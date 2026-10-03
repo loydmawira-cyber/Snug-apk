@@ -45,6 +45,23 @@ fun handleFirestoreError(exception: Exception, operationType: OperationType, pat
     return jsonString
 }
 
+/** Great-circle distance between two points in kilometres (Haversine formula). */
+fun distanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    val r = 6371.0
+    val dLat = Math.toRadians(lat2 - lat1)
+    val dLon = Math.toRadians(lon2 - lon1)
+    val a = Math.sin(dLat / 2).let { it * it } +
+        Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+        Math.sin(dLon / 2).let { it * it }
+    return 2 * r * Math.asin(Math.sqrt(a))
+}
+
+fun formatDistance(km: Double?): String = when {
+    km == null -> "Distance unknown"
+    km < 1.0 -> "Less than 1 km away"
+    else -> "${Math.round(km)} km away"
+}
+
 fun calculateAge(timestamp: com.google.firebase.Timestamp?): Int {
     if (timestamp == null) return 25
     val birthDate = timestamp.toDate()
