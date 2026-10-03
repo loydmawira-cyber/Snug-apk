@@ -39,6 +39,7 @@ import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.example.data.model.UserProfile
 import com.example.data.util.calculateAge
+import com.example.data.util.formatDistance
 import com.example.ui.viewmodel.SnugViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -47,6 +48,7 @@ import kotlin.math.roundToInt
 fun DiscoverScreen(viewModel: SnugViewModel) {
     val profile by viewModel.currentProfile.collectAsState()
     val profiles by viewModel.discoveryProfiles.collectAsState()
+    val me by viewModel.currentUserProfile.collectAsState()
     
     android.util.Log.d("DiscoverScreen", "Recomposing with profile: ${profile?.displayName}")
     
@@ -60,6 +62,7 @@ fun DiscoverScreen(viewModel: SnugViewModel) {
         } else {
             ProfileCard(
                 profile = profile!!,
+                distanceText = formatDistance(viewModel.distanceTo(me, profile!!)),
                 onLike = { viewModel.likeProfile(profile!!.id) },
                 onPass = { viewModel.passProfile() },
                 swipeThreshold = maxWidthPx / 3f
@@ -69,7 +72,7 @@ fun DiscoverScreen(viewModel: SnugViewModel) {
 }
 
 @Composable
-fun ProfileCard(profile: UserProfile, onLike: () -> Unit, onPass: () -> Unit, swipeThreshold: Float) {
+fun ProfileCard(profile: UserProfile, distanceText: String, onLike: () -> Unit, onPass: () -> Unit, swipeThreshold: Float) {
     val coroutineScope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
     val offsetY = remember { Animatable(0f) }
@@ -172,6 +175,11 @@ fun ProfileCard(profile: UserProfile, onLike: () -> Unit, onPass: () -> Unit, sw
                     }
                 }
                 Text(
+                    text = distanceText,
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
                     text = profile.bio,
                     color = Color.White.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.bodyLarge
@@ -219,6 +227,7 @@ fun ProfileCard(profile: UserProfile, onLike: () -> Unit, onPass: () -> Unit, sw
 @Composable
 fun RadarScreen(viewModel: SnugViewModel) {
     val profiles by viewModel.discoveryProfiles.collectAsState()
+    val me by viewModel.currentUserProfile.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Nearby", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -229,14 +238,14 @@ fun RadarScreen(viewModel: SnugViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(profiles) { profile ->
-                RadarItem(profile)
+                RadarItem(profile, formatDistance(viewModel.distanceTo(me, profile)))
             }
         }
     }
 }
 
 @Composable
-fun RadarItem(profile: UserProfile) {
+fun RadarItem(profile: UserProfile, distanceText: String) {
     Card(
         modifier = Modifier.height(200.dp),
         shape = RoundedCornerShape(16.dp)
@@ -267,7 +276,7 @@ fun RadarItem(profile: UserProfile) {
                     .padding(8.dp)
             ) {
                 Text(profile.displayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("1.2 km away", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
+                Text(distanceText, color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
             }
         }
     }
