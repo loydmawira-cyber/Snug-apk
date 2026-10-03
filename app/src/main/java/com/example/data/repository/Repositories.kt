@@ -202,6 +202,8 @@ private operator fun UserProfile.plus(other: Map<String, Any?>): Map<String, Any
         "minAge" to this.minAge,
         "maxAge" to this.maxAge,
         "radiusKm" to this.radiusKm,
+        "latitude" to this.latitude,
+        "longitude" to this.longitude,
         "createdAt" to this.createdAt,
         "updatedAt" to this.updatedAt
     )
