@@ -22,12 +22,6 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Decode Debug Keystore
-      run: |
-        if [ -f debug.keystore.base64 ]; then
-          base64 -d debug.keystore.base64 > debug.keystore
-        fi
-
     - name: Create dummy google-services.json if missing
       run: |
         if [ ! -f app/google-services.json ]; then
