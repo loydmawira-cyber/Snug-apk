@@ -106,6 +106,14 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun loadUser(id: String): UserProfile? =
         profileRepo.getProfile(id) ?: _discoveryProfiles.value.firstOrNull { it.id == id }
 
+    /** Opens (creating if needed) the chat with [userId] and returns the match id via [onReady]. */
+    fun openChat(userId: String, onReady: (String) -> Unit) {
+        viewModelScope.launch {
+            val id = matchRepo.findOrCreateMatch(userId)
+            if (id != null) onReady(id) else _uiMessage.value = "Could not start chat"
+        }
+    }
+
     fun clearMessage() {
         _uiMessage.value = null
     }
