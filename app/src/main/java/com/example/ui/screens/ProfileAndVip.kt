@@ -29,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import com.example.ui.components.SnugImage
 import com.example.data.model.UserPhoto
 import com.example.data.model.UserProfile
 import com.example.data.security.PinManager
@@ -117,6 +117,9 @@ fun ProfileScreen(viewModel: SnugViewModel) {
             if (profile != null) {
                 EditProfileDialog(
                     profile = profile!!,
+                    onChangePicture = {
+                        avatarPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
                     onDismiss = { activeSubScreen = ProfileSubScreen.NONE },
                     onSave = { updatedProfile ->
                         viewModel.updateUserProfile(updatedProfile)
@@ -160,7 +163,7 @@ fun ProfileScreen(viewModel: SnugViewModel) {
             ) {
                 Box(contentAlignment = Alignment.BottomEnd) {
                     if (avatarUrl != null) {
-                        AsyncImage(
+                        SnugImage(
                             model = avatarUrl,
                             contentDescription = "Profile Photo",
                             modifier = Modifier
@@ -663,7 +666,7 @@ fun PhotoItem(photo: UserPhoto, onDelete: () -> Unit, onToggleBlur: () -> Unit) 
             .size(96.dp)
             .clip(RoundedCornerShape(14.dp))
     ) {
-        AsyncImage(
+        SnugImage(
             model = photo.url,
             contentDescription = null,
             modifier = Modifier
@@ -1310,6 +1313,7 @@ fun LogoutConfirmDialog(
 @Composable
 fun EditProfileDialog(
     profile: UserProfile,
+    onChangePicture: () -> Unit = {},
     onDismiss: () -> Unit,
     onSave: (UserProfile) -> Unit
 ) {
@@ -1338,7 +1342,42 @@ fun EditProfileDialog(
                     .verticalScroll(rememberScrollState())
             ) {
                 Text("Edit Profile", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                val dialogAvatar = profile.profilePhoto.takeIf { it.isNotBlank() } ?: profile.photos.firstOrNull()?.url
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (dialogAvatar != null) {
+                        SnugImage(
+                            model = dialogAvatar,
+                            contentDescription = "Profile picture",
+                            modifier = Modifier
+                                .size(96.dp)
+                                .clip(CircleShape)
+                                .clickable { onChangePicture() },
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Surface(
+                            modifier = Modifier.size(96.dp).clickable { onChangePicture() },
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Add profile picture",
+                                modifier = Modifier.padding(24.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    TextButton(onClick = onChangePicture) {
+                        Text(if (dialogAvatar != null) "Change picture" else "Add profile picture")
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 OutlinedTextField(
                     value = name,

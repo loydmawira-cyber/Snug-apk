@@ -26,7 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
+import com.example.ui.components.SnugImage
 import com.example.data.model.ChatMessage
 import com.example.data.model.Match
 import com.example.data.model.avatarUrl
@@ -73,7 +73,7 @@ fun MatchGridItem(match: Match, onClick: () -> Unit) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Box {
-            AsyncImage(
+            SnugImage(
                 model = match.otherUser?.avatarUrl(),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
@@ -136,7 +136,7 @@ fun MessagesScreen(viewModel: SnugViewModel, navController: NavController) {
 @Composable
 fun MatchAvatar(match: Match, onClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }) {
-        AsyncImage(
+        SnugImage(
             model = match.otherUser?.avatarUrl(),
             contentDescription = null,
             modifier = Modifier
@@ -161,7 +161,7 @@ fun MatchRow(match: Match, onAvatarClick: () -> Unit = {}, onClick: () -> Unit) 
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
+        SnugImage(
             model = match.otherUser?.avatarUrl(),
             contentDescription = null,
             modifier = Modifier
@@ -210,7 +210,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable { other?.id?.takeIf { it.isNotBlank() }?.let(onOpenProfile) }
                     ) {
-                        AsyncImage(
+                        SnugImage(
                             model = other?.avatarUrl(),
                             contentDescription = null,
                             modifier = Modifier.size(36.dp).clip(CircleShape),

@@ -19,7 +19,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
+import com.example.ui.components.SnugImage
 import com.example.data.model.UserProfile
 import com.example.data.model.avatarUrl
 import com.example.data.util.calculateAge
@@ -65,7 +65,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
             ) {
                 val avatar = u.avatarUrl()
                 if (avatar != null) {
-                    AsyncImage(
+                    SnugImage(
                         model = avatar,
                         contentDescription = "Profile picture",
                         modifier = Modifier.size(160.dp).clip(CircleShape),
@@ -152,7 +152,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     u.photos.forEach { photo ->
-                        AsyncImage(
+                        SnugImage(
                             model = photo.url,
                             contentDescription = null,
                             modifier = Modifier

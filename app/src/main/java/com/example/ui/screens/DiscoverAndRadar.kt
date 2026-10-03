@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import coil.compose.AsyncImage
+import com.example.ui.components.SnugImage
 import com.example.data.model.UserProfile
 import com.example.data.model.avatarUrl
 import com.example.data.util.calculateAge
@@ -128,7 +128,7 @@ fun ProfileCard(profile: UserProfile, distanceText: String, onOpenProfile: () ->
         Box {
             val hasProfilePic = profile.profilePhoto.isNotBlank()
             val mainPhoto = profile.photos.firstOrNull()
-            AsyncImage(
+            SnugImage(
                 model = profile.avatarUrl(),
                 contentDescription = null,
                 modifier = Modifier
@@ -267,7 +267,7 @@ fun RadarItem(profile: UserProfile, distanceText: String, onClick: () -> Unit = 
         Box {
             val photo = profile.photos.firstOrNull()
             val hasProfilePic = profile.profilePhoto.isNotBlank()
-            AsyncImage(
+            SnugImage(
                 model = profile.avatarUrl(),
                 contentDescription = null,
                 modifier = Modifier
