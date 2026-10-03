@@ -2,6 +2,13 @@ package com.example.data.model
 
 import com.google.firebase.Timestamp
 
+data class UserPhoto(
+    val url: String = "",
+    val isBlurred: Boolean = false,
+    val isPublic: Boolean = true,
+    val allowedUserIds: List<String> = emptyList()
+)
+
 data class UserProfile(
     val id: String = "",
     val displayName: String = "",
@@ -10,7 +17,9 @@ data class UserProfile(
     val gender: String = "",
     val interestedIn: List<String> = emptyList(),
     val interests: List<String> = emptyList(),
-    val photos: List<String> = emptyList(),
+    val photos: List<UserPhoto> = emptyList(),
+    val phoneNumber: String = "",
+    val isPhoneVerified: Boolean = false,
     val isVip: Boolean = false,
     val dailyLikesUsed: Int = 0,
     val lastLikeReset: Timestamp? = null,

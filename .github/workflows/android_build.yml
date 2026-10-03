@@ -22,6 +22,18 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    - name: Decode Debug Keystore
+      run: |
+        if [ -f debug.keystore.base64 ]; then
+          base64 -d debug.keystore.base64 > debug.keystore
+        fi
+
+    - name: Create dummy google-services.json if missing
+      run: |
+        if [ ! -f app/google-services.json ]; then
+          echo '{"project_info":{"project_number":"0","project_id":"dummy","storage_bucket":"dummy.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0","android_client_info":{"package_name":"com.aistudio.snug.rdxwzq"}},"api_key":[{"current_key":"dummy"}],"services":{"appinvite_service":{"status":1}}}]}' > app/google-services.json
+        fi
+
     - name: Grant execute permission for gradlew
       run: |
         if [ -f gradlew ]; then
@@ -31,17 +43,17 @@ jobs:
     - name: Build APK (Debug)
       run: |
         if [ -f gradlew ]; then
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
         else
-          gradle assembleDebug
+          gradle assembleDebug --no-daemon
         fi
 
     - name: Build AAB (Debug)
       run: |
         if [ -f gradlew ]; then
-          ./gradlew bundleDebug
+          ./gradlew bundleDebug --no-daemon
         else
-          gradle bundleDebug
+          gradle bundleDebug --no-daemon
         fi
 
     - name: Upload APK

@@ -149,7 +149,16 @@ private operator fun UserProfile.plus(other: Map<String, Any?>): Map<String, Any
         "gender" to this.gender,
         "interestedIn" to this.interestedIn,
         "interests" to this.interests,
-        "photos" to this.photos,
+        "photos" to this.photos.map { photo ->
+            mapOf(
+                "url" to photo.url,
+                "isBlurred" to photo.isBlurred,
+                "isPublic" to photo.isPublic,
+                "allowedUserIds" to photo.allowedUserIds
+            )
+        },
+        "phoneNumber" to this.phoneNumber,
+        "isPhoneVerified" to this.isPhoneVerified,
         "isVip" to this.isVip,
         "dailyLikesUsed" to this.dailyLikesUsed,
         "lastLikeReset" to this.lastLikeReset,
@@ -159,3 +168,4 @@ private operator fun UserProfile.plus(other: Map<String, Any?>): Map<String, Any
     map.putAll(other)
     return map
 }
+

@@ -30,8 +30,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.data.security.PinManager
 import com.example.ui.Screen
-import com.example.ui.components.GoogleSignInButton
+import com.example.ui.components.EmailSignInFlow
+import com.example.ui.components.PinUnlockScreen
 import com.example.ui.theme.SNUGTheme
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -56,11 +58,19 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppContent(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
+    val context = LocalContext.current
+    val pinManager = remember { PinManager(context) }
     var currentUser by remember { mutableStateOf(Firebase.auth.currentUser) }
+    var isUnlocked by remember { mutableStateOf(!pinManager.isPinEnabled()) }
 
     DisposableEffect(Unit) {
         val listener = FirebaseAuth.AuthStateListener { auth ->
             currentUser = auth.currentUser
+            if (auth.currentUser == null) {
+                isUnlocked = false
+            } else if (!pinManager.isPinEnabled()) {
+                isUnlocked = true
+            }
         }
         Firebase.auth.addAuthStateListener(listener)
         onDispose {
@@ -70,6 +80,11 @@ fun AppContent(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
 
     if (currentUser == null) {
         SignInScreen()
+    } else if (pinManager.isPinEnabled() && !isUnlocked) {
+        PinUnlockScreen(
+            onUnlocked = { isUnlocked = true },
+            onSignOut = { isUnlocked = false }
+        )
     } else {
         MainNavigation(isDarkTheme, onToggleTheme)
     }
@@ -106,9 +121,9 @@ fun SignInScreen() {
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
             )
             Spacer(modifier = Modifier.height(48.dp))
-            GoogleSignInButton(
+            EmailSignInFlow(
                 onAuthSuccess = { /* Handled by AuthStateListener */ },
-                onAuthError = { /* Show error snackbar */ }
+                onAuthError = { /* Handle error */ }
             )
         }
     }

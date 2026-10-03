@@ -3,6 +3,7 @@ package com.example.data.repository
 import android.content.Context
 import android.util.Log
 import com.example.R
+import com.example.data.model.UserPhoto
 import com.example.data.model.UserProfile
 import com.example.data.util.OperationType
 import com.example.data.util.handleFirestoreError
@@ -30,7 +31,9 @@ class SeedRepository(private val db: FirebaseFirestore, private val context: Con
                     gender = "Female",
                     interestedIn = listOf("Male"),
                     interests = listOf("Architecture", "Photography", "Travel"),
-                    photos = listOf("android.resource://$packageName/drawable/img_jane_avatar_1791028912976"),
+                    photos = listOf(UserPhoto(url = "android.resource://$packageName/drawable/img_jane_avatar_1791028912976")),
+                    phoneNumber = "+1 555 019 2831",
+                    isPhoneVerified = true,
                     createdAt = Timestamp.now(),
                     updatedAt = Timestamp.now()
                 ),
@@ -42,7 +45,9 @@ class SeedRepository(private val db: FirebaseFirestore, private val context: Con
                     gender = "Male",
                     interestedIn = listOf("Female"),
                     interests = listOf("Hiking", "Outdoors", "Fitness"),
-                    photos = listOf("android.resource://$packageName/drawable/img_peter_avatar_1791028926931"),
+                    photos = listOf(UserPhoto(url = "android.resource://$packageName/drawable/img_peter_avatar_1791028926931")),
+                    phoneNumber = "+1 555 018 7329",
+                    isPhoneVerified = true,
                     createdAt = Timestamp.now(),
                     updatedAt = Timestamp.now()
                 ),
@@ -54,7 +59,9 @@ class SeedRepository(private val db: FirebaseFirestore, private val context: Con
                     gender = "Female",
                     interestedIn = listOf("Male", "Female"),
                     interests = listOf("Art", "Painting", "Music"),
-                    photos = listOf("android.resource://$packageName/drawable/img_bridget_avatar_1791028942614"),
+                    photos = listOf(UserPhoto(url = "android.resource://$packageName/drawable/img_bridget_avatar_1791028942614")),
+                    phoneNumber = "+1 555 014 9922",
+                    isPhoneVerified = true,
                     createdAt = Timestamp.now(),
                     updatedAt = Timestamp.now()
                 ),
@@ -66,7 +73,9 @@ class SeedRepository(private val db: FirebaseFirestore, private val context: Con
                     gender = "Female",
                     interestedIn = listOf("Male"),
                     interests = listOf("Reading", "History", "Chess"),
-                    photos = listOf("android.resource://$packageName/drawable/img_agnes_avatar_1791028955213"),
+                    photos = listOf(UserPhoto(url = "android.resource://$packageName/drawable/img_agnes_avatar_1791028955213")),
+                    phoneNumber = "+1 555 012 4430",
+                    isPhoneVerified = true,
                     createdAt = Timestamp.now(),
                     updatedAt = Timestamp.now()
                 )

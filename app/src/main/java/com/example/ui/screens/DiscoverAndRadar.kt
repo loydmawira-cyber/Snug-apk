@@ -14,12 +14,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -117,10 +119,13 @@ fun ProfileCard(profile: UserProfile, onLike: () -> Unit, onPass: () -> Unit, sw
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Box {
+            val mainPhoto = profile.photos.firstOrNull()
             AsyncImage(
-                model = if (profile.photos.isNotEmpty()) profile.photos.first() else "https://via.placeholder.com/400x600",
+                model = mainPhoto?.url ?: "https://via.placeholder.com/400x600",
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(if (mainPhoto?.isBlurred == true) Modifier.blur(20.dp) else Modifier),
                 contentScale = ContentScale.Crop
             )
             
@@ -141,12 +146,31 @@ fun ProfileCard(profile: UserProfile, onLike: () -> Unit, onPass: () -> Unit, sw
                     .padding(24.dp)
                     .zIndex(1f)
             ) {
-                Text(
-                    text = "${profile.displayName}, ${calculateAge(profile.birthDate)}",
-                    color = Color.White,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${profile.displayName}, ${calculateAge(profile.birthDate)}",
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (profile.isPhoneVerified) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = "Verified Phone",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
                 Text(
                     text = profile.bio,
                     color = Color.White.copy(alpha = 0.8f),
@@ -218,10 +242,13 @@ fun RadarItem(profile: UserProfile) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Box {
+            val photo = profile.photos.firstOrNull()
             AsyncImage(
-                model = if (profile.photos.isNotEmpty()) profile.photos.first() else "https://via.placeholder.com/200",
+                model = photo?.url ?: "https://via.placeholder.com/200",
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(if (photo?.isBlurred == true) Modifier.blur(10.dp) else Modifier),
                 contentScale = ContentScale.Crop
             )
             Box(
@@ -245,3 +272,4 @@ fun RadarItem(profile: UserProfile) {
         }
     }
 }
+
