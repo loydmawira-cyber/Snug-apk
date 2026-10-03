@@ -36,7 +36,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import coil.compose.AsyncImage
+import com.example.ui.components.SnugImage
 import com.example.data.security.PinManager
 import com.example.ui.Screen
 import com.example.ui.components.EmailSignInFlow
@@ -234,7 +234,7 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
                             }
                         }) {
                             if (myAvatar != null) {
-                                AsyncImage(
+                                SnugImage(
                                     model = myAvatar,
                                     contentDescription = "My profile",
                                     modifier = Modifier.size(34.dp).clip(CircleShape),
