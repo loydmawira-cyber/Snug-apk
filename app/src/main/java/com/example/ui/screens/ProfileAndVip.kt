@@ -63,6 +63,13 @@ fun ProfileScreen(viewModel: SnugViewModel) {
     val pinManager = remember { PinManager(context) }
     var isPinEnabled by remember { mutableStateOf(pinManager.isPinEnabled()) }
 
+    val avatarPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> uri?.let { viewModel.setProfilePicture(it) } }
+    )
+    val avatarUrl = profile?.profilePhoto?.takeIf { it.isNotBlank() }
+        ?: profile?.photos?.firstOrNull()?.url
+
     // Sub-screens / Bottom Sheets
     when (activeSubScreen) {
         ProfileSubScreen.ACCOUNT_VERIFICATION -> {
@@ -152,26 +159,43 @@ fun ProfileScreen(viewModel: SnugViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(contentAlignment = Alignment.BottomEnd) {
-                    AsyncImage(
-                        model = profile?.photos?.firstOrNull()?.url ?: "https://via.placeholder.com/150",
-                        contentDescription = "Profile Photo",
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape)
-                            .clickable { activeSubScreen = ProfileSubScreen.EDIT_PROFILE },
-                        contentScale = ContentScale.Crop
-                    )
+                    if (avatarUrl != null) {
+                        AsyncImage(
+                            model = avatarUrl,
+                            contentDescription = "Profile Photo",
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(CircleShape)
+                                .clickable { avatarPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Surface(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clickable { avatarPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Add profile picture",
+                                modifier = Modifier.padding(24.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     Surface(
                         modifier = Modifier
                             .size(32.dp)
-                            .clickable { activeSubScreen = ProfileSubScreen.EDIT_PROFILE },
+                            .clickable { avatarPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.primary,
                         tonalElevation = 4.dp
                     ) {
                         Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Edit Profile",
+                            Icons.Default.CameraAlt,
+                            contentDescription = "Change profile picture",
                             modifier = Modifier.padding(6.dp),
                             tint = Color.White
                         )
