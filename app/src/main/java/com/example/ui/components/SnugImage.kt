@@ -8,8 +8,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -40,17 +43,19 @@ fun SnugImage(
 ) {
     val str = model as? String
     if (str != null && str.startsWith("data:image")) {
-        val bitmap by produceState<ImageBitmap?>(initialValue = bitmapCache.get(str), key1 = str) {
-            if (value == null) {
+        // remember(str) makes sure a new photo never shows the previous user's picture
+        var bmp by remember(str) { mutableStateOf<ImageBitmap?>(bitmapCache.get(str)) }
+        LaunchedEffect(str) {
+            if (bmp == null) {
                 val decoded = withContext(Dispatchers.Default) { decodeDataUri(str) }
                 if (decoded != null) bitmapCache.put(str, decoded)
-                value = decoded
+                bmp = decoded
             }
         }
-        val bmp = bitmap
-        if (bmp != null) {
+        val current = bmp
+        if (current != null) {
             Image(
-                bitmap = bmp,
+                bitmap = current,
                 contentDescription = contentDescription,
                 modifier = modifier,
                 contentScale = contentScale
