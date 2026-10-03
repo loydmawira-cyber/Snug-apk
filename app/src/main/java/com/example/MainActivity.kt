@@ -279,14 +279,26 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
             startDestination = Screen.Discover.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Discover.route) { com.example.ui.screens.DiscoverScreen(viewModel) }
-            composable(Screen.Radar.route) { com.example.ui.screens.RadarScreen(viewModel) }
+            composable(Screen.Discover.route) {
+                com.example.ui.screens.DiscoverScreen(viewModel, onOpenProfile = { navController.navigate(Screen.UserDetail.createRoute(it)) })
+            }
+            composable(Screen.Radar.route) {
+                com.example.ui.screens.RadarScreen(viewModel, onOpenProfile = { navController.navigate(Screen.UserDetail.createRoute(it)) })
+            }
             composable(Screen.Matches.route) { com.example.ui.screens.MatchesScreen(viewModel, navController) }
             composable(Screen.Messages.route) { com.example.ui.screens.MessagesScreen(viewModel, navController) }
             composable(Screen.Profile.route) { com.example.ui.screens.ProfileScreen(viewModel) }
             composable(Screen.Chat.route) { backStackEntry ->
                 val matchId = backStackEntry.arguments?.getString("matchId") ?: ""
-                com.example.ui.screens.ChatScreen(matchId, viewModel, onBack = { navController.popBackStack() })
+                com.example.ui.screens.ChatScreen(
+                    matchId, viewModel,
+                    onBack = { navController.popBackStack() },
+                    onOpenProfile = { navController.navigate(Screen.UserDetail.createRoute(it)) }
+                )
+            }
+            composable(Screen.UserDetail.route) { backStackEntry ->
+                val userId = backStackEntry.arguments?.getString("userId") ?: ""
+                com.example.ui.screens.UserProfileScreen(userId, viewModel, navController)
             }
         }
     }
