@@ -819,7 +819,15 @@ fun DiscoveryPreferencesSheet(
     viewModel: SnugViewModel,
     onDismiss: () -> Unit
 ) {
-    var distanceKm by remember { mutableFloatStateOf((profile?.radiusKm ?: 50).toFloat()) }
+    // Distance steps in km. The last step means "Anywhere" (worldwide).
+    val distanceStops = remember { listOf(5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 20000) }
+    var distanceIndex by remember {
+        mutableFloatStateOf(
+            (distanceStops.indexOfFirst { it >= (profile?.radiusKm ?: 50) }
+                .let { if (it == -1) distanceStops.lastIndex else it }).toFloat()
+        )
+    }
+    val distanceKm = distanceStops[distanceIndex.roundToInt().coerceIn(0, distanceStops.lastIndex)]
     var ageRange by remember { mutableStateOf((profile?.minAge ?: 18).toFloat()..(profile?.maxAge ?: 35).toFloat()) }
 
     ModalBottomSheet(
@@ -850,7 +858,7 @@ fun DiscoveryPreferencesSheet(
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                 ) {
                     Text(
-                        "${distanceKm.roundToInt()} km",
+                        if (distanceKm >= 20000) "Anywhere" else "$distanceKm km",
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -858,9 +866,10 @@ fun DiscoveryPreferencesSheet(
                 }
             }
             Slider(
-                value = distanceKm,
-                onValueChange = { distanceKm = it },
-                valueRange = 5f..150f,
+                value = distanceIndex,
+                onValueChange = { distanceIndex = it },
+                valueRange = 0f..distanceStops.lastIndex.toFloat(),
+                steps = distanceStops.size - 2,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -899,7 +908,7 @@ fun DiscoveryPreferencesSheet(
                     profile?.let {
                         viewModel.updateUserProfile(
                             it.copy(
-                                radiusKm = distanceKm.roundToInt(),
+                                radiusKm = distanceKm,
                                 minAge = ageRange.start.roundToInt(),
                                 maxAge = ageRange.endInclusive.roundToInt()
                             )
