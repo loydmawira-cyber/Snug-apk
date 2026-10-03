@@ -17,6 +17,7 @@ data class UserProfile(
     val gender: String = "",
     val interestedIn: List<String> = emptyList(),
     val interests: List<String> = emptyList(),
+    val profilePhoto: String = "",
     val photos: List<UserPhoto> = emptyList(),
     val phoneNumber: String = "",
     val isPhoneVerified: Boolean = false,
