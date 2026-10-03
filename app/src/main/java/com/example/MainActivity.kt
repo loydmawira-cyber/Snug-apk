@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,6 +31,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import com.example.data.security.PinManager
 import com.example.ui.Screen
 import com.example.ui.components.EmailSignInFlow
@@ -121,9 +123,18 @@ fun SignInScreen() {
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
             )
             Spacer(modifier = Modifier.height(48.dp))
+            var authError by remember { mutableStateOf<String?>(null) }
+            if (authError != null) {
+                Text(
+                    text = authError!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
             EmailSignInFlow(
-                onAuthSuccess = { /* Handled by AuthStateListener */ },
-                onAuthError = { /* Handle error */ }
+                onAuthSuccess = { authError = null },
+                onAuthError = { authError = it }
             )
         }
     }
@@ -135,9 +146,14 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val viewModel: com.example.ui.viewmodel.SnugViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    // Keyed by user id so each account gets its own fresh ViewModel (no leftover data from the previous user)
+    val viewModel: com.example.ui.viewmodel.SnugViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        key = Firebase.auth.currentUser?.uid ?: "signed_out"
+    )
     val snackbarHostState = remember { SnackbarHostState() }
     val uiMessage by viewModel.uiMessage.collectAsState()
+    val myProfile by viewModel.currentUserProfile.collectAsState()
+    val myAvatar = myProfile?.profilePhoto?.takeIf { it.isNotBlank() } ?: myProfile?.photos?.firstOrNull()?.url
 
     LaunchedEffect(uiMessage) {
         uiMessage?.let {
@@ -187,6 +203,24 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
                                 imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
                                 contentDescription = "Toggle Theme"
                             )
+                        }
+                        IconButton(onClick = {
+                            navController.navigate(Screen.Profile.route) {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }) {
+                            if (myAvatar != null) {
+                                AsyncImage(
+                                    model = myAvatar,
+                                    contentDescription = "My profile",
+                                    modifier = Modifier.size(34.dp).clip(CircleShape),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                            } else {
+                                Icon(Icons.Default.Person, contentDescription = "My profile")
+                            }
                         }
                     }
                 )
