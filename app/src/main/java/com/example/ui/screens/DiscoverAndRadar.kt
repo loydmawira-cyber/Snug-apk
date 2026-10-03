@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
@@ -38,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.example.data.model.UserProfile
+import com.example.data.model.avatarUrl
 import com.example.data.util.calculateAge
 import com.example.data.util.formatDistance
 import com.example.ui.viewmodel.SnugViewModel
@@ -45,7 +48,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
-fun DiscoverScreen(viewModel: SnugViewModel) {
+fun DiscoverScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) {
     val profile by viewModel.currentProfile.collectAsState()
     val profiles by viewModel.discoveryProfiles.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
@@ -63,6 +66,7 @@ fun DiscoverScreen(viewModel: SnugViewModel) {
             ProfileCard(
                 profile = profile!!,
                 distanceText = formatDistance(viewModel.distanceTo(me, profile!!)),
+                onOpenProfile = { onOpenProfile(profile!!.id) },
                 onLike = { viewModel.likeProfile(profile!!.id) },
                 onPass = { viewModel.passProfile() },
                 swipeThreshold = maxWidthPx / 3f
@@ -72,7 +76,7 @@ fun DiscoverScreen(viewModel: SnugViewModel) {
 }
 
 @Composable
-fun ProfileCard(profile: UserProfile, distanceText: String, onLike: () -> Unit, onPass: () -> Unit, swipeThreshold: Float) {
+fun ProfileCard(profile: UserProfile, distanceText: String, onOpenProfile: () -> Unit, onLike: () -> Unit, onPass: () -> Unit, swipeThreshold: Float) {
     val coroutineScope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
     val offsetY = remember { Animatable(0f) }
@@ -122,15 +126,25 @@ fun ProfileCard(profile: UserProfile, distanceText: String, onLike: () -> Unit, 
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Box {
+            val hasProfilePic = profile.profilePhoto.isNotBlank()
             val mainPhoto = profile.photos.firstOrNull()
             AsyncImage(
-                model = mainPhoto?.url ?: "https://via.placeholder.com/400x600",
+                model = profile.avatarUrl(),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(if (mainPhoto?.isBlurred == true) Modifier.blur(20.dp) else Modifier),
+                    .then(if (!hasProfilePic && mainPhoto?.isBlurred == true) Modifier.blur(20.dp) else Modifier),
                 contentScale = ContentScale.Crop
             )
+            IconButton(
+                onClick = onOpenProfile,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .zIndex(2f)
+            ) {
+                Icon(Icons.Default.Info, contentDescription = "View profile", tint = Color.White)
+            }
             
             Box(
                 modifier = Modifier
@@ -149,7 +163,7 @@ fun ProfileCard(profile: UserProfile, distanceText: String, onLike: () -> Unit, 
                     .padding(24.dp)
                     .zIndex(1f)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onOpenProfile() }) {
                     Text(
                         text = "${profile.displayName}, ${calculateAge(profile.birthDate)}",
                         color = Color.White,
@@ -225,7 +239,7 @@ fun ProfileCard(profile: UserProfile, distanceText: String, onLike: () -> Unit, 
 }
 
 @Composable
-fun RadarScreen(viewModel: SnugViewModel) {
+fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) {
     val profiles by viewModel.discoveryProfiles.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
 
@@ -238,26 +252,27 @@ fun RadarScreen(viewModel: SnugViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(profiles) { profile ->
-                RadarItem(profile, formatDistance(viewModel.distanceTo(me, profile)))
+                RadarItem(profile, formatDistance(viewModel.distanceTo(me, profile))) { onOpenProfile(profile.id) }
             }
         }
     }
 }
 
 @Composable
-fun RadarItem(profile: UserProfile, distanceText: String) {
+fun RadarItem(profile: UserProfile, distanceText: String, onClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier.height(200.dp),
+        modifier = Modifier.height(200.dp).clickable { onClick() },
         shape = RoundedCornerShape(16.dp)
     ) {
         Box {
             val photo = profile.photos.firstOrNull()
+            val hasProfilePic = profile.profilePhoto.isNotBlank()
             AsyncImage(
-                model = photo?.url ?: "https://via.placeholder.com/200",
+                model = profile.avatarUrl(),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(if (photo?.isBlurred == true) Modifier.blur(10.dp) else Modifier),
+                    .then(if (!hasProfilePic && photo?.isBlurred == true) Modifier.blur(10.dp) else Modifier),
                 contentScale = ContentScale.Crop
             )
             Box(

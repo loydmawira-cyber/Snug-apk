@@ -29,6 +29,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.data.model.ChatMessage
 import com.example.data.model.Match
+import com.example.data.model.avatarUrl
 import com.example.ui.Screen
 import com.example.ui.viewmodel.SnugViewModel
 
@@ -55,7 +56,10 @@ fun MatchesScreen(viewModel: SnugViewModel, navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(matches) { match ->
-                    MatchGridItem(match) { navController.navigate(Screen.Chat.createRoute(match.id)) }
+                    MatchGridItem(match) {
+                        match.otherUser?.id?.takeIf { it.isNotBlank() }?.let { navController.navigate(Screen.UserDetail.createRoute(it)) }
+                            ?: navController.navigate(Screen.Chat.createRoute(match.id))
+                    }
                 }
             }
         }
@@ -70,7 +74,7 @@ fun MatchGridItem(match: Match, onClick: () -> Unit) {
     ) {
         Box {
             AsyncImage(
-                model = match.otherUser?.photos?.firstOrNull() ?: "https://via.placeholder.com/200",
+                model = match.otherUser?.avatarUrl(),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -117,7 +121,12 @@ fun MessagesScreen(viewModel: SnugViewModel, navController: NavController) {
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(messagesOnly) { match ->
-                    MatchRow(match) { navController.navigate(Screen.Chat.createRoute(match.id)) }
+                    MatchRow(
+                        match = match,
+                        onAvatarClick = {
+                            match.otherUser?.id?.takeIf { it.isNotBlank() }?.let { navController.navigate(Screen.UserDetail.createRoute(it)) }
+                        }
+                    ) { navController.navigate(Screen.Chat.createRoute(match.id)) }
                 }
             }
         }
@@ -128,7 +137,7 @@ fun MessagesScreen(viewModel: SnugViewModel, navController: NavController) {
 fun MatchAvatar(match: Match, onClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }) {
         AsyncImage(
-            model = match.otherUser?.photos?.firstOrNull() ?: "https://via.placeholder.com/100",
+            model = match.otherUser?.avatarUrl(),
             contentDescription = null,
             modifier = Modifier
                 .size(70.dp)
@@ -144,7 +153,7 @@ fun MatchAvatar(match: Match, onClick: () -> Unit) {
 }
 
 @Composable
-fun MatchRow(match: Match, onClick: () -> Unit) {
+fun MatchRow(match: Match, onAvatarClick: () -> Unit = {}, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -153,11 +162,12 @@ fun MatchRow(match: Match, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = match.otherUser?.photos?.firstOrNull() ?: "https://via.placeholder.com/100",
+            model = match.otherUser?.avatarUrl(),
             contentDescription = null,
             modifier = Modifier
                 .size(60.dp)
-                .clip(CircleShape),
+                .clip(CircleShape)
+                .clickable { onAvatarClick() },
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.width(16.dp))
@@ -186,14 +196,30 @@ fun MatchRow(match: Match, onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit) {
+fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, onOpenProfile: (String) -> Unit = {}) {
+    val allMatches by viewModel.matches.collectAsState()
+    val other = allMatches.firstOrNull { it.id == matchId }?.otherUser
     val messages by viewModel.observeMessages(matchId).collectAsState(initial = emptyList())
     var text by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Chat") },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { other?.id?.takeIf { it.isNotBlank() }?.let(onOpenProfile) }
+                    ) {
+                        AsyncImage(
+                            model = other?.avatarUrl(),
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp).clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(other?.displayName ?: "Chat")
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
