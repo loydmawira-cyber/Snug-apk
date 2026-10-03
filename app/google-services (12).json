@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "81245383833",
+    "project_id": "snug-e808e",
+    "storage_bucket": "snug-e808e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:81245383833:android:edbe8686e9035d5679dc08",
+        "android_client_info": {
+          "package_name": "com.aistudio.snug.rdxwzq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCOR-1P9lUo_ag1E4tbPcU80q81vJx_Bw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
