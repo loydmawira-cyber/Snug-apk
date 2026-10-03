@@ -118,18 +118,34 @@ class MatchRepository(private val db: FirebaseFirestore) {
             }
     }
 
-    suspend fun createMatch(otherUserId: String) {
-        val uid = auth.currentUser?.uid ?: return
-        try {
-            val match = Match(
-                userIds = listOf(uid, otherUserId),
-                createdAt = com.google.firebase.Timestamp.now(),
-                lastMessageAt = com.google.firebase.Timestamp.now()
-            )
-            db.collection("matches").add(match).await()
+    /** Returns the id of the existing match with [otherUserId], or creates one. */
+    suspend fun findOrCreateMatch(otherUserId: String): String? {
+        val uid = auth.currentUser?.uid ?: return null
+        return try {
+            val existing = db.collection("matches")
+                .whereArrayContains("userIds", uid)
+                .get().await()
+                .documents.firstOrNull { d ->
+                    (d.get("userIds") as? List<*>)?.contains(otherUserId) == true
+                }
+            if (existing != null) {
+                existing.id
+            } else {
+                val match = Match(
+                    userIds = listOf(uid, otherUserId),
+                    createdAt = com.google.firebase.Timestamp.now(),
+                    lastMessageAt = com.google.firebase.Timestamp.now()
+                )
+                db.collection("matches").add(match).await().id
+            }
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.CREATE, "matches")
+            null
         }
+    }
+
+    suspend fun createMatch(otherUserId: String) {
+        findOrCreateMatch(otherUserId)
     }
 }
 
