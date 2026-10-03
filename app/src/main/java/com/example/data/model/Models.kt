@@ -27,6 +27,8 @@ data class UserProfile(
     val minAge: Int = 18,
     val maxAge: Int = 35,
     val radiusKm: Int = 50,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     val createdAt: Timestamp? = null,
     val updatedAt: Timestamp? = null
 )
