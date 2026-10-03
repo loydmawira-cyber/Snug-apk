@@ -11,6 +11,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Matches : Screen("matches", "Matches", Icons.Default.FavoriteBorder)
     object Messages : Screen("messages", "Messages", Icons.Default.Forum)
     object Profile : Screen("profile", "Profile", Icons.Default.Person)
+    object UserDetail : Screen("user/{userId}", "Profile", Icons.Default.Person) {
+        fun createRoute(userId: String) = "user/$userId"
+    }
     object Chat : Screen("chat/{matchId}", "Chat", Icons.Default.Chat) {
         fun createRoute(matchId: String) = "chat/$matchId"
     }
