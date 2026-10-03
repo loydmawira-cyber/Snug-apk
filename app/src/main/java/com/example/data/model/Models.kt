@@ -23,6 +23,9 @@ data class UserProfile(
     val isVip: Boolean = false,
     val dailyLikesUsed: Int = 0,
     val lastLikeReset: Timestamp? = null,
+    val minAge: Int = 18,
+    val maxAge: Int = 35,
+    val radiusKm: Int = 50,
     val createdAt: Timestamp? = null,
     val updatedAt: Timestamp? = null
 )
