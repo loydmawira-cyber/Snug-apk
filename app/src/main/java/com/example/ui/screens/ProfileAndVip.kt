@@ -702,12 +702,7 @@ fun PhotosPrivacySheet(
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
-            uri?.let {
-                val newPhoto = UserPhoto(url = it.toString(), isPublic = true)
-                profile?.let { p ->
-                    viewModel.updateUserProfile(p.copy(photos = p.photos + newPhoto))
-                }
-            }
+            uri?.let { viewModel.addPhoto(it) }
         }
     )
 
@@ -800,8 +795,8 @@ fun DiscoveryPreferencesSheet(
     viewModel: SnugViewModel,
     onDismiss: () -> Unit
 ) {
-    var distanceKm by remember { mutableFloatStateOf(50f) }
-    var ageRange by remember { mutableStateOf(18f..35f) }
+    var distanceKm by remember { mutableFloatStateOf((profile?.radiusKm ?: 50).toFloat()) }
+    var ageRange by remember { mutableStateOf((profile?.minAge ?: 18).toFloat()..(profile?.maxAge ?: 35).toFloat()) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -876,7 +871,18 @@ fun DiscoveryPreferencesSheet(
             Spacer(modifier = Modifier.height(28.dp))
 
             Button(
-                onClick = onDismiss,
+                onClick = {
+                    profile?.let {
+                        viewModel.updateUserProfile(
+                            it.copy(
+                                radiusKm = distanceKm.roundToInt(),
+                                minAge = ageRange.start.roundToInt(),
+                                maxAge = ageRange.endInclusive.roundToInt()
+                            )
+                        )
+                    }
+                    onDismiss()
+                },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = CircleShape
             ) {
