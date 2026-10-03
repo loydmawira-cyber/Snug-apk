@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -56,7 +57,10 @@ fun MatchesScreen(viewModel: SnugViewModel, navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(matches) { match ->
-                    MatchGridItem(match) {
+                    MatchGridItem(
+                        match = match,
+                        onChat = { navController.navigate(Screen.Chat.createRoute(match.id)) }
+                    ) {
                         match.otherUser?.id?.takeIf { it.isNotBlank() }?.let { navController.navigate(Screen.UserDetail.createRoute(it)) }
                             ?: navController.navigate(Screen.Chat.createRoute(match.id))
                     }
@@ -67,7 +71,7 @@ fun MatchesScreen(viewModel: SnugViewModel, navController: NavController) {
 }
 
 @Composable
-fun MatchGridItem(match: Match, onClick: () -> Unit) {
+fun MatchGridItem(match: Match, onChat: () -> Unit = {}, onClick: () -> Unit) {
     Card(
         modifier = Modifier.aspectRatio(1f).clickable { onClick() },
         shape = RoundedCornerShape(16.dp)
@@ -95,6 +99,12 @@ fun MatchGridItem(match: Match, onClick: () -> Unit) {
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.BottomStart).padding(12.dp)
             )
+            IconButton(
+                onClick = onChat,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)
+            ) {
+                Icon(Icons.Default.Chat, contentDescription = "Message", tint = Color.White)
+            }
         }
     }
 }
@@ -102,7 +112,8 @@ fun MatchGridItem(match: Match, onClick: () -> Unit) {
 @Composable
 fun MessagesScreen(viewModel: SnugViewModel, navController: NavController) {
     val matches by viewModel.matches.collectAsState()
-    val messagesOnly = matches.filter { it.lastMessage.isNotEmpty() }
+    // Show every match here so you can start a chat even before anyone has sent a message
+    val messagesOnly = matches
 
     Column(modifier = Modifier.fillMaxSize()) {
         Spacer(modifier = Modifier.height(16.dp))
@@ -116,7 +127,7 @@ fun MessagesScreen(viewModel: SnugViewModel, navController: NavController) {
         
         if (messagesOnly.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No conversations yet.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                Text("No matches yet. Like someone on Discover to start chatting!", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {

@@ -166,10 +166,18 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                     }
                 }
 
-                if (match != null) {
+                if (me?.id != userId) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { navController.navigate(Screen.Chat.createRoute(match.id)) },
+                        onClick = {
+                            if (match != null) {
+                                navController.navigate(Screen.Chat.createRoute(match.id))
+                            } else {
+                                viewModel.openChat(userId) { id ->
+                                    navController.navigate(Screen.Chat.createRoute(id))
+                                }
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         shape = CircleShape
                     ) {
