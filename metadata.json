@@ -1,0 +1,6 @@
+{
+  "name": "SNUG",
+  "description": "A romantic, playful, modern dating app for finding your perfect match.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

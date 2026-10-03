@@ -1,0 +1,46 @@
+{
+  "collections": {
+    "users": {
+      "description": "User profiles and settings",
+      "fields": {
+        "displayName": "string",
+        "bio": "string",
+        "birthDate": "timestamp",
+        "gender": "string",
+        "interestedIn": "array<string>",
+        "interests": "array<string>",
+        "photos": "array<string>",
+        "location": "geopoint",
+        "discoverySettings": {
+          "minAge": "number",
+          "maxAge": "number",
+          "radius": "number"
+        },
+        "isVip": "boolean",
+        "dailyLikesUsed": "number",
+        "lastLikeReset": "timestamp",
+        "createdAt": "timestamp",
+        "updatedAt": "timestamp"
+      }
+    },
+    "matches": {
+      "description": "Matches between users",
+      "fields": {
+        "userIds": "array<string>",
+        "createdAt": "timestamp",
+        "lastMessage": "string",
+        "lastMessageAt": "timestamp"
+      }
+    },
+    "chats": {
+      "description": "Messages within a match",
+      "fields": {
+        "matchId": "string",
+        "senderId": "string",
+        "text": "string",
+        "imageUrl": "string",
+        "createdAt": "timestamp"
+      }
+    }
+  }
+}

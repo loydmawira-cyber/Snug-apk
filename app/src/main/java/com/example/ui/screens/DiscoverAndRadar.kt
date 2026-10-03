@@ -1,0 +1,247 @@
+package com.example.ui.screens
+
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import coil.compose.AsyncImage
+import com.example.data.model.UserProfile
+import com.example.data.util.calculateAge
+import com.example.ui.viewmodel.SnugViewModel
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+
+@Composable
+fun DiscoverScreen(viewModel: SnugViewModel) {
+    val profile by viewModel.currentProfile.collectAsState()
+    val profiles by viewModel.discoveryProfiles.collectAsState()
+    
+    android.util.Log.d("DiscoverScreen", "Recomposing with profile: ${profile?.displayName}")
+    
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        val maxWidthPx = constraints.maxWidth
+        
+        if (profile == null) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
+                Text("No one new nearby. Try expanding your search!", textAlign = TextAlign.Center)
+            }
+        } else {
+            ProfileCard(
+                profile = profile!!,
+                onLike = { viewModel.likeProfile(profile!!.id) },
+                onPass = { viewModel.passProfile() },
+                swipeThreshold = maxWidthPx / 3f
+            )
+        }
+    }
+}
+
+@Composable
+fun ProfileCard(profile: UserProfile, onLike: () -> Unit, onPass: () -> Unit, swipeThreshold: Float) {
+    val coroutineScope = rememberCoroutineScope()
+    val offsetX = remember { Animatable(0f) }
+    val offsetY = remember { Animatable(0f) }
+    
+    // Key to reset animation when profile changes
+    LaunchedEffect(profile.id) {
+        offsetX.snapTo(0f)
+        offsetY.snapTo(0f)
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxSize()
+            .offset { IntOffset(offsetX.value.roundToInt(), offsetY.value.roundToInt()) }
+            .graphicsLayer {
+                rotationZ = offsetX.value / 20f
+            }
+            .pointerInput(profile.id) {
+                detectDragGestures(
+                    onDragEnd = {
+                        coroutineScope.launch {
+                            if (offsetX.value > swipeThreshold) {
+                                // Swipe Right - Like
+                                offsetX.animateTo(2000f, tween(300))
+                                onLike()
+                            } else if (offsetX.value < -swipeThreshold) {
+                                // Swipe Left - Pass
+                                offsetX.animateTo(-2000f, tween(300))
+                                onPass()
+                            } else {
+                                // Snap back
+                                launch { offsetX.animateTo(0f, tween(300)) }
+                                launch { offsetY.animateTo(0f, tween(300)) }
+                            }
+                        }
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        coroutineScope.launch {
+                            offsetX.snapTo(offsetX.value + dragAmount.x)
+                            offsetY.snapTo(offsetY.value + dragAmount.y)
+                        }
+                    }
+                )
+            },
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box {
+            AsyncImage(
+                model = if (profile.photos.isNotEmpty()) profile.photos.first() else "https://via.placeholder.com/400x600",
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)),
+                            startY = 300f
+                        )
+                    )
+            )
+            
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(24.dp)
+                    .zIndex(1f)
+            ) {
+                Text(
+                    text = "${profile.displayName}, ${calculateAge(profile.birthDate)}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = profile.bio,
+                    color = Color.White.copy(alpha = 0.8f),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    FilledTonalIconButton(
+                        onClick = onPass,
+                        modifier = Modifier.size(64.dp).testTag("pass_button"),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = Color.White.copy(alpha = 0.2f),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Pass", modifier = Modifier.size(32.dp))
+                    }
+                    
+                    FilledTonalIconButton(
+                        onClick = { /* Super like logic */ },
+                        modifier = Modifier.size(64.dp).testTag("super_like_button"),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = Color.White.copy(alpha = 0.2f),
+                            contentColor = Color.Cyan
+                        )
+                    ) {
+                        Icon(Icons.Default.Star, contentDescription = "Super Spark", modifier = Modifier.size(32.dp))
+                    }
+                    
+                    FilledIconButton(
+                        onClick = onLike,
+                        modifier = Modifier.size(64.dp).testTag("like_button"),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(Icons.Default.Favorite, contentDescription = "Like", modifier = Modifier.size(32.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RadarScreen(viewModel: SnugViewModel) {
+    val profiles by viewModel.discoveryProfiles.collectAsState()
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Nearby", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(profiles) { profile ->
+                RadarItem(profile)
+            }
+        }
+    }
+}
+
+@Composable
+fun RadarItem(profile: UserProfile) {
+    Card(
+        modifier = Modifier.height(200.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Box {
+            AsyncImage(
+                model = if (profile.photos.isNotEmpty()) profile.photos.first() else "https://via.placeholder.com/200",
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                            startY = 100f
+                        )
+                    )
+            )
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(8.dp)
+            ) {
+                Text(profile.displayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("1.2 km away", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
+            }
+        }
+    }
+}
