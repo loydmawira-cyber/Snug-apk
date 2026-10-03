@@ -50,3 +50,7 @@ data class ChatMessage(
     val imageUrl: String? = null,
     val createdAt: Timestamp? = null
 )
+
+/** Best picture to show for a user: their profile picture, else the first gallery photo. */
+fun UserProfile.avatarUrl(): String? =
+    profilePhoto.takeIf { it.isNotBlank() } ?: photos.firstOrNull()?.url
