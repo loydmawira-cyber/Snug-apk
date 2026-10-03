@@ -106,10 +106,11 @@ class MatchRepository(private val db: FirebaseFirestore) {
         val uid = auth.currentUser?.uid ?: return kotlinx.coroutines.flow.emptyFlow()
         return db.collection("matches")
             .whereArrayContains("userIds", uid)
-            .orderBy("lastMessageAt", Query.Direction.DESCENDING)
             .snapshots()
             .map { snapshot ->
-                snapshot.toObjects(Match::class.java)
+                snapshot.documents
+                    .mapNotNull { d -> d.toObject(Match::class.java)?.copy(id = d.id) }
+                    .sortedByDescending { it.lastMessageAt?.toDate()?.time ?: 0L }
             }
             .catch { e ->
                 if (e is Exception) handleFirestoreError(e, OperationType.LIST, "matches")
@@ -140,9 +141,12 @@ class ChatRepository(private val db: FirebaseFirestore) {
     fun observeMessages(matchId: String): Flow<List<ChatMessage>> {
         return db.collection("chats")
             .whereEqualTo("matchId", matchId)
-            .orderBy("createdAt", Query.Direction.ASCENDING)
             .snapshots()
-            .map { it.toObjects(ChatMessage::class.java) }
+            .map { snap ->
+                snap.documents
+                    .mapNotNull { d -> d.toObject(ChatMessage::class.java)?.copy(id = d.id) }
+                    .sortedBy { it.createdAt?.toDate()?.time ?: 0L }
+            }
             .catch { e ->
                 if (e is Exception) handleFirestoreError(e, OperationType.LIST, "chats")
                 emit(emptyList())
