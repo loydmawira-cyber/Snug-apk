@@ -92,11 +92,19 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadMatches() {
         viewModelScope.launch {
-            matchRepo.observeMatches().collect { matches ->
-                _matches.value = matches
+            matchRepo.observeMatches().collect { list ->
+                val me = currentUserId
+                _matches.value = list.map { m ->
+                    val otherId = m.userIds.firstOrNull { it != me }
+                    val other = otherId?.let { profileRepo.getProfile(it) }
+                    m.copy(otherUser = other)
+                }
             }
         }
     }
+
+    suspend fun loadUser(id: String): UserProfile? =
+        profileRepo.getProfile(id) ?: _discoveryProfiles.value.firstOrNull { it.id == id }
 
     fun clearMessage() {
         _uiMessage.value = null
