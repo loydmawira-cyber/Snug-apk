@@ -5,7 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.model.ChatMessage
 import com.example.data.model.Match
+import com.example.data.model.UserPhoto
 import com.example.data.model.UserProfile
+import com.example.data.util.calculateAge
 import com.example.data.repository.ChatRepository
 import com.example.data.repository.MatchRepository
 import com.example.data.repository.ProfileRepository
@@ -64,10 +66,18 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadDiscoveryProfiles() {
         viewModelScope.launch {
-            profileRepo.observeDiscoveryProfiles().collect {
-                android.util.Log.d("SnugViewModel", "Loaded ${it.size} profiles")
-                _discoveryProfiles.value = it
-            }
+            profileRepo.observeDiscoveryProfiles()
+                .combine(_currentUserProfile) { list, me ->
+                    if (me == null) list
+                    else list.filter { u ->
+                        val age = calculateAge(u.birthDate)
+                        age in me.minAge..me.maxAge
+                    }
+                }
+                .collect {
+                    android.util.Log.d("SnugViewModel", "Loaded ${it.size} profiles")
+                    _discoveryProfiles.value = it
+                }
         }
     }
 
@@ -116,9 +126,38 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateUserProfile(profile: UserProfile) {
         viewModelScope.launch {
-            profileRepo.updateProfile(profile)
-            _currentUserProfile.value = profile
-            _uiMessage.value = "Profile updated!"
+            val result = profileRepo.updateProfile(profile)
+            if (result.isSuccess) {
+                _currentUserProfile.value = profile
+                _uiMessage.value = "Profile updated!"
+            } else {
+                _uiMessage.value = "Save failed: ${result.exceptionOrNull()?.message}"
+            }
+        }
+    }
+
+    fun addPhoto(uri: android.net.Uri) {
+        viewModelScope.launch {
+            val me = _currentUserProfile.value ?: return@launch
+            if (me.photos.size >= 4) {
+                _uiMessage.value = "Maximum 4 photos"
+                return@launch
+            }
+            _uiMessage.value = "Saving photo..."
+            val upload = profileRepo.encodePhoto(getApplication(), uri)
+            if (upload.isFailure) {
+                _uiMessage.value = "Photo failed: ${upload.exceptionOrNull()?.message}"
+                return@launch
+            }
+            val latest = _currentUserProfile.value ?: me
+            val updated = latest.copy(photos = latest.photos + UserPhoto(url = upload.getOrThrow(), isPublic = true))
+            val saved = profileRepo.updateProfile(updated)
+            if (saved.isSuccess) {
+                _currentUserProfile.value = updated
+                _uiMessage.value = "Photo added!"
+            } else {
+                _uiMessage.value = "Photo save failed: ${saved.exceptionOrNull()?.message}"
+            }
         }
     }
 
