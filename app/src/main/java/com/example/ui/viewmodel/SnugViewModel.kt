@@ -1,5 +1,6 @@
 package com.example.ui.viewmodel
 
+import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,6 +9,10 @@ import com.example.data.model.Match
 import com.example.data.model.UserPhoto
 import com.example.data.model.UserProfile
 import com.example.data.util.calculateAge
+import com.example.data.util.distanceKm
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import kotlinx.coroutines.tasks.await
 import com.example.data.repository.ChatRepository
 import com.example.data.repository.MatchRepository
 import com.example.data.repository.ProfileRepository
@@ -71,7 +76,11 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                     if (me == null) list
                     else list.filter { u ->
                         val age = calculateAge(u.birthDate)
-                        age in me.minAge..me.maxAge
+                        val ageOk = age in me.minAge..me.maxAge
+                        val d = distanceTo(me, u)
+                        // If either person has no location yet we can't measure, so keep them
+                        val distOk = d == null || d <= me.radiusKm
+                        ageOk && distOk
                     }
                 }
                 .collect {
@@ -132,6 +141,45 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                 _uiMessage.value = "Profile updated!"
             } else {
                 _uiMessage.value = "Save failed: ${result.exceptionOrNull()?.message}"
+            }
+        }
+    }
+
+    /** Distance in km between the signed-in user and [other], or null if either has no location. */
+    fun distanceTo(me: UserProfile?, other: UserProfile): Double? {
+        if (me == null) return null
+        val lat1 = me.latitude ?: return null
+        val lon1 = me.longitude ?: return null
+        val lat2 = other.latitude ?: return null
+        val lon2 = other.longitude ?: return null
+        return distanceKm(lat1, lon1, lat2, lon2)
+    }
+
+    fun distanceTo(other: UserProfile): Double? = distanceTo(_currentUserProfile.value, other)
+
+    /** Call only after location permission is granted. */
+    @SuppressLint("MissingPermission")
+    fun refreshLocation() {
+        viewModelScope.launch {
+            try {
+                val client = LocationServices.getFusedLocationProviderClient(getApplication<Application>())
+                var loc = client.lastLocation.await()
+                if (loc == null) {
+                    loc = client.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null).await()
+                }
+                if (loc != null) {
+                    // Rounded to 2 decimals (~1 km) so exact position is never stored
+                    val lat = Math.round(loc.latitude * 100) / 100.0
+                    val lon = Math.round(loc.longitude * 100) / 100.0
+                    val me = _currentUserProfile.value ?: return@launch
+                    if (me.latitude == lat && me.longitude == lon) return@launch
+                    val updated = me.copy(latitude = lat, longitude = lon)
+                    if (profileRepo.updateProfile(updated).isSuccess) {
+                        _currentUserProfile.value = updated
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SnugViewModel", "Location failed", e)
             }
         }
     }
