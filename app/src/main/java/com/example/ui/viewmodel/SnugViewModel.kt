@@ -136,6 +136,26 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setProfilePicture(uri: android.net.Uri) {
+        viewModelScope.launch {
+            val me = _currentUserProfile.value ?: return@launch
+            _uiMessage.value = "Saving profile picture..."
+            val enc = profileRepo.encodePhoto(getApplication(), uri, 400)
+            if (enc.isFailure) {
+                _uiMessage.value = "Picture failed: ${enc.exceptionOrNull()?.message}"
+                return@launch
+            }
+            val updated = me.copy(profilePhoto = enc.getOrThrow())
+            val saved = profileRepo.updateProfile(updated)
+            if (saved.isSuccess) {
+                _currentUserProfile.value = updated
+                _uiMessage.value = "Profile picture updated!"
+            } else {
+                _uiMessage.value = "Picture save failed: ${saved.exceptionOrNull()?.message}"
+            }
+        }
+    }
+
     fun addPhoto(uri: android.net.Uri) {
         viewModelScope.launch {
             val me = _currentUserProfile.value ?: return@launch
