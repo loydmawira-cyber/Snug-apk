@@ -1,6 +1,11 @@
 package com.example
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -151,9 +156,26 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
         key = Firebase.auth.currentUser?.uid ?: "signed_out"
     )
     val snackbarHostState = remember { SnackbarHostState() }
+    val appContext = LocalContext.current
+    val locationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants -> if (grants.values.any { it }) viewModel.refreshLocation() }
     val uiMessage by viewModel.uiMessage.collectAsState()
     val myProfile by viewModel.currentUserProfile.collectAsState()
     val myAvatar = myProfile?.profilePhoto?.takeIf { it.isNotBlank() } ?: myProfile?.photos?.firstOrNull()?.url
+
+    val hasProfile = viewModel.currentUserProfile.collectAsState().value != null
+    LaunchedEffect(hasProfile) {
+        if (hasProfile) {
+            val granted = ContextCompat.checkSelfPermission(
+                appContext, Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+            if (granted) viewModel.refreshLocation()
+            else locationLauncher.launch(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+            )
+        }
+    }
 
     LaunchedEffect(uiMessage) {
         uiMessage?.let {
