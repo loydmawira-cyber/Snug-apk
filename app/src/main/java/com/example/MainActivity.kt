@@ -180,6 +180,23 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
     val myAvatar = myProfile?.profilePhoto?.takeIf { it.isNotBlank() } ?: myProfile?.photos?.firstOrNull()?.url
 
     val hasProfile = myProfile != null
+
+    // Online while the app is on screen, offline when it goes to the background
+    val activity = appContext as? androidx.activity.ComponentActivity
+    DisposableEffect(activity, viewModel) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_START -> viewModel.goOnline()
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> viewModel.goOffline()
+                else -> {}
+            }
+        }
+        activity?.lifecycle?.addObserver(observer)
+        onDispose {
+            activity?.lifecycle?.removeObserver(observer)
+            viewModel.stopPresence()
+        }
+    }
     LaunchedEffect(hasProfile) {
         if (hasProfile) {
             val granted = ContextCompat.checkSelfPermission(
