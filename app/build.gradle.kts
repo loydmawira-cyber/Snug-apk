@@ -12,6 +12,12 @@ android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
+  val releaseKeystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
+  val releaseStorePassword = System.getenv("STORE_PASSWORD")
+  val releaseKeyPassword = System.getenv("KEY_PASSWORD")
+  val canSignRelease = file(releaseKeystorePath).exists() &&
+    !releaseStorePassword.isNullOrBlank() && !releaseKeyPassword.isNullOrBlank()
+
   defaultConfig {
     applicationId = "com.aistudio.snug.rdxwzq"
     minSdk = 24
@@ -37,7 +43,9 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
+      // CI and local contributors can assemble an unsigned release artifact. Configure
+      // KEYSTORE_PATH, STORE_PASSWORD, and KEY_PASSWORD for a signed release build.
+      if (canSignRelease) signingConfig = signingConfigs.getByName("release")
     }
     // Debug builds use Android's automatic default debug key (no keystore file needed).
   }
