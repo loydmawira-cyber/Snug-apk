@@ -9,6 +9,11 @@ data class UserPhoto(
     val allowedUserIds: List<String> = emptyList()
 )
 
+data class ProfilePrompt(
+    val question: String = "",
+    val answer: String = ""
+)
+
 data class UserProfile(
     val id: String = "",
     val displayName: String = "",
@@ -43,6 +48,12 @@ data class UserProfile(
     val zodiac: String = "",
     val jobTitle: String = "",
     val heightCm: Int = 0,
+    val isPaused: Boolean = false,
+    val prompts: List<ProfilePrompt> = emptyList(),
+    val hideDistance: Boolean = false,
+    val onboarded: Boolean = false,
+    val superLikesUsed: Int = 0,
+    val lastSuperLikeDay: String = "",
     val createdAt: Timestamp? = null,
     val updatedAt: Timestamp? = null
 )
@@ -62,7 +73,9 @@ data class ChatMessage(
     val senderId: String = "",
     val text: String = "",
     val imageUrl: String? = null,
-    val createdAt: Timestamp? = null
+    val createdAt: Timestamp? = null,
+    val readAt: Timestamp? = null,
+    val reaction: String = ""
 )
 
 /** Best picture to show for a user: their profile picture, else the first gallery photo. */
@@ -87,7 +100,7 @@ fun UserProfile.locationLabel(): String =
 /** "City, Country - 12 km away", falling back gracefully when something is unknown. */
 fun placeAndDistance(profile: UserProfile, distanceText: String): String {
     val place = profile.locationLabel()
-    val dist = distanceText.takeIf { it != "Distance unknown" }
+    val dist = distanceText.takeIf { it != "Distance unknown" && !profile.hideDistance }
     return when {
         place.isNotBlank() && dist != null -> "$place \u2022 $dist"
         place.isNotBlank() -> place
@@ -97,6 +110,16 @@ fun placeAndDistance(profile: UserProfile, distanceText: String): String {
 }
 
 object ProfileOptions {
+    val promptQuestions = listOf(
+        "My ideal Sunday is...",
+        "I'm happiest when...",
+        "A green flag for me is...",
+        "The way to my heart is...",
+        "My most useless talent is...",
+        "We'll get along if...",
+        "Two truths and a lie...",
+        "Best trip I ever took..."
+    )
     val lookingFor = listOf("Long-term relationship", "Marriage", "Casual dating", "Short-term fun", "New friends", "Still figuring it out")
     val haveKids = listOf("Have kids", "No kids")
     val wantKids = listOf("Want kids", "Don't want kids", "Open to kids", "Not sure")
@@ -128,3 +151,60 @@ fun UserProfile.basics(): List<String> = listOf(
     pets,
     zodiac
 ).filter { it.isNotBlank() }
+
+/** In-memory Discover filters. Empty / false means "no filter". */
+data class DiscoverFilters(
+    val lookingFor: String = "",
+    val verifiedOnly: Boolean = false
+) {
+    val isActive: Boolean get() = lookingFor.isNotBlank() || verifiedOnly
+}
+
+object ReportReasons {
+    val all = listOf("Fake profile or spam", "Inappropriate photos", "Harassment or abuse", "Underage user", "Scam or asking for money", "Other")
+}
+
+/** Interests two people have in common. */
+fun UserProfile.sharedInterestsWith(other: UserProfile?): List<String> =
+    if (other == null) emptyList() else interests.filter { it in other.interests }
+
+const val SUPER_LIKES_PER_DAY = 3
+
+private fun todayKey(): String =
+    java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+
+fun UserProfile.superLikesLeft(): Int =
+    if (lastSuperLikeDay == todayKey()) (SUPER_LIKES_PER_DAY - superLikesUsed).coerceAtLeast(0) else SUPER_LIKES_PER_DAY
+
+fun UserProfile.afterSuperLike(): UserProfile =
+    copy(
+        superLikesUsed = if (lastSuperLikeDay == todayKey()) superLikesUsed + 1 else 1,
+        lastSuperLikeDay = todayKey()
+    )
+
+/** Profile completeness in percent plus a hint about what to add next (null when complete). */
+fun UserProfile.completeness(): Pair<Int, String?> {
+    val checks = listOf(
+        (profilePhoto.isNotBlank() || photos.isNotEmpty()) to "Add a profile photo",
+        (bio.trim().length >= 20) to "Write a bio of at least 20 characters",
+        (interests.size >= 3) to "Pick at least 3 interests",
+        lookingFor.isNotBlank() to "Say what you are looking for",
+        prompts.any { it.answer.isNotBlank() } to "Answer a profile prompt",
+        gender.isNotBlank() to "Add your gender",
+        (jobTitle.isNotBlank() || education.isNotBlank()) to "Add your job or education"
+    )
+    val done = checks.count { it.first }
+    val hint = checks.firstOrNull { !it.first }?.second
+    return (done * 100 / checks.size) to hint
+}
+
+/** Conversation starters built from what the two profiles have in common. */
+fun icebreakers(me: UserProfile?, other: UserProfile): List<String> {
+    val out = mutableListOf<String>()
+    other.sharedInterestsWith(me).firstOrNull()?.let { out += "I see we both like $it! What got you into it?" }
+    other.prompts.firstOrNull { it.answer.isNotBlank() }?.let { out += "Loved your answer to \"${it.question}\". Tell me more!" }
+    other.interests.firstOrNull()?.let { out += "What is your favorite thing about $it?" }
+    if (other.jobTitle.isNotBlank()) out += "How did you end up working as ${other.jobTitle}?"
+    if (out.isEmpty()) out += "Hey ${other.displayName.ifBlank { "there" }}! How is your week going?"
+    return out.take(3)
+}
