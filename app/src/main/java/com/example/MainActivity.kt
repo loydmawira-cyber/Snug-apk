@@ -323,12 +323,24 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Discover.route) {
-                com.example.ui.screens.DiscoverScreen(viewModel, onOpenProfile = { navController.navigate(Screen.UserDetail.createRoute(it)) })
+                com.example.ui.screens.DiscoverScreen(
+                    viewModel,
+                    onOpenProfile = { navController.navigate(Screen.UserDetail.createRoute(it)) },
+                    onOpenChat = { navController.navigate(Screen.Chat.createRoute(it)) },
+                    onSetupProfile = {
+                        navController.navigate(Screen.Profile.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
             }
             composable(Screen.Radar.route) {
                 com.example.ui.screens.RadarScreen(viewModel, onOpenProfile = { navController.navigate(Screen.UserDetail.createRoute(it)) })
             }
             composable(Screen.Matches.route) { com.example.ui.screens.MatchesScreen(viewModel, navController) }
+            composable(Screen.Likes.route) { com.example.ui.screens.LikesYouScreen(viewModel, navController) }
             composable(Screen.Messages.route) { com.example.ui.screens.MessagesScreen(viewModel, navController) }
             composable(Screen.Profile.route) { com.example.ui.screens.ProfileScreen(viewModel) }
             composable(Screen.Chat.route) { backStackEntry ->
