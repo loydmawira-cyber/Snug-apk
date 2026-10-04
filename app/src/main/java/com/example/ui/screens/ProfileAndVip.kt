@@ -53,7 +53,6 @@ enum class ProfileSubScreen {
     SECURITY_PIN_LOCK,
     VIP_MEMBERSHIP,
     HELP_SUPPORT,
-    DEMO_SEEDING,
     EDIT_PROFILE
 }
 
@@ -112,12 +111,6 @@ fun ProfileScreen(viewModel: SnugViewModel) {
         }
         ProfileSubScreen.HELP_SUPPORT -> {
             HelpAndSupportSheet(onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
-        }
-        ProfileSubScreen.DEMO_SEEDING -> {
-            DemoSeedingSheet(
-                viewModel = viewModel,
-                onDismiss = { activeSubScreen = ProfileSubScreen.NONE }
-            )
         }
         ProfileSubScreen.EDIT_PROFILE -> {
             if (profile != null) {
@@ -430,17 +423,6 @@ fun ProfileScreen(viewModel: SnugViewModel) {
                     onClick = { activeSubScreen = ProfileSubScreen.HELP_SUPPORT }
                 )
 
-                if (com.example.BuildConfig.DEBUG) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                    SettingsMenuRow(
-                        icon = Icons.Default.Science,
-                        iconTint = MaterialTheme.colorScheme.secondary,
-                        title = "Demo & Testing Tools",
-                        subtitle = "Seed sample discovery profiles",
-                        onClick = { activeSubScreen = ProfileSubScreen.DEMO_SEEDING }
-                    )
-                }
             }
         }
 
@@ -1275,67 +1257,6 @@ fun HelpCard(title: String, desc: String, icon: ImageVector) {
                 Text(title, fontWeight = FontWeight.Bold)
                 Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DemoSeedingSheet(
-    viewModel: SnugViewModel,
-    onDismiss: () -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.size(56.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(28.dp))
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text("Sample Discovery Matches", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                "Populate sample profiles (Jane, Peter, Bridget, Agnes) with avatars, bios, and verified badges into the database.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    viewModel.seedData()
-                    onDismiss()
-                },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = CircleShape
-            ) {
-                Icon(Icons.Default.CloudUpload, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Seed Sample Profiles Now")
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
