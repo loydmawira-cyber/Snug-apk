@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
@@ -189,11 +190,21 @@ fun ProfileCard(profile: UserProfile, distanceText: String, onOpenProfile: () ->
                         }
                     }
                 }
-                Text(
-                    text = distanceText,
-                    color = Color.White.copy(alpha = 0.7f),
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        tint = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = distanceText,
+                        color = Color.White.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 if (profile.lookingFor.isNotBlank()) {
                     Text(
                         text = "Looking for: ${profile.lookingFor}",
@@ -308,12 +319,22 @@ fun RadarItem(profile: UserProfile, distanceText: String, onClick: () -> Unit = 
                     .padding(8.dp)
             ) {
                 Text(profile.displayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text(
-                    distanceText,
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    maxLines = 2
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        tint = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        distanceText,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 10.sp,
+                        maxLines = 2,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }
