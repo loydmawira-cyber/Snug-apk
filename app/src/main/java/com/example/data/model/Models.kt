@@ -51,6 +51,16 @@ data class UserProfile(
     val isPaused: Boolean = false,
     val prompts: List<ProfilePrompt> = emptyList(),
     val hideDistance: Boolean = false,
+    val showNameToOthers: Boolean = true,
+    val showAgeToOthers: Boolean = true,
+    val showLocationToOthers: Boolean = true,
+    val showPhotosToOthers: Boolean = true,
+    val showBioToOthers: Boolean = true,
+    val showInterestsToOthers: Boolean = true,
+    val showPromptsToOthers: Boolean = true,
+    val showAboutMeToOthers: Boolean = true,
+    val showPresenceToOthers: Boolean = true,
+    val showVerifiedBadgeToOthers: Boolean = true,
     val onboarded: Boolean = false,
     val online: Boolean = false,
     val lastActive: Timestamp? = null,
@@ -98,6 +108,51 @@ data class AppNotification(
 
 fun UserProfile.locationLabel(): String =
     listOf(city, country).filter { it.isNotBlank() }.joinToString(", ")
+
+/** Removes fields the profile owner chose not to show in public app screens. */
+fun UserProfile.publicViewForOthers(): UserProfile {
+    val showLocation = showLocationToOthers
+    val showAboutMe = showAboutMeToOthers
+    return copy(
+        displayName = if (showNameToOthers) displayName else "SNUG member",
+        birthDate = birthDate.takeIf { showAgeToOthers },
+        bio = if (showBioToOthers) bio else "",
+        gender = if (showAboutMe) gender else "",
+        interestedIn = emptyList(),
+        interests = if (showInterestsToOthers) interests else emptyList(),
+        profilePhoto = if (showPhotosToOthers) profilePhoto else "",
+        photos = if (showPhotosToOthers) photos.filter { it.isPublic } else emptyList(),
+        phoneNumber = "",
+        minAge = 18,
+        maxAge = 99,
+        radiusKm = 20_000,
+        latitude = latitude.takeIf { showLocation },
+        longitude = longitude.takeIf { showLocation },
+        city = if (showLocation) city else "",
+        country = if (showLocation) country else "",
+        lookingFor = if (showAboutMe) lookingFor else "",
+        haveKids = if (showAboutMe) haveKids else "",
+        wantKids = if (showAboutMe) wantKids else "",
+        smoking = if (showAboutMe) smoking else "",
+        drinking = if (showAboutMe) drinking else "",
+        exercise = if (showAboutMe) exercise else "",
+        religion = if (showAboutMe) religion else "",
+        education = if (showAboutMe) education else "",
+        pets = if (showAboutMe) pets else "",
+        zodiac = if (showAboutMe) zodiac else "",
+        jobTitle = if (showAboutMe) jobTitle else "",
+        heightCm = if (showAboutMe) heightCm else 0,
+        prompts = if (showPromptsToOthers) prompts else emptyList(),
+        hideDistance = hideDistance || !showLocation,
+        online = showPresenceToOthers && online,
+        lastActive = lastActive.takeIf { showPresenceToOthers },
+        isVip = false,
+        dailyLikesUsed = 0,
+        lastLikeReset = null,
+        superLikesUsed = 0,
+        lastSuperLikeDay = ""
+    )
+}
 
 /** "City, Country - 12 km away", falling back gracefully when something is unknown. */
 fun placeAndDistance(profile: UserProfile, distanceText: String): String {
