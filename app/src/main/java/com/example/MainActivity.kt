@@ -55,9 +55,10 @@ class MainActivity : ComponentActivity() {
             val preferences = remember {
                 context.getSharedPreferences("snug_preferences", MODE_PRIVATE)
             }
+            val systemDark = isSystemInDarkTheme()
             var darkTheme by remember {
                 mutableStateOf(
-                    preferences.getBoolean("dark_theme", isSystemInDarkTheme())
+                    preferences.getBoolean("dark_theme", systemDark)
                 )
             }
             
