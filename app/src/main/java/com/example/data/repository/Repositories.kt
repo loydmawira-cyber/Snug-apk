@@ -53,7 +53,7 @@ class ProfileRepository(private val db: FirebaseFirestore) {
         if (!snapshot.exists()) return null
         val base = snapshot.toUserProfile()?.copy(id = userId)
             ?: throw IllegalStateException("Profile document exists but could not be decoded")
-        if (userId == auth.currentUser?.uid) {
+        return if (userId == auth.currentUser?.uid) {
             // A failed private-contact read must not silently replace a saved phone number with blank.
             val phone = db.collection("users").document(userId).collection("private").document("contact")
                 .get().await().getString("phoneNumber")
