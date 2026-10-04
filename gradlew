@@ -35,7 +35,7 @@
 #       requires all of these POSIX shell features:
 #         * functions;
 #         * expansions «$var», «${var}», «${var:-default}», «${var+SET}»,
-#           «${var#prefix}», «${var%suffix}», and «$( cmd )»;
+#           «${var#prefix}», and «${var%suffix}»;
 #         * compound commands having a testable exit status, especially «case»;
 #         * various built-in commands including «command», «set», and «ulimit».
 #
@@ -46,7 +46,7 @@
 #
 #       The "traditional" practice of packing multiple parameters into a
 #       space-separated string is a well documented source of bugs and security
-#       problems, so this is (mostly) avoided, by progressively accumulating
+#       problems, so this (mostly) avoided, by progressively accumulating
 #       options in "$@", and eventually passing that to Java.
 #
 #       Where the inherited environment variables (DEFAULT_JVM_OPTS, JAVA_OPTS,
@@ -174,7 +174,7 @@ if "$cygwin" || "$msys" ; then
 
     JAVACMD=$( cygpath --unix "$JAVACMD" )
 
-    # Now convert the arguments - kludge to limit ourselves to /bin/sh
+    # Now convert the arguments to Windows format
     for arg do
         if
             case $arg in                                #(
@@ -230,9 +230,9 @@ fi
 #
 # but POSIX shell has neither arrays nor command substitution, so instead we
 # post-process each arg (as a line of input to sed) to backslash-escape any
-# character that might be a shell metacharacter, then use eval to reverse
-# that process (while maintaining the separation between arguments), and wrap
-# the whole thing up as a single "set" statement.
+# character that might be a shell metacharacter, then use eval to reverse that
+# process (while maintaining the separation between arguments), and wrap the
+# whole thing up as a single "set" statement.
 #
 # This will of course break if any of these variables contains a newline or
 # an unmatched quote.
