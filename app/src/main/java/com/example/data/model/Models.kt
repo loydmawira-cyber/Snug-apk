@@ -52,6 +52,8 @@ data class UserProfile(
     val prompts: List<ProfilePrompt> = emptyList(),
     val hideDistance: Boolean = false,
     val onboarded: Boolean = false,
+    val online: Boolean = false,
+    val lastActive: Timestamp? = null,
     val superLikesUsed: Int = 0,
     val lastSuperLikeDay: String = "",
     val createdAt: Timestamp? = null,
@@ -207,4 +209,23 @@ fun icebreakers(me: UserProfile?, other: UserProfile): List<String> {
     if (other.jobTitle.isNotBlank()) out += "How did you end up working as ${other.jobTitle}?"
     if (out.isEmpty()) out += "Hey ${other.displayName.ifBlank { "there" }}! How is your week going?"
     return out.take(3)
+}
+
+private const val ONLINE_WINDOW_MS = 5 * 60 * 1000L
+
+/** Online = the app said so AND it checked in within the last 5 minutes (covers crashes/lost signal). */
+fun UserProfile.isOnlineNow(now: Long = System.currentTimeMillis()): Boolean {
+    val t = lastActive?.toDate()?.time ?: return false
+    return online && now - t < ONLINE_WINDOW_MS
+}
+
+fun UserProfile.lastSeenText(now: Long = System.currentTimeMillis()): String {
+    val t = lastActive?.toDate()?.time ?: return "Offline"
+    val min = (now - t) / 60000
+    return when {
+        min < 1 -> "Last seen just now"
+        min < 60 -> "Last seen ${min}m ago"
+        min < 60 * 24 -> "Last seen ${min / 60}h ago"
+        else -> "Last seen ${min / (60 * 24)}d ago"
+    }
 }
