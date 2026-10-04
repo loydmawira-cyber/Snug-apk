@@ -51,12 +51,23 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            var darkTheme by remember { mutableStateOf(false) }
+            val context = LocalContext.current
+            val preferences = remember {
+                context.getSharedPreferences("snug_preferences", MODE_PRIVATE)
+            }
+            var darkTheme by remember {
+                mutableStateOf(
+                    preferences.getBoolean("dark_theme", isSystemInDarkTheme())
+                )
+            }
             
             SNUGTheme(darkTheme = darkTheme) {
                 AppContent(
                     isDarkTheme = darkTheme,
-                    onToggleTheme = { darkTheme = !darkTheme }
+                    onToggleTheme = {
+                        darkTheme = !darkTheme
+                        preferences.edit().putBoolean("dark_theme", darkTheme).apply()
+                    }
                 )
             }
         }
@@ -167,7 +178,7 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
     var showNotifications by remember { mutableStateOf(false) }
     val myAvatar = myProfile?.profilePhoto?.takeIf { it.isNotBlank() } ?: myProfile?.photos?.firstOrNull()?.url
 
-    val hasProfile = viewModel.currentUserProfile.collectAsState().value != null
+    val hasProfile = myProfile != null
     LaunchedEffect(hasProfile) {
         if (hasProfile) {
             val granted = ContextCompat.checkSelfPermission(
