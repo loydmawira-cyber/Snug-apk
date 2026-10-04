@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.SnugImage
 import com.example.data.model.UserPhoto
+import com.example.data.model.ProfileOptions
 import com.example.data.model.UserProfile
 import com.example.data.security.PinManager
 import com.example.data.util.calculateAge
@@ -222,6 +223,15 @@ fun ProfileScreen(viewModel: SnugViewModel) {
                             modifier = Modifier.size(20.dp)
                         )
                     }
+                }
+
+                val myPlace = profile?.let { listOf(it.city, it.country).filter { s -> s.isNotBlank() }.joinToString(", ") } ?: ""
+                if (myPlace.isNotBlank()) {
+                    Text(
+                        text = myPlace,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 if (!profile?.bio.isNullOrBlank()) {
@@ -1311,6 +1321,34 @@ fun LogoutConfirmDialog(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChoiceSection(
+    title: String,
+    options: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    Spacer(modifier = Modifier.height(8.dp))
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        options.forEach { option ->
+            FilterChip(
+                selected = selected == option,
+                // tap again to clear
+                onClick = { onSelect(if (selected == option) "" else option) },
+                label = { Text(option) }
+            )
+        }
+    }
+}
+
+@Composable
 fun EditProfileDialog(
     profile: UserProfile,
     onChangePicture: () -> Unit = {},
@@ -1324,8 +1362,20 @@ fun EditProfileDialog(
     val interests = remember { mutableStateListOf(*profile.interests.toTypedArray()) }
     var birthYear by remember { mutableStateOf((profile.birthDate?.toDate()?.year?.plus(1900) ?: 2000).toString()) }
     var phoneNumber by remember { mutableStateOf(profile.phoneNumber) }
-    
-    val allInterests = listOf("Music", "Travel", "Art", "Hiking", "Fitness", "Reading", "Gaming", "Cooking", "Photography", "Movies", "Yoga", "Pets")
+    var lookingFor by remember { mutableStateOf(profile.lookingFor) }
+    var haveKids by remember { mutableStateOf(profile.haveKids) }
+    var wantKids by remember { mutableStateOf(profile.wantKids) }
+    var smoking by remember { mutableStateOf(profile.smoking) }
+    var drinking by remember { mutableStateOf(profile.drinking) }
+    var exercise by remember { mutableStateOf(profile.exercise) }
+    var religion by remember { mutableStateOf(profile.religion) }
+    var education by remember { mutableStateOf(profile.education) }
+    var pets by remember { mutableStateOf(profile.pets) }
+    var zodiac by remember { mutableStateOf(profile.zodiac) }
+    var jobTitle by remember { mutableStateOf(profile.jobTitle) }
+    var heightText by remember { mutableStateOf(if (profile.heightCm > 0) profile.heightCm.toString() else "") }
+
+    val allInterests = ProfileOptions.interests
     val genders = listOf("Male", "Female", "Non-binary")
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
@@ -1469,6 +1519,42 @@ fun EditProfileDialog(
                     }
                 }
                 
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("More about me", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+                ChoiceSection("I'm looking for", ProfileOptions.lookingFor, lookingFor) { lookingFor = it }
+                ChoiceSection("Kids", ProfileOptions.haveKids, haveKids) { haveKids = it }
+                ChoiceSection("Future plans for kids", ProfileOptions.wantKids, wantKids) { wantKids = it }
+                ChoiceSection("Smoking", ProfileOptions.smoking, smoking) { smoking = it }
+                ChoiceSection("Drinking", ProfileOptions.drinking, drinking) { drinking = it }
+                ChoiceSection("Exercise", ProfileOptions.exercise, exercise) { exercise = it }
+                ChoiceSection("Religion", ProfileOptions.religion, religion) { religion = it }
+                ChoiceSection("Education", ProfileOptions.education, education) { education = it }
+                ChoiceSection("Pets", ProfileOptions.pets, pets) { pets = it }
+                ChoiceSection("Zodiac sign", ProfileOptions.zodiac, zodiac) { zodiac = it }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = jobTitle,
+                    onValueChange = { if (it.length <= 40) jobTitle = it },
+                    label = { Text("Job title") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                OutlinedTextField(
+                    value = heightText,
+                    onValueChange = { if (it.length <= 3 && it.all { c -> c.isDigit() }) heightText = it },
+                    label = { Text("Height (cm)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
                 Spacer(modifier = Modifier.height(28.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text("Cancel") }
@@ -1489,7 +1575,19 @@ fun EditProfileDialog(
                                 isPhoneVerified = if (phoneNumber == profile.phoneNumber) profile.isPhoneVerified else false,
                                 birthDate = com.google.firebase.Timestamp(calendar.time),
                                 interestedIn = interestedIn.toList(),
-                                interests = interests.toList()
+                                interests = interests.toList(),
+                                lookingFor = lookingFor,
+                                haveKids = haveKids,
+                                wantKids = wantKids,
+                                smoking = smoking,
+                                drinking = drinking,
+                                exercise = exercise,
+                                religion = religion,
+                                education = education,
+                                pets = pets,
+                                zodiac = zodiac,
+                                jobTitle = jobTitle.trim(),
+                                heightCm = heightText.toIntOrNull()?.takeIf { it in 100..250 } ?: 0
                             )) 
                         },
                         shape = CircleShape

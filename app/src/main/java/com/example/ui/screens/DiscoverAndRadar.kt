@@ -41,6 +41,8 @@ import androidx.compose.ui.zIndex
 import com.example.ui.components.SnugImage
 import com.example.data.model.UserProfile
 import com.example.data.model.avatarUrl
+import com.example.data.model.basics
+import com.example.data.model.placeAndDistance
 import com.example.data.util.calculateAge
 import com.example.data.util.formatDistance
 import com.example.ui.viewmodel.SnugViewModel
@@ -65,7 +67,7 @@ fun DiscoverScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {
         } else {
             ProfileCard(
                 profile = profile!!,
-                distanceText = formatDistance(viewModel.distanceTo(me, profile!!)),
+                distanceText = placeAndDistance(profile!!, formatDistance(viewModel.distanceTo(me, profile!!))),
                 onOpenProfile = { onOpenProfile(profile!!.id) },
                 onLike = { viewModel.likeProfile(profile!!.id) },
                 onPass = { viewModel.passProfile() },
@@ -193,6 +195,22 @@ fun ProfileCard(profile: UserProfile, distanceText: String, onOpenProfile: () ->
                     color = Color.White.copy(alpha = 0.7f),
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (profile.lookingFor.isNotBlank()) {
+                    Text(
+                        text = "Looking for: ${profile.lookingFor}",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                val quickFacts = profile.basics().take(3).joinToString(" \u2022 ")
+                if (quickFacts.isNotBlank()) {
+                    Text(
+                        text = quickFacts,
+                        color = Color.White.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
                 Text(
                     text = profile.bio,
                     color = Color.White.copy(alpha = 0.8f),
@@ -240,7 +258,7 @@ fun ProfileCard(profile: UserProfile, distanceText: String, onOpenProfile: () ->
 
 @Composable
 fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) {
-    val profiles by viewModel.discoveryProfiles.collectAsState()
+    val profiles by viewModel.nearbyProfiles.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -252,7 +270,7 @@ fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) 
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(profiles) { profile ->
-                RadarItem(profile, formatDistance(viewModel.distanceTo(me, profile))) { onOpenProfile(profile.id) }
+                RadarItem(profile, placeAndDistance(profile, formatDistance(viewModel.distanceTo(me, profile)))) { onOpenProfile(profile.id) }
             }
         }
     }
@@ -291,7 +309,12 @@ fun RadarItem(profile: UserProfile, distanceText: String, onClick: () -> Unit = 
                     .padding(8.dp)
             ) {
                 Text(profile.displayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text(distanceText, color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
+                Text(
+                    distanceText,
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 10.sp,
+                    maxLines = 2
+                )
             }
         }
     }

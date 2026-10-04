@@ -22,6 +22,8 @@ import androidx.navigation.NavController
 import com.example.ui.components.SnugImage
 import com.example.data.model.UserProfile
 import com.example.data.model.avatarUrl
+import com.example.data.model.basics
+import com.example.data.model.placeAndDistance
 import com.example.data.util.calculateAge
 import com.example.data.util.formatDistance
 import com.example.ui.Screen
@@ -106,7 +108,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 }
 
                 Text(
-                    formatDistance(viewModel.distanceTo(me, u)),
+                    placeAndDistance(u, formatDistance(viewModel.distanceTo(me, u))),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -122,6 +124,40 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 if (u.bio.isNotBlank()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(u.bio, style = MaterialTheme.typography.bodyLarge)
+                }
+
+                if (u.lookingFor.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            "Looking for: ${u.lookingFor}",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                val basics = u.basics()
+                if (basics.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        "About",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        basics.forEach { AssistChip(onClick = {}, label = { Text(it) }) }
+                    }
                 }
 
                 if (u.interests.isNotEmpty()) {
