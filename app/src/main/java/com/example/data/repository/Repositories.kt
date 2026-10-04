@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import com.example.R
+import com.example.data.model.AppNotification
 import com.example.data.model.ChatMessage
 import com.example.data.model.Match
 import com.example.data.model.UserProfile
@@ -190,6 +191,123 @@ class ChatRepository(private val db: FirebaseFirestore) {
             ).await()
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.WRITE, "chats/matches")
+        }
+
+        // Tell the other person they have a new message
+        try {
+            val snap = db.collection("matches").document(matchId).get().await()
+            val other = (snap.get("userIds") as? List<*>)?.firstOrNull { it != uid } as? String
+            if (other != null) {
+                val myName = db.collection("users").document(uid).get().await()
+                    .getString("displayName") ?: "Someone"
+                writeNotification(db, other, "message", "$myName: ${text.take(80)}", matchId, myName)
+            }
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.WRITE, "notifications")
+        }
+    }
+}
+
+/** Saves a notification for [toUserId]. Shown by the bell icon in their app. */
+suspend fun writeNotification(
+    db: FirebaseFirestore,
+    toUserId: String,
+    type: String,
+    text: String,
+    matchId: String,
+    fromName: String
+) {
+    val uid = Firebase.auth.currentUser?.uid ?: return
+    db.collection("notifications").add(
+        mapOf(
+            "toUserId" to toUserId,
+            "fromUserId" to uid,
+            "fromName" to fromName,
+            "type" to type,
+            "text" to text,
+            "matchId" to matchId,
+            "read" to false,
+            "createdAt" to FieldValue.serverTimestamp()
+        )
+    ).await()
+}
+
+class SocialRepository(private val db: FirebaseFirestore) {
+    constructor(context: Context) : this(
+        FirebaseFirestore.getInstance(context.getString(R.string.firestore_database_id))
+    )
+
+    private val auth = Firebase.auth
+
+    /** Ids of everyone I have already liked or passed. */
+    fun observeMySwipes(): Flow<Set<String>> {
+        val uid = auth.currentUser?.uid ?: return kotlinx.coroutines.flow.emptyFlow()
+        return db.collection("swipes")
+            .whereEqualTo("fromUserId", uid)
+            .snapshots()
+            .map { snap -> snap.documents.mapNotNull { it.getString("toUserId") }.toSet() }
+            .catch { e ->
+                if (e is Exception) handleFirestoreError(e, OperationType.LIST, "swipes")
+                emit(emptySet())
+            }
+    }
+
+    /** Saves a like/pass. Returns true if it created a match (they had already liked me). */
+    suspend fun swipe(toUserId: String, like: Boolean, myName: String): Result<Boolean> {
+        val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Not signed in"))
+        return try {
+            db.collection("swipes").document("${uid}_$toUserId").set(
+                mapOf(
+                    "fromUserId" to uid,
+                    "toUserId" to toUserId,
+                    "action" to if (like) "like" else "pass",
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
+            if (!like) {
+                Result.success(false)
+            } else {
+                val reverse = db.collection("swipes").document("${toUserId}_$uid").get().await()
+                val mutual = reverse.exists() && reverse.getString("action") == "like"
+                if (mutual) {
+                    val matchId = MatchRepository(db).findOrCreateMatch(toUserId) ?: ""
+                    writeNotification(db, toUserId, "match", "You and $myName matched! \uD83C\uDF89", matchId, myName)
+                } else {
+                    writeNotification(db, toUserId, "like", "$myName liked you \u2764\uFE0F", "", myName)
+                }
+                Result.success(mutual)
+            }
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.WRITE, "swipes")
+            Result.failure(e)
+        }
+    }
+
+    fun observeNotifications(): Flow<List<AppNotification>> {
+        val uid = auth.currentUser?.uid ?: return kotlinx.coroutines.flow.emptyFlow()
+        return db.collection("notifications")
+            .whereEqualTo("toUserId", uid)
+            .snapshots()
+            .map { snap ->
+                snap.documents
+                    .mapNotNull { d -> d.toObject(AppNotification::class.java)?.copy(id = d.id) }
+                    .sortedByDescending { it.createdAt?.toDate()?.time ?: Long.MAX_VALUE }
+                    .take(50)
+            }
+            .catch { e ->
+                if (e is Exception) handleFirestoreError(e, OperationType.LIST, "notifications")
+                emit(emptyList())
+            }
+    }
+
+    suspend fun markRead(ids: List<String>) {
+        if (ids.isEmpty()) return
+        try {
+            val batch = db.batch()
+            ids.forEach { batch.update(db.collection("notifications").document(it), "read", true) }
+            batch.commit().await()
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, "notifications")
         }
     }
 }
