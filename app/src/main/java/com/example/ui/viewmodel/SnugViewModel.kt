@@ -272,7 +272,8 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val me = _currentUserProfile.value ?: return@launch
             _uiMessage.value = "Saving profile picture..."
-            val enc = profileRepo.encodePhoto(getApplication(), uri, 400)
+            // Keep the avatar sharp on modern phones while remaining small enough for Firestore.
+            val enc = profileRepo.encodePhoto(getApplication(), uri, 1000)
             if (enc.isFailure) {
                 _uiMessage.value = "Picture failed: ${enc.exceptionOrNull()?.message}"
                 return@launch
@@ -296,7 +297,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             _uiMessage.value = "Saving photo..."
-            val upload = profileRepo.encodePhoto(getApplication(), uri)
+            val upload = profileRepo.encodePhoto(getApplication(), uri, 1000)
             if (upload.isFailure) {
                 _uiMessage.value = "Photo failed: ${upload.exceptionOrNull()?.message}"
                 return@launch
