@@ -244,9 +244,10 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                     loc = client.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null).await()
                 }
                 if (loc != null) {
-                    // Rounded to 2 decimals (~1 km) so exact position is never stored
-                    val lat = Math.round(loc.latitude * 100) / 100.0
-                    val lon = Math.round(loc.longitude * 100) / 100.0
+                    // Rounded to 3 decimals (~100 m) so distances are useful without storing
+                    // an exact device position.
+                    val lat = Math.round(loc.latitude * 1000) / 1000.0
+                    val lon = Math.round(loc.longitude * 1000) / 1000.0
                     val me = _currentUserProfile.value ?: return@launch
                     if (me.latitude == lat && me.longitude == lon && me.city.isNotBlank()) return@launch
                     val (city, country) = withContext(Dispatchers.IO) {
