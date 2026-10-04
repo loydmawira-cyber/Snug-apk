@@ -162,6 +162,9 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
     ) { grants -> if (grants.values.any { it }) viewModel.refreshLocation() }
     val uiMessage by viewModel.uiMessage.collectAsState()
     val myProfile by viewModel.currentUserProfile.collectAsState()
+    val notifications by viewModel.notifications.collectAsState()
+    val unreadCount = notifications.count { !it.read }
+    var showNotifications by remember { mutableStateOf(false) }
     val myAvatar = myProfile?.profilePhoto?.takeIf { it.isNotBlank() } ?: myProfile?.photos?.firstOrNull()?.url
 
     val hasProfile = viewModel.currentUserProfile.collectAsState().value != null
@@ -192,6 +195,26 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
         Screen.Profile
     )
 
+    if (showNotifications) {
+        com.example.ui.screens.NotificationsSheet(
+            notifications = notifications,
+            onOpen = { n ->
+                showNotifications = false
+                viewModel.markNotificationsRead()
+                when {
+                    (n.type == "match" || n.type == "message") && n.matchId.isNotBlank() ->
+                        navController.navigate(Screen.Chat.createRoute(n.matchId))
+                    n.fromUserId.isNotBlank() ->
+                        navController.navigate(Screen.UserDetail.createRoute(n.fromUserId))
+                }
+            },
+            onDismiss = {
+                showNotifications = false
+                viewModel.markNotificationsRead()
+            }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -217,8 +240,16 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
                         }
                     },
                     actions = {
-                        IconButton(onClick = { viewModel.clearMessage() }) { // Placeholder for notifications
-                            Icon(Icons.Default.Notifications, contentDescription = "Notifications")
+                        IconButton(onClick = { showNotifications = true }) {
+                            BadgedBox(
+                                badge = {
+                                    if (unreadCount > 0) {
+                                        Badge { Text(if (unreadCount > 9) "9+" else unreadCount.toString()) }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Notifications, contentDescription = "Notifications")
+                            }
                         }
                         IconButton(onClick = onToggleTheme) {
                             Icon(
