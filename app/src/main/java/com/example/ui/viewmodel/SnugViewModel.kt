@@ -24,7 +24,6 @@ import kotlinx.coroutines.tasks.await
 import com.example.data.repository.ChatRepository
 import com.example.data.repository.MatchRepository
 import com.example.data.repository.ProfileRepository
-import com.example.data.repository.SeedRepository
 import com.example.data.repository.SafetyRepository
 import com.example.data.repository.SocialRepository
 import kotlinx.coroutines.Job
@@ -36,7 +35,6 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     private val profileRepo = ProfileRepository(application)
     private val matchRepo = MatchRepository(application)
     private val chatRepo = ChatRepository(application)
-    private val seedRepo = SeedRepository(application)
     private val socialRepo = SocialRepository(application)
     private val safetyRepo = SafetyRepository(application)
 
@@ -591,16 +589,4 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun seedData() {
-        viewModelScope.launch {
-            _uiMessage.value = "Seeding sample data..."
-            val result = seedRepo.seedData()
-            if (result.isSuccess) {
-                _uiMessage.value = "Sample data seeded successfully!"
-                loadDiscoveryProfiles()
-            } else {
-                _uiMessage.value = "Failed to seed data: ${result.exceptionOrNull()?.message}"
-            }
-        }
-    }
 }
