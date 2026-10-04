@@ -7,6 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.data.model.isOnlineNow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -49,6 +53,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.example.ui.components.PresenceBadge
 import com.example.ui.components.SnugImage
 import com.example.data.model.UserProfile
 import com.example.data.model.avatarUrl
@@ -73,6 +78,8 @@ fun DiscoverScreen(
     val me by viewModel.currentUserProfile.collectAsState()
     val filters by viewModel.filters.collectAsState()
     val canUndo by viewModel.canUndo.collectAsState()
+    val likedIds by viewModel.likedIds.collectAsState()
+    var swipeKey by remember { mutableStateOf(0) }
     var showFilters by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
     LaunchedEffect(profiles.size) {
@@ -168,23 +175,35 @@ fun DiscoverScreen(
                 }
             }
         } else {
+            key(profile!!.id, swipeKey) {
             ProfileCard(
                 profile = profile!!,
+                liked = profile!!.id in likedIds,
                 distanceText = placeAndDistance(profile!!, formatDistance(viewModel.distanceTo(me, profile!!))),
                 onOpenProfile = { onOpenProfile(profile!!.id) },
                 onLike = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    swipeKey++
                     viewModel.likeProfile(profile!!.id)
                 },
                 onSuperLike = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    swipeKey++
                     viewModel.likeProfile(profile!!.id, superLike = true)
+                },
+                onNudge = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    viewModel.nudge(profile!!.id)
                 },
                 superLikesLeft = me?.superLikesLeft() ?: 0,
                 autoAdvance = true,
-                onPass = { viewModel.passProfile() },
+                onPass = {
+                    swipeKey++
+                    viewModel.passProfile()
+                },
                 swipeThreshold = maxWidthPx / 3f
             )
+            }
         }
 
         if (me?.isPaused != true) {
@@ -202,9 +221,6 @@ fun DiscoverScreen(
                 FilledTonalIconButton(onClick = { viewModel.undoPass() }, enabled = canUndo) {
                     Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo last pass")
                 }
-                FilledTonalIconButton(onClick = { viewModel.setPaused(true) }) {
-                    Icon(Icons.Default.Bedtime, contentDescription = "Pause my profile")
-                }
             }
         }
     }
@@ -219,8 +235,10 @@ fun ProfileCard(
     onPass: () -> Unit,
     swipeThreshold: Float,
     onSuperLike: () -> Unit = {},
+    onNudge: () -> Unit = {},
     superLikesLeft: Int = 0,
-    autoAdvance: Boolean = false
+    autoAdvance: Boolean = false,
+    liked: Boolean = false
 ) {
     val coroutineScope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
@@ -304,6 +322,23 @@ fun ProfileCard(
             ) {
                 Icon(Icons.Default.Info, contentDescription = "View profile", tint = Color.White)
             }
+            if (liked) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp)
+                        .zIndex(2f)
+                ) {
+                    Text(
+                        "Liked \u2764",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
+            }
             
             Box(
                 modifier = Modifier
@@ -347,6 +382,8 @@ fun ProfileCard(
                         }
                     }
                 }
+                PresenceBadge(profile, Color.White.copy(alpha = 0.9f))
+                Spacer(modifier = Modifier.height(2.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
@@ -387,48 +424,59 @@ fun ProfileCard(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     FilledTonalIconButton(
                         onClick = onPass,
-                        modifier = Modifier.size(64.dp).testTag("pass_button"),
+                        modifier = Modifier.size(50.dp).testTag("pass_button"),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = Color.White.copy(alpha = 0.2f),
                             contentColor = Color.White
                         )
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Pass", modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.Close, contentDescription = "Pass", modifier = Modifier.size(26.dp))
                     }
                     
                     OutlinedIconButton(
                         onClick = onOpenProfile,
-                        modifier = Modifier.size(64.dp).testTag("view_profile_button"),
+                        modifier = Modifier.size(50.dp).testTag("view_profile_button"),
                         colors = IconButtonDefaults.outlinedIconButtonColors(
                             containerColor = Color.White.copy(alpha = 0.12f),
                             contentColor = Color.White
                         )
                     ) {
-                        Icon(Icons.Default.Info, contentDescription = "View full profile", modifier = Modifier.size(30.dp))
+                        Icon(Icons.Default.Info, contentDescription = "View full profile", modifier = Modifier.size(24.dp))
                     }
                     
                     BadgedBox(badge = { Badge { Text(superLikesLeft.toString()) } }) {
                         FilledTonalIconButton(
                             onClick = onSuperLike,
-                            modifier = Modifier.size(64.dp).testTag("super_like_button"),
+                            modifier = Modifier.size(50.dp).testTag("super_like_button"),
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = Color(0xFF1E88E5),
                                 contentColor = Color.White
                             )
                         ) {
-                            Icon(Icons.Default.Star, contentDescription = "Super Like", modifier = Modifier.size(30.dp))
+                            Icon(Icons.Default.Star, contentDescription = "Super Like", modifier = Modifier.size(24.dp))
                         }
+                    }
+
+                    OutlinedIconButton(
+                        onClick = onNudge,
+                        modifier = Modifier.size(50.dp).testTag("nudge_button"),
+                        colors = IconButtonDefaults.outlinedIconButtonColors(
+                            containerColor = Color.White.copy(alpha = 0.12f),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text("\uD83D\uDC4B", fontSize = 22.sp)
                     }
 
                     FilledIconButton(
                         onClick = onLike,
-                        modifier = Modifier.size(64.dp).testTag("like_button"),
+                        modifier = Modifier.size(50.dp).testTag("like_button"),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = Color.White
                         )
                     ) {
-                        Icon(Icons.Default.Favorite, contentDescription = "Like", modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.Favorite, contentDescription = "Like", modifier = Modifier.size(26.dp))
                     }
                 }
             }
@@ -441,7 +489,34 @@ fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) 
     val profiles by viewModel.nearbyProfiles.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
 
+    // Re-check every 30 seconds so people who left the app drop off the Online row
+    val now by produceState(initialValue = System.currentTimeMillis()) {
+        while (true) {
+            delay(30_000)
+            value = System.currentTimeMillis()
+        }
+    }
+    val onlineNearby = profiles
+        .filter { it.isOnlineNow(now) }
+        .sortedBy { viewModel.distanceTo(me, it) ?: Double.MAX_VALUE } // closest first
+
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Online now", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(10.dp))
+        if (onlineNearby.isEmpty()) {
+            Text(
+                "No one nearby is online right now.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                items(onlineNearby, key = { it.id }) { person ->
+                    OnlineAvatar(person) { onOpenProfile(person.id) }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(20.dp))
         Text("Nearby", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
         LazyVerticalGrid(
@@ -453,6 +528,48 @@ fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) 
                 RadarItem(profile, placeAndDistance(profile, formatDistance(viewModel.distanceTo(me, profile)))) { onOpenProfile(profile.id) }
             }
         }
+    }
+}
+
+/** Round photo, first name and a green online badge. Used in the Online now row on Radar. */
+@Composable
+private fun OnlineAvatar(profile: UserProfile, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(72.dp).clickable { onClick() }
+    ) {
+        Box {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                SnugImage(
+                    model = profile.avatarUrl(),
+                    contentDescription = profile.displayName,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(16.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(2.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF4CAF50))
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            profile.displayName.substringBefore(" "),
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -489,6 +606,7 @@ fun RadarItem(profile: UserProfile, distanceText: String, onClick: () -> Unit = 
                     .padding(8.dp)
             ) {
                 Text(profile.displayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                PresenceBadge(profile, Color.White.copy(alpha = 0.9f), compact = true)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,

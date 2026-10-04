@@ -20,6 +20,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.ui.components.PresenceBadge
 import com.example.ui.components.SnugImage
 import com.example.data.model.UserProfile
 import com.example.data.model.avatarUrl
@@ -166,6 +167,8 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                PresenceBadge(u, MaterialTheme.colorScheme.onSurfaceVariant, showLastSeen = true)
 
                 if (u.gender.isNotBlank()) {
                     Text(

@@ -157,7 +157,7 @@ fun ProfileScreen(viewModel: SnugViewModel) {
             onDismiss = { showLogoutDialog = false },
             onConfirm = {
                 showLogoutDialog = false
-                Firebase.auth.signOut()
+                viewModel.goOffline { Firebase.auth.signOut() }
             }
         )
     }
@@ -491,8 +491,17 @@ fun ProfileScreen(viewModel: SnugViewModel) {
             }
         }
 
-        TextButton(onClick = { showDeleteDialog = true }) {
-            Text("Delete account", color = MaterialTheme.colorScheme.error)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = { viewModel.setPaused(profile?.isPaused != true) }) {
+                Text(if (profile?.isPaused == true) "Resume my profile" else "Pause my profile")
+            }
+            TextButton(onClick = { showDeleteDialog = true }) {
+                Text("Delete account", color = MaterialTheme.colorScheme.error)
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

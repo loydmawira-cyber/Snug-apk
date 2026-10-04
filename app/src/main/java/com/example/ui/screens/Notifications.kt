@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.data.model.AppNotification
 
 private fun timeAgo(millis: Long?): String {
@@ -82,7 +83,11 @@ fun NotificationsSheet(
                                 modifier = Modifier.size(40.dp).clip(CircleShape)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
-                                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    if (n.type == "nudge") {
+                                        Text("\uD83D\uDC4B", fontSize = 20.sp)
+                                    } else {
+                                        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    }
                                 }
                             }
                             Spacer(modifier = Modifier.width(12.dp))
