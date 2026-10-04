@@ -27,6 +27,8 @@ import com.example.data.repository.ProfileRepository
 import com.example.data.repository.SeedRepository
 import com.example.data.repository.SafetyRepository
 import com.example.data.repository.SocialRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -63,6 +65,33 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     // Only people I liked leave Discover. People I passed come back later (at the end of the queue).
     private val _likedIds = MutableStateFlow<Set<String>>(emptySet())
     private val _passedIds = MutableStateFlow<List<String>>(emptyList())
+    val likedIds: StateFlow<Set<String>> = _likedIds.asStateFlow()
+
+    private var presenceJob: Job? = null
+
+    /** Starts the online heartbeat (every 2 minutes while the app is open). */
+    fun goOnline() {
+        presenceJob?.cancel()
+        presenceJob = viewModelScope.launch {
+            while (true) {
+                profileRepo.setPresence(true)
+                delay(120_000)
+            }
+        }
+    }
+
+    fun stopPresence() {
+        presenceJob?.cancel()
+    }
+
+    /** Marks me offline (app in background or logging out); [then] runs when it is saved. */
+    fun goOffline(then: () -> Unit = {}) {
+        presenceJob?.cancel()
+        viewModelScope.launch {
+            profileRepo.setPresence(false)
+            then()
+        }
+    }
 
     // People who liked me and I have not answered yet (not liked back, blocked or matched)
     private val _likedMeIds = MutableStateFlow<Set<String>>(emptySet())
@@ -262,11 +291,18 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             combine(_nearbyProfiles, _likedIds, _passedIds, _filters) { list, liked, passed, f ->
-                // Not-yet-liked people only; passed ones go to the back, oldest pass first
-                list.filter { it.id !in liked }
-                    .filter { !f.verifiedOnly || it.isPhoneVerified }
+                // The deck never runs out: new people first, then people liked in the past,
+                // then everyone I already swiped on this session (oldest first), and it starts over.
+                list.filter { !f.verifiedOnly || it.isPhoneVerified }
                     .filter { f.lookingFor.isBlank() || it.lookingFor == f.lookingFor }
-                    .sortedBy { passed.indexOf(it.id) }
+                    .sortedBy { u ->
+                        val i = passed.indexOf(u.id)
+                        when {
+                            i >= 0 -> 1000 + i
+                            u.id in liked -> 500
+                            else -> 0
+                        }
+                    }
             }.collect { _discoveryProfiles.value = it }
         }
     }
@@ -320,6 +356,13 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
 
     fun likeProfile(profileId: String, superLike: Boolean = false) {
         viewModelScope.launch {
+            val alreadyLiked = profileId in _likedIds.value
+            // Send this card to the back of the deck so the loop keeps going
+            _passedIds.value = _passedIds.value.filter { it != profileId } + profileId
+            if (alreadyLiked && !superLike) {
+                _uiMessage.value = "You already liked this person"
+                return@launch
+            }
             if (superLike) {
                 val me = _currentUserProfile.value
                 if (me == null || me.superLikesLeft() <= 0) {
@@ -339,6 +382,22 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                     ?: profileRepo.getProfile(profileId)
             } else {
                 _uiMessage.value = if (superLike) "Super Like sent! \u2B50" else "Liked!"
+            }
+        }
+    }
+
+    fun nudge(userId: String) {
+        viewModelScope.launch {
+            val myName = _currentUserProfile.value?.displayName?.ifBlank { null } ?: "Someone"
+            val result = socialRepo.nudge(userId, myName)
+            _uiMessage.value = if (result.isSuccess) {
+                "Nudge sent \uD83D\uDC4B"
+            } else if ((result.exceptionOrNull() as? com.google.firebase.firestore.FirebaseFirestoreException)?.code ==
+                com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED
+            ) {
+                "You already nudged them today"
+            } else {
+                "Could not send nudge"
             }
         }
     }
