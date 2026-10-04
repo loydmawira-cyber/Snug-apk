@@ -61,7 +61,7 @@ class ProfileRepository(private val db: FirebaseFirestore) {
     }
 
     // Spark plan: no Firebase Storage. Photos are shrunk and saved inside the profile as a data URI.
-    suspend fun encodePhoto(context: Context, uri: Uri, maxSide: Int = 640): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun encodePhoto(context: Context, uri: Uri, maxSide: Int = 1000): Result<String> = withContext(Dispatchers.IO) {
         try {
             val original = context.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
                 ?: return@withContext Result.failure(Exception("Could not read image"))
@@ -70,7 +70,9 @@ class ProfileRepository(private val db: FirebaseFirestore) {
                 Bitmap.createScaledBitmap(original, (original.width * scale).toInt(), (original.height * scale).toInt(), true)
             else original
             val out = ByteArrayOutputStream()
-            bmp.compress(Bitmap.CompressFormat.JPEG, 65, out)
+            // 82 keeps faces and fine details noticeably sharper while staying compact enough
+            // for the current Firestore document-based photo storage approach.
+            bmp.compress(Bitmap.CompressFormat.JPEG, 82, out)
             val b64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
             Result.success("data:image/jpeg;base64,$b64")
         } catch (e: Exception) {
@@ -366,4 +368,3 @@ private operator fun UserProfile.plus(other: Map<String, Any?>): Map<String, Any
     map.putAll(other)
     return map
 }
-
