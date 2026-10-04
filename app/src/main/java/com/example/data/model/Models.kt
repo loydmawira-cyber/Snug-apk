@@ -54,3 +54,15 @@ data class ChatMessage(
 /** Best picture to show for a user: their profile picture, else the first gallery photo. */
 fun UserProfile.avatarUrl(): String? =
     profilePhoto.takeIf { it.isNotBlank() } ?: photos.firstOrNull()?.url
+
+data class AppNotification(
+    val id: String = "",
+    val toUserId: String = "",
+    val fromUserId: String = "",
+    val fromName: String = "",
+    val type: String = "", // "like", "match" or "message"
+    val text: String = "",
+    val matchId: String = "",
+    val read: Boolean = false,
+    val createdAt: Timestamp? = null
+)
