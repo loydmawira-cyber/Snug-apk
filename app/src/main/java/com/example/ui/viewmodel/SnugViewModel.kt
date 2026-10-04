@@ -45,9 +45,14 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
 
     // How many profiles to fetch from Firestore; grows when the queue runs low
     private val _profileLimit = MutableStateFlow(100)
+    val profileLimit: StateFlow<Int> = _profileLimit.asStateFlow()
 
     private val _filters = MutableStateFlow(DiscoverFilters())
     val filters: StateFlow<DiscoverFilters> = _filters.asStateFlow()
+
+    private val _discoveryRetry = MutableStateFlow(0)
+    private val _discoveryError = MutableStateFlow<String?>(null)
+    val discoveryError: StateFlow<String?> = _discoveryError.asStateFlow()
 
     private val _lastPassedId = MutableStateFlow<String?>(null)
     val canUndo: StateFlow<Boolean> = _lastPassedId
@@ -233,11 +238,14 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         val uid = currentUserId ?: return
         viewModelScope.launch {
             try {
-                val profile = profileRepo.getProfile(uid)
+                // Only a confirmed missing document may create a new profile. A network or
+                // permission failure must never overwrite the user's existing document.
+                val profile = profileRepo.getProfileOrThrow(uid)
                 if (profile == null) {
                     val newProfile = UserProfile(id = uid, displayName = "New User", createdAt = com.google.firebase.Timestamp.now())
-                    profileRepo.updateProfile(newProfile)
-                    _currentUserProfile.value = newProfile
+                    val saved = profileRepo.updateProfile(newProfile)
+                    if (saved.isSuccess) _currentUserProfile.value = newProfile
+                    else _uiMessage.value = "Could not create profile: ${saved.exceptionOrNull()?.message}"
                 } else {
                     // Clear any badge that is not backed by a really linked phone number
                     val phoneLinked = !com.google.firebase.Firebase.auth.currentUser?.phoneNumber.isNullOrBlank()
@@ -260,14 +268,25 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         if (_profileLimit.value < 500) _profileLimit.value = _profileLimit.value + 100
     }
 
+    fun retryDiscovery() {
+        _discoveryError.value = null
+        _discoveryRetry.value += 1
+    }
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun loadDiscoveryProfiles() {
         viewModelScope.launch {
             combine(
                 _currentUserProfile.map { it?.interestedIn ?: emptyList() }.distinctUntilChanged(),
-                _profileLimit
-            ) { genders, limit -> genders to limit }
-                .flatMapLatest { (genders, limit) -> profileRepo.observeDiscoveryProfiles(genders, limit.toLong()) }
+                _profileLimit,
+                _discoveryRetry
+            ) { genders, limit, _ -> genders to limit }
+                .flatMapLatest { (genders, limit) ->
+                    _discoveryError.value = null
+                    profileRepo.observeDiscoveryProfiles(genders, limit.toLong()) { error ->
+                        _discoveryError.value = error.message ?: "Check your connection and Firebase access."
+                    }
+                }
                 .combine(_currentUserProfile) { list, me ->
                     if (me == null) list
                     else list.filter { u ->
