@@ -13,6 +13,7 @@ import com.example.data.model.afterSuperLike
 import com.example.data.model.superLikesLeft
 import com.example.data.model.UserPhoto
 import com.example.data.model.UserProfile
+import com.example.data.model.publicViewForOthers
 import com.example.data.util.calculateAge
 import com.example.data.util.distanceKm
 import com.example.data.util.reverseGeocode
@@ -301,9 +302,9 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                 .combine(_blockedIds) { list, blocked ->
                     list.filter { it.id !in blocked && !it.isPaused }
                 }
-                .collect {
-                    android.util.Log.d("SnugViewModel", "Loaded ${it.size} profiles")
-                    _nearbyProfiles.value = it
+                .collect { profiles ->
+                    android.util.Log.d("SnugViewModel", "Loaded ${profiles.size} profiles")
+                    _nearbyProfiles.value = profiles.map { it.publicViewForOthers() }
                 }
         }
         viewModelScope.launch {
