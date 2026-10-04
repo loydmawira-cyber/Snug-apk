@@ -1,34 +1,77 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
+
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
+    // ---------- USERS ----------
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (isOwner(userId) || userId.matches('seed_.*'));
-      allow delete: if isSignedIn() && (isOwner(userId) || userId.matches('seed_.*'));
-    }
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId)
+        && request.resource.data.isVip == resource.data.isVip;
+      allow delete: if isOwner(userId);
 
-    match /matches/{matchId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-    }
-
-    match /chats/{chatId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      
-      match /messages/{messageId} {
-        allow read, write: if isSignedIn();
+      match /private/{docId} {
+        allow read, write: if isOwner(userId);
       }
+    }
+
+    // ---------- SWIPES (likes and passes) ----------
+    match /swipes/{swipeId} {
+      // reading a swipe that does not exist yet must be allowed (mutual-like check)
+      allow get: if isSignedIn()
+        && (resource == null
+            || resource.data.fromUserId == request.auth.uid
+            || resource.data.toUserId == request.auth.uid);
+      allow list: if isSignedIn()
+        && (resource.data.fromUserId == request.auth.uid
+            || resource.data.toUserId == request.auth.uid);
+      allow create, update: if isSignedIn()
+        && request.resource.data.fromUserId == request.auth.uid
+        && swipeId == request.auth.uid + '_' + request.resource.data.toUserId;
+      allow delete: if isSignedIn() && resource.data.fromUserId == request.auth.uid;
+    }
+
+    // ---------- NOTIFICATIONS ----------
+    match /notifications/{notifId} {
+      allow read, update, delete: if isSignedIn() && resource.data.toUserId == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.fromUserId == request.auth.uid
+        && request.resource.data.toUserId != request.auth.uid;
+    }
+
+    // ---------- MATCHES ----------
+    match /matches/{matchId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.userIds;
+      allow create: if isSignedIn()
+        && request.auth.uid in request.resource.data.userIds
+        && request.resource.data.userIds.size() == 2;
+      allow update: if isSignedIn()
+        && request.auth.uid in resource.data.userIds
+        && request.resource.data.userIds == resource.data.userIds;
+      allow delete: if isSignedIn() && request.auth.uid in resource.data.userIds;
+    }
+
+    // ---------- CHATS ----------
+    match /chats/{chatId} {
+      allow read: if isSignedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/matches/$(resource.data.matchId)).data.userIds;
+      allow create: if isSignedIn()
+        && request.resource.data.senderId == request.auth.uid
+        && request.auth.uid in get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.userIds;
+      allow update: if false;
+      allow delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
