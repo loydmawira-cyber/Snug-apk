@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.*
@@ -24,6 +25,8 @@ import com.example.data.model.UserProfile
 import com.example.data.model.avatarUrl
 import com.example.data.model.basics
 import com.example.data.model.placeAndDistance
+import com.example.data.model.ReportReasons
+import com.example.data.model.sharedInterestsWith
 import com.example.data.util.calculateAge
 import com.example.data.util.formatDistance
 import com.example.ui.Screen
@@ -38,6 +41,46 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
         value = viewModel.loadUser(userId)
     }
     val match = matches.firstOrNull { it.userIds.contains(userId) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var showBlock by remember { mutableStateOf(false) }
+    var showReport by remember { mutableStateOf(false) }
+
+    if (showBlock) {
+        AlertDialog(
+            onDismissRequest = { showBlock = false },
+            title = { Text("Block ${user?.displayName ?: "user"}?") },
+            text = { Text("You will no longer see each other, and any chat will be removed.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBlock = false
+                    viewModel.blockUser(userId)
+                    navController.popBackStack()
+                }) { Text("Block") }
+            },
+            dismissButton = { TextButton(onClick = { showBlock = false }) { Text("Cancel") } }
+        )
+    }
+    if (showReport) {
+        AlertDialog(
+            onDismissRequest = { showReport = false },
+            title = { Text("Report ${user?.displayName ?: "user"}") },
+            text = {
+                Column {
+                    ReportReasons.all.forEach { reason ->
+                        TextButton(
+                            onClick = {
+                                showReport = false
+                                viewModel.reportUser(userId, reason)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(reason) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showReport = false }) { Text("Cancel") } }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -46,6 +89,17 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (me?.id != null && me?.id != userId) {
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                        }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            DropdownMenuItem(text = { Text("Report") }, onClick = { menuOpen = false; showReport = true })
+                            DropdownMenuItem(text = { Text("Block") }, onClick = { menuOpen = false; showBlock = true })
+                        }
                     }
                 }
             )
@@ -126,6 +180,26 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                     Text(u.bio, style = MaterialTheme.typography.bodyLarge)
                 }
 
+                u.prompts.filter { it.question.isNotBlank() && it.answer.isNotBlank() }.forEach { prompt ->
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                prompt.question,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(prompt.answer, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+
                 if (u.lookingFor.isNotBlank()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Surface(
@@ -168,13 +242,31 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.align(Alignment.Start)
                     )
+                    val shared = u.sharedInterestsWith(me)
+                    if (shared.isNotEmpty() && me?.id != userId) {
+                        Text(
+                            "${shared.size} in common",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        u.interests.forEach { AssistChip(onClick = {}, label = { Text(it) }) }
+                        u.interests.forEach { interest ->
+                            val isShared = interest in shared && me?.id != userId
+                            AssistChip(
+                                onClick = {},
+                                label = { Text(interest) },
+                                colors = if (isShared)
+                                    AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                                else AssistChipDefaults.assistChipColors()
+                            )
+                        }
                     }
                 }
 

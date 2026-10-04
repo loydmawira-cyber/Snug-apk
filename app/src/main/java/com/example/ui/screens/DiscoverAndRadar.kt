@@ -19,6 +19,17 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Star
+import kotlinx.coroutines.delay
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.automirrored.filled.Undo
+import com.example.data.model.DiscoverFilters
+import com.example.data.model.completeness
+import com.example.data.model.superLikesLeft
+import com.example.data.model.ProfileOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,44 +60,187 @@ import com.example.ui.viewmodel.SnugViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DiscoverScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) {
+fun DiscoverScreen(
+    viewModel: SnugViewModel,
+    onOpenProfile: (String) -> Unit = {},
+    onOpenChat: (String) -> Unit = {},
+    onSetupProfile: () -> Unit = {}
+) {
     val profile by viewModel.currentProfile.collectAsState()
     val profiles by viewModel.discoveryProfiles.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
+    val filters by viewModel.filters.collectAsState()
+    val canUndo by viewModel.canUndo.collectAsState()
+    var showFilters by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+    LaunchedEffect(profiles.size) {
+        if (profiles.size <= 3) viewModel.loadMoreProfiles()
+    }
+    val celebration by viewModel.matchCelebration.collectAsState()
+
+    MatchCelebrationDialog(
+        other = celebration,
+        onDismiss = { viewModel.dismissCelebration() },
+        onSayHi = { id -> viewModel.openChat(id) { chatId -> onOpenChat(chatId) } }
+    )
+
+    // First-run welcome for people with a mostly empty profile
+    val myProfile = me
+    if (myProfile != null && !myProfile.onboarded && myProfile.completeness().first < 60) {
+        AlertDialog(
+            onDismissRequest = { viewModel.completeOnboarding() },
+            title = { Text("Welcome to SNUG! \uD83D\uDC4B") },
+            text = { Text("Profiles with a photo, a bio and a few interests get far more matches. It takes a minute to set yours up.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.completeOnboarding(); onSetupProfile() }) { Text("Set up profile") }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.completeOnboarding() }) { Text("Later") }
+            }
+        )
+    }
+
+    if (showFilters) {
+        AlertDialog(
+            onDismissRequest = { showFilters = false },
+            title = { Text("Filters") },
+            text = {
+                Column {
+                    Text("Looking for", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        ProfileOptions.lookingFor.forEach { option ->
+                            FilterChip(
+                                selected = filters.lookingFor == option,
+                                onClick = {
+                                    viewModel.setFilters(
+                                        filters.copy(lookingFor = if (filters.lookingFor == option) "" else option)
+                                    )
+                                },
+                                label = { Text(option) }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Verified only", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = filters.verifiedOnly,
+                            onCheckedChange = { viewModel.setFilters(filters.copy(verifiedOnly = it)) }
+                        )
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showFilters = false }) { Text("Done") } },
+            dismissButton = {
+                TextButton(onClick = { viewModel.setFilters(DiscoverFilters()) }) { Text("Reset") }
+            }
+        )
+    }
     
     android.util.Log.d("DiscoverScreen", "Recomposing with profile: ${profile?.displayName}")
     
     BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         val maxWidthPx = constraints.maxWidth
         
-        if (profile == null) {
+        if (me?.isPaused == true) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
-                Text("No one new nearby. Try expanding your search!", textAlign = TextAlign.Center)
+                Text("Your profile is paused", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Nobody can see you while you are on snooze.", textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { viewModel.setPaused(false) }) { Text("Resume") }
+            }
+        } else if (profile == null) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
+                Text(
+                    if (filters.isActive) "No one matches your filters." else "No one new nearby. Try expanding your search!",
+                    textAlign = TextAlign.Center
+                )
+                if (filters.isActive) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(onClick = { viewModel.setFilters(DiscoverFilters()) }) { Text("Clear filters") }
+                }
             }
         } else {
             ProfileCard(
                 profile = profile!!,
                 distanceText = placeAndDistance(profile!!, formatDistance(viewModel.distanceTo(me, profile!!))),
                 onOpenProfile = { onOpenProfile(profile!!.id) },
-                onLike = { viewModel.likeProfile(profile!!.id) },
+                onLike = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    viewModel.likeProfile(profile!!.id)
+                },
+                onSuperLike = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    viewModel.likeProfile(profile!!.id, superLike = true)
+                },
+                superLikesLeft = me?.superLikesLeft() ?: 0,
+                autoAdvance = true,
                 onPass = { viewModel.passProfile() },
                 swipeThreshold = maxWidthPx / 3f
             )
+        }
+
+        if (me?.isPaused != true) {
+            Row(
+                modifier = Modifier.align(Alignment.TopStart).padding(8.dp).zIndex(3f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilledTonalIconButton(onClick = { showFilters = true }) {
+                    Icon(
+                        Icons.Default.FilterList,
+                        contentDescription = "Filters",
+                        tint = if (filters.isActive) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                    )
+                }
+                FilledTonalIconButton(onClick = { viewModel.undoPass() }, enabled = canUndo) {
+                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo last pass")
+                }
+                FilledTonalIconButton(onClick = { viewModel.setPaused(true) }) {
+                    Icon(Icons.Default.Bedtime, contentDescription = "Pause my profile")
+                }
+            }
         }
     }
 }
 
 @Composable
-fun ProfileCard(profile: UserProfile, distanceText: String, onOpenProfile: () -> Unit, onLike: () -> Unit, onPass: () -> Unit, swipeThreshold: Float) {
+fun ProfileCard(
+    profile: UserProfile,
+    distanceText: String,
+    onOpenProfile: () -> Unit,
+    onLike: () -> Unit,
+    onPass: () -> Unit,
+    swipeThreshold: Float,
+    onSuperLike: () -> Unit = {},
+    superLikesLeft: Int = 0,
+    autoAdvance: Boolean = false
+) {
     val coroutineScope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
     val offsetY = remember { Animatable(0f) }
     
+    var isDragging by remember { mutableStateOf(false) }
+
     // Key to reset animation when profile changes
     LaunchedEffect(profile.id) {
         offsetX.snapTo(0f)
         offsetY.snapTo(0f)
+    }
+
+    // Auto-advance: after 5 seconds the card slides left (a pass). Waits while you drag it.
+    LaunchedEffect(profile.id, autoAdvance, isDragging) {
+        if (autoAdvance && !isDragging) {
+            delay(5000)
+            offsetX.animateTo(-2000f, tween(300))
+            onPass()
+        }
     }
 
     Card(
@@ -98,7 +252,10 @@ fun ProfileCard(profile: UserProfile, distanceText: String, onOpenProfile: () ->
             }
             .pointerInput(profile.id) {
                 detectDragGestures(
+                    onDragStart = { isDragging = true },
+                    onDragCancel = { isDragging = false },
                     onDragEnd = {
+                        isDragging = false
                         coroutineScope.launch {
                             if (offsetX.value > swipeThreshold) {
                                 // Swipe Right - Like
@@ -250,6 +407,19 @@ fun ProfileCard(profile: UserProfile, distanceText: String, onOpenProfile: () ->
                         Icon(Icons.Default.Info, contentDescription = "View full profile", modifier = Modifier.size(30.dp))
                     }
                     
+                    BadgedBox(badge = { Badge { Text(superLikesLeft.toString()) } }) {
+                        FilledTonalIconButton(
+                            onClick = onSuperLike,
+                            modifier = Modifier.size(64.dp).testTag("super_like_button"),
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = Color(0xFF1E88E5),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(Icons.Default.Star, contentDescription = "Super Like", modifier = Modifier.size(30.dp))
+                        }
+                    }
+
                     FilledIconButton(
                         onClick = onLike,
                         modifier = Modifier.size(64.dp).testTag("like_button"),
@@ -338,4 +508,29 @@ fun RadarItem(profile: UserProfile, distanceText: String, onClick: () -> Unit = 
             }
         }
     }
+}
+
+@Composable
+fun MatchCelebrationDialog(other: UserProfile?, onDismiss: () -> Unit, onSayHi: (String) -> Unit) {
+    if (other == null) return
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("It's a match! \uD83C\uDF89", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                SnugImage(
+                    model = other.avatarUrl(),
+                    contentDescription = null,
+                    modifier = Modifier.size(120.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("You and ${other.displayName} liked each other.", textAlign = TextAlign.Center)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onDismiss(); onSayHi(other.id) }) { Text("Say hi") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Keep swiping") } }
+    )
 }

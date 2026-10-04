@@ -31,9 +31,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.SnugImage
 import com.example.data.model.UserPhoto
+import com.example.data.model.completeness
+import com.example.data.model.ProfilePrompt
 import com.example.data.model.ProfileOptions
 import com.example.data.model.UserProfile
 import com.example.data.security.PinManager
+import com.example.data.security.PhoneVerifier
+import kotlinx.coroutines.launch
 import com.example.data.util.calculateAge
 import com.example.ui.components.PinSetupDialog
 import com.example.ui.viewmodel.SnugViewModel
@@ -59,6 +63,7 @@ fun ProfileScreen(viewModel: SnugViewModel) {
     val profile by viewModel.currentUserProfile.collectAsState()
     var activeSubScreen by remember { mutableStateOf(ProfileSubScreen.NONE) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val pinManager = remember { PinManager(context) }
@@ -132,6 +137,21 @@ fun ProfileScreen(viewModel: SnugViewModel) {
         ProfileSubScreen.NONE -> {}
     }
 
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete your account?") },
+            text = { Text("This permanently deletes your profile, matches and likes. It cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    viewModel.deleteAccount { Firebase.auth.signOut() }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } }
+        )
+    }
+
     if (showLogoutDialog) {
         LogoutConfirmDialog(
             onDismiss = { showLogoutDialog = false },
@@ -149,6 +169,32 @@ fun ProfileScreen(viewModel: SnugViewModel) {
             .padding(horizontal = 16.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Profile completeness meter
+        profile?.let { p ->
+            val (pct, hint) = p.completeness()
+            if (pct < 100) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Profile $pct% complete", fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { pct / 100f },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (hint != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+        }
+
         // Profile Header Card
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -384,15 +430,17 @@ fun ProfileScreen(viewModel: SnugViewModel) {
                     onClick = { activeSubScreen = ProfileSubScreen.HELP_SUPPORT }
                 )
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
+                if (com.example.BuildConfig.DEBUG) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
 
-                SettingsMenuRow(
-                    icon = Icons.Default.Science,
-                    iconTint = MaterialTheme.colorScheme.secondary,
-                    title = "Demo & Testing Tools",
-                    subtitle = "Seed sample discovery profiles",
-                    onClick = { activeSubScreen = ProfileSubScreen.DEMO_SEEDING }
-                )
+                    SettingsMenuRow(
+                        icon = Icons.Default.Science,
+                        iconTint = MaterialTheme.colorScheme.secondary,
+                        title = "Demo & Testing Tools",
+                        subtitle = "Seed sample discovery profiles",
+                        onClick = { activeSubScreen = ProfileSubScreen.DEMO_SEEDING }
+                    )
+                }
             }
         }
 
@@ -441,6 +489,10 @@ fun ProfileScreen(viewModel: SnugViewModel) {
                     modifier = Modifier.size(14.dp)
                 )
             }
+        }
+
+        TextButton(onClick = { showDeleteDialog = true }) {
+            Text("Delete account", color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -528,6 +580,29 @@ fun AccountVerificationSheet(
     var phoneNumber by remember { mutableStateOf(profile?.phoneNumber ?: "") }
     var code by remember { mutableStateOf("") }
     var step by remember { mutableStateOf(if (profile?.isPhoneVerified == true) 0 else 1) } // 0: Status, 1: Enter Phone, 2: Enter Code
+    var verificationId by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val ctx = LocalContext.current
+    val activity = remember(ctx) {
+        var c = ctx
+        while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
+        c as? android.app.Activity
+    }
+
+    fun finishLink(credential: com.google.firebase.auth.PhoneAuthCredential, number: String) {
+        scope.launch {
+            val problem = PhoneVerifier.link(credential)
+            busy = false
+            if (problem == null && profile != null) {
+                viewModel.updateUserProfile(profile.copy(phoneNumber = number, isPhoneVerified = true))
+                step = 0
+            } else {
+                error = problem
+            }
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -615,16 +690,44 @@ fun AccountVerificationSheet(
                     shape = RoundedCornerShape(12.dp)
                 )
                 Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    "Use the international format, e.g. +254712345678",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                error?.let {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
                 Button(
-                    onClick = { if (phoneNumber.isNotBlank()) step = 2 },
+                    onClick = {
+                        val number = PhoneVerifier.normalize(phoneNumber)
+                        if (!number.startsWith("+") || number.length < 9) {
+                            error = "Enter the number with its country code, like +254712345678"
+                        } else if (activity == null) {
+                            error = "Could not start verification"
+                        } else {
+                            error = null
+                            busy = true
+                            PhoneVerifier.sendCode(
+                                activity = activity,
+                                phone = number,
+                                onSent = { id -> verificationId = id; busy = false; step = 2 },
+                                onAutoVerified = { cred -> finishLink(cred, number) },
+                                onError = { msg -> busy = false; error = msg }
+                            )
+                        }
+                    },
+                    enabled = !busy && phoneNumber.isNotBlank(),
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = CircleShape
                 ) {
-                    Text("Send Verification Code")
+                    Text(if (busy) "Sending..." else "Send Verification Code")
                 }
             } else {
                 Text(
-                    "Enter the 6-digit code sent to $phoneNumber (Demo code: 123456)",
+                    "Enter the 6-digit code sent to $phoneNumber",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -644,19 +747,24 @@ fun AccountVerificationSheet(
                 Spacer(modifier = Modifier.height(20.dp))
                 Button(
                     onClick = {
-                        if (code.length == 6 && profile != null) {
-                            viewModel.updateUserProfile(profile.copy(
-                                phoneNumber = phoneNumber,
-                                isPhoneVerified = true
-                            ))
-                            step = 0
+                        if (code.length == 6 && verificationId.isNotBlank()) {
+                            error = null
+                            busy = true
+                            finishLink(
+                                PhoneVerifier.credentialFor(verificationId, code),
+                                PhoneVerifier.normalize(phoneNumber)
+                            )
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    enabled = code.length == 6,
+                    enabled = code.length == 6 && !busy,
                     shape = CircleShape
                 ) {
-                    Text("Confirm & Verify")
+                    Text(if (busy) "Verifying..." else "Confirm & Verify")
+                }
+                error?.let {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
             }
 
@@ -1373,6 +1481,10 @@ fun EditProfileDialog(
     var zodiac by remember { mutableStateOf(profile.zodiac) }
     var jobTitle by remember { mutableStateOf(profile.jobTitle) }
     var heightText by remember { mutableStateOf(if (profile.heightCm > 0) profile.heightCm.toString() else "") }
+    var hideDistance by remember { mutableStateOf(profile.hideDistance) }
+
+    val promptQuestions = remember { mutableStateListOf(*Array(3) { profile.prompts.getOrNull(it)?.question ?: "" }) }
+    val promptAnswers = remember { mutableStateListOf(*Array(3) { profile.prompts.getOrNull(it)?.answer ?: "" }) }
 
     val allInterests = ProfileOptions.interests
     val genders = listOf("Male", "Female", "Non-binary")
@@ -1521,6 +1633,55 @@ fun EditProfileDialog(
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
+                Text("Profile prompts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "Answer up to 3 to show your personality.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                for (slot in 0 until 3) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    var menuOpen by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(
+                            onClick = { menuOpen = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                promptQuestions[slot].ifBlank { "Pick a prompt" },
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1
+                            )
+                        }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            ProfileOptions.promptQuestions.forEach { q ->
+                                DropdownMenuItem(
+                                    text = { Text(q) },
+                                    onClick = { promptQuestions[slot] = q; menuOpen = false }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("Clear") },
+                                onClick = { promptQuestions[slot] = ""; promptAnswers[slot] = ""; menuOpen = false }
+                            )
+                        }
+                    }
+                    if (promptQuestions[slot].isNotBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = promptAnswers[slot],
+                            onValueChange = { if (it.length <= 150) promptAnswers[slot] = it },
+                            label = { Text("Your answer") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
                 Text("More about me", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
                 ChoiceSection("I'm looking for", ProfileOptions.lookingFor, lookingFor) { lookingFor = it }
@@ -1554,6 +1715,19 @@ fun EditProfileDialog(
                     shape = RoundedCornerShape(12.dp)
                 )
 
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Hide my distance", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Others will see your city but not how far away you are.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(checked = hideDistance, onCheckedChange = { hideDistance = it })
+                }
+
                 Spacer(modifier = Modifier.height(28.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text("Cancel") }
@@ -1585,6 +1759,10 @@ fun EditProfileDialog(
                                 education = education,
                                 pets = pets,
                                 zodiac = zodiac,
+                                prompts = (0 until 3)
+                                    .map { ProfilePrompt(promptQuestions[it], promptAnswers[it].trim()) }
+                                    .filter { it.question.isNotBlank() && it.answer.isNotBlank() },
+                                hideDistance = hideDistance,
                                 jobTitle = jobTitle.trim(),
                                 heightCm = heightText.toIntOrNull()?.takeIf { it in 100..250 } ?: 0
                             )) 
