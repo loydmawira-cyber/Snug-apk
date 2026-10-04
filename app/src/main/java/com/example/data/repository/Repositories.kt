@@ -17,7 +17,9 @@ import com.example.data.util.OperationType
 import com.example.data.util.handleFirestoreError
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.snapshots
@@ -39,7 +41,7 @@ class ProfileRepository(private val db: FirebaseFirestore) {
     suspend fun getProfile(userId: String): UserProfile? {
         return try {
             val base = db.collection("users").document(userId).get().await()
-                .toObject(UserProfile::class.java)?.copy(id = userId) ?: return null
+                .toUserProfile()?.copy(id = userId) ?: return null
             if (userId == auth.currentUser?.uid) {
                 // Phone numbers live in a private document nobody else can read
                 val phone = try {
@@ -56,6 +58,19 @@ class ProfileRepository(private val db: FirebaseFirestore) {
         }
     }
 
+    /** Heartbeat: tells everyone whether I am online. Silent if it fails. */
+    suspend fun setPresence(online: Boolean) {
+        val uid = auth.currentUser?.uid ?: return
+        try {
+            db.collection("users").document(uid).set(
+                mapOf("online" to online, "lastActive" to FieldValue.serverTimestamp()),
+                SetOptions.merge()
+            ).await()
+        } catch (e: Exception) {
+            android.util.Log.w("Presence", "Could not update presence", e)
+        }
+    }
+
     suspend fun updateProfile(profile: UserProfile): Result<Unit> {
         val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Not signed in"))
         return try {
@@ -66,6 +81,8 @@ class ProfileRepository(private val db: FirebaseFirestore) {
                     .set(
                         profile.copy(id = uid, isPhoneVerified = verified) + mapOf(
                             "phoneNumber" to "", // never stored on the public profile
+                            "online" to true, // saving means the app is open
+                            "lastActive" to FieldValue.serverTimestamp(),
                             "updatedAt" to FieldValue.serverTimestamp()
                         )
                     )
@@ -127,7 +144,7 @@ class ProfileRepository(private val db: FirebaseFirestore) {
             .snapshots()
             .map { snapshot -> 
                 val profiles = snapshot.documents.mapNotNull { d ->
-                    d.toObject(UserProfile::class.java)?.copy(id = d.id)
+                    d.toUserProfile()?.copy(id = d.id)
                 }
                 profiles.filter { user -> user.id != getCurrentUserId() }
             }
@@ -362,6 +379,32 @@ class SocialRepository(private val db: FirebaseFirestore) {
             }
     }
 
+    /**
+     * Sends a friendly nudge. The notification id includes today's date, and the rules only let the
+     * receiver edit it, so each person can be nudged by you once per day.
+     */
+    suspend fun nudge(toUserId: String, myName: String): Result<Unit> {
+        val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Not signed in"))
+        return try {
+            val day = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
+            db.collection("notifications").document("nudge_${uid}_${toUserId}_$day").set(
+                mapOf(
+                    "toUserId" to toUserId,
+                    "fromUserId" to uid,
+                    "fromName" to myName,
+                    "type" to "nudge",
+                    "text" to "$myName nudged you \uD83D\uDC4B",
+                    "matchId" to "",
+                    "read" to false,
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /** Saves a like/pass. Returns true if it created a match (they had already liked me). */
     suspend fun swipe(toUserId: String, like: Boolean, myName: String, superLike: Boolean = false): Result<Boolean> {
         val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Not signed in"))
@@ -593,4 +636,17 @@ private operator fun UserProfile.plus(other: Map<String, Any?>): Map<String, Any
     )
     map.putAll(other)
     return map
+}
+
+/**
+ * Firestore's automatic mapping skips Kotlin booleans named isXxx (it looks for "xxx" instead),
+ * so these are read by hand to make sure paused / verified / VIP always load correctly.
+ */
+private fun DocumentSnapshot.toUserProfile(): UserProfile? {
+    val base = toObject(UserProfile::class.java) ?: return null
+    return base.copy(
+        isPaused = getBoolean("isPaused") ?: false,
+        isPhoneVerified = getBoolean("isPhoneVerified") ?: false,
+        isVip = getBoolean("isVip") ?: false
+    )
 }
