@@ -11,6 +11,9 @@ import com.example.data.model.UserPhoto
 import com.example.data.model.UserProfile
 import com.example.data.util.calculateAge
 import com.example.data.util.distanceKm
+import com.example.data.util.reverseGeocode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import kotlinx.coroutines.tasks.await
@@ -37,8 +40,13 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentUserProfile = MutableStateFlow<UserProfile?>(null)
     val currentUserProfile: StateFlow<UserProfile?> = _currentUserProfile.asStateFlow()
 
-    // Everyone I already liked or passed - they are removed from Discover
-    private val _swipedIds = MutableStateFlow<Set<String>>(emptySet())
+    // Only people I liked leave Discover. People I passed come back later (at the end of the queue).
+    private val _likedIds = MutableStateFlow<Set<String>>(emptySet())
+    private val _passedIds = MutableStateFlow<List<String>>(emptyList())
+
+    // Everyone matching my age/distance filters (used by Radar, includes people I already liked)
+    private val _nearbyProfiles = MutableStateFlow<List<UserProfile>>(emptyList())
+    val nearbyProfiles: StateFlow<List<UserProfile>> = _nearbyProfiles.asStateFlow()
 
     // Swiped people leave the list, so the next card is always the first one
     val currentProfile: StateFlow<UserProfile?> = _discoveryProfiles
@@ -64,7 +72,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadSwipes() {
         viewModelScope.launch {
-            socialRepo.observeMySwipes().collect { _swipedIds.value = _swipedIds.value + it }
+            socialRepo.observeMySwipes().collect { _likedIds.value = _likedIds.value + it }
         }
     }
 
@@ -121,11 +129,16 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                         ageOk && distOk
                     }
                 }
-                .combine(_swipedIds) { list, swiped -> list.filter { it.id !in swiped } }
                 .collect {
                     android.util.Log.d("SnugViewModel", "Loaded ${it.size} profiles")
-                    _discoveryProfiles.value = it
+                    _nearbyProfiles.value = it
                 }
+        }
+        viewModelScope.launch {
+            combine(_nearbyProfiles, _likedIds, _passedIds) { list, liked, passed ->
+                // Not-yet-liked people only; passed ones go to the back, oldest pass first
+                list.filter { it.id !in liked }.sortedBy { passed.indexOf(it.id) }
+            }.collect { _discoveryProfiles.value = it }
         }
     }
 
@@ -169,7 +182,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
 
 
     fun likeProfile(profileId: String) {
-        _swipedIds.value = _swipedIds.value + profileId
+        _likedIds.value = _likedIds.value + profileId
         viewModelScope.launch {
             val myName = _currentUserProfile.value?.displayName?.ifBlank { null } ?: "Someone"
             val result = socialRepo.swipe(profileId, true, myName)
@@ -183,8 +196,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
 
     fun passProfile() {
         val id = currentProfile.value?.id ?: return
-        _swipedIds.value = _swipedIds.value + id
-        viewModelScope.launch { socialRepo.swipe(id, false, "") }
+        _passedIds.value = _passedIds.value.filter { it != id } + id
     }
 
     fun observeMessages(matchId: String): Flow<List<ChatMessage>> {
@@ -236,8 +248,16 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                     val lat = Math.round(loc.latitude * 100) / 100.0
                     val lon = Math.round(loc.longitude * 100) / 100.0
                     val me = _currentUserProfile.value ?: return@launch
-                    if (me.latitude == lat && me.longitude == lon) return@launch
-                    val updated = me.copy(latitude = lat, longitude = lon)
+                    if (me.latitude == lat && me.longitude == lon && me.city.isNotBlank()) return@launch
+                    val (city, country) = withContext(Dispatchers.IO) {
+                        reverseGeocode(getApplication(), lat, lon)
+                    }
+                    val updated = me.copy(
+                        latitude = lat,
+                        longitude = lon,
+                        city = city.ifBlank { me.city },
+                        country = country.ifBlank { me.country }
+                    )
                     if (profileRepo.updateProfile(updated).isSuccess) {
                         _currentUserProfile.value = updated
                     }
