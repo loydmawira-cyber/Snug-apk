@@ -239,13 +239,17 @@ class SocialRepository(private val db: FirebaseFirestore) {
 
     private val auth = Firebase.auth
 
-    /** Ids of everyone I have already liked or passed. */
+    /** Ids of everyone I have liked. Passed people are not stored, so they can show up again. */
     fun observeMySwipes(): Flow<Set<String>> {
         val uid = auth.currentUser?.uid ?: return kotlinx.coroutines.flow.emptyFlow()
         return db.collection("swipes")
             .whereEqualTo("fromUserId", uid)
             .snapshots()
-            .map { snap -> snap.documents.mapNotNull { it.getString("toUserId") }.toSet() }
+            .map { snap ->
+                snap.documents
+                    .mapNotNull { d -> if (d.getString("action") == "like") d.getString("toUserId") else null }
+                    .toSet()
+            }
             .catch { e ->
                 if (e is Exception) handleFirestoreError(e, OperationType.LIST, "swipes")
                 emit(emptySet())
@@ -342,6 +346,20 @@ private operator fun UserProfile.plus(other: Map<String, Any?>): Map<String, Any
         "radiusKm" to this.radiusKm,
         "latitude" to this.latitude,
         "longitude" to this.longitude,
+        "city" to this.city,
+        "lookingFor" to this.lookingFor,
+        "haveKids" to this.haveKids,
+        "wantKids" to this.wantKids,
+        "smoking" to this.smoking,
+        "drinking" to this.drinking,
+        "exercise" to this.exercise,
+        "religion" to this.religion,
+        "education" to this.education,
+        "pets" to this.pets,
+        "zodiac" to this.zodiac,
+        "jobTitle" to this.jobTitle,
+        "heightCm" to this.heightCm,
+        "country" to this.country,
         "createdAt" to this.createdAt,
         "updatedAt" to this.updatedAt
     )
