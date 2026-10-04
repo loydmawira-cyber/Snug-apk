@@ -75,15 +75,21 @@ fun DiscoverScreen(
 ) {
     val profile by viewModel.currentProfile.collectAsState()
     val profiles by viewModel.discoveryProfiles.collectAsState()
+    val profileLimit by viewModel.profileLimit.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
     val filters by viewModel.filters.collectAsState()
+    val discoveryError by viewModel.discoveryError.collectAsState()
     val canUndo by viewModel.canUndo.collectAsState()
     val likedIds by viewModel.likedIds.collectAsState()
     var swipeKey by remember { mutableStateOf(0) }
     var showFilters by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
-    LaunchedEffect(profiles.size) {
-        if (profiles.size <= 3) viewModel.loadMoreProfiles()
+    LaunchedEffect(profiles.size, profileLimit, discoveryError) {
+        if (profiles.size <= 3 && profileLimit < 500 && discoveryError == null) {
+            // Give the current query time to return before expanding its server-side limit.
+            delay(500)
+            viewModel.loadMoreProfiles()
+        }
     }
     val celebration by viewModel.matchCelebration.collectAsState()
 
@@ -162,6 +168,17 @@ fun DiscoverScreen(
                 Text("Nobody can see you while you are on snooze.", textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = { viewModel.setPaused(false) }) { Text("Resume") }
+            }
+        } else if (profile == null && discoveryError != null) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
+                Text(
+                    "Couldn't load profiles. Check your connection or Firebase access.",
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(discoveryError.orEmpty(), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(onClick = { viewModel.retryDiscovery() }) { Text("Retry") }
             }
         } else if (profile == null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
@@ -243,7 +260,6 @@ fun ProfileCard(
     val coroutineScope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
     val offsetY = remember { Animatable(0f) }
-    
     var isDragging by remember { mutableStateOf(false) }
 
     // Key to reset animation when profile changes
@@ -252,7 +268,7 @@ fun ProfileCard(
         offsetY.snapTo(0f)
     }
 
-    // Auto-advance: after 5 seconds the card slides left (a pass). Waits while you drag it.
+    // Auto-advance after five seconds; pause the timer while the user is dragging the card.
     LaunchedEffect(profile.id, autoAdvance, isDragging) {
         if (autoAdvance && !isDragging) {
             delay(5000)
