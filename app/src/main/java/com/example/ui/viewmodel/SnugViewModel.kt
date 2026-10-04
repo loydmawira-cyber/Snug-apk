@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.model.AppNotification
 import com.example.data.model.ChatMessage
 import com.example.data.model.Match
 import com.example.data.model.UserPhoto
@@ -17,6 +18,7 @@ import com.example.data.repository.ChatRepository
 import com.example.data.repository.MatchRepository
 import com.example.data.repository.ProfileRepository
 import com.example.data.repository.SeedRepository
+import com.example.data.repository.SocialRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -25,6 +27,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     private val matchRepo = MatchRepository(application)
     private val chatRepo = ChatRepository(application)
     private val seedRepo = SeedRepository(application)
+    private val socialRepo = SocialRepository(application)
 
     val currentUserId = profileRepo.getCurrentUserId()
 
@@ -34,10 +37,16 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentUserProfile = MutableStateFlow<UserProfile?>(null)
     val currentUserProfile: StateFlow<UserProfile?> = _currentUserProfile.asStateFlow()
 
-    private val _currentProfileIndex = MutableStateFlow(0)
-    val currentProfile: StateFlow<UserProfile?> = combine(_discoveryProfiles, _currentProfileIndex) { profiles, index ->
-        if (profiles.isNotEmpty() && index < profiles.size) profiles[index] else null
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    // Everyone I already liked or passed - they are removed from Discover
+    private val _swipedIds = MutableStateFlow<Set<String>>(emptySet())
+
+    // Swiped people leave the list, so the next card is always the first one
+    val currentProfile: StateFlow<UserProfile?> = _discoveryProfiles
+        .map { it.firstOrNull() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private val _notifications = MutableStateFlow<List<AppNotification>>(emptyList())
+    val notifications: StateFlow<List<AppNotification>> = _notifications.asStateFlow()
 
     private val _matches = MutableStateFlow<List<Match>>(emptyList())
     val matches: StateFlow<List<Match>> = _matches.asStateFlow()
@@ -49,6 +58,35 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         loadDiscoveryProfiles()
         loadMatches()
         loadCurrentUserProfile()
+        loadSwipes()
+        loadNotifications()
+    }
+
+    private fun loadSwipes() {
+        viewModelScope.launch {
+            socialRepo.observeMySwipes().collect { _swipedIds.value = _swipedIds.value + it }
+        }
+    }
+
+    private fun loadNotifications() {
+        viewModelScope.launch {
+            val seen = mutableSetOf<String>()
+            var first = true
+            socialRepo.observeNotifications().collect { list ->
+                _notifications.value = list
+                if (!first) {
+                    // Pop up the newest notification that arrived while the app is open
+                    list.firstOrNull { !it.read && it.id !in seen }?.let { _uiMessage.value = it.text }
+                }
+                seen.addAll(list.map { it.id })
+                first = false
+            }
+        }
+    }
+
+    fun markNotificationsRead() {
+        val unread = _notifications.value.filter { !it.read }.map { it.id }
+        viewModelScope.launch { socialRepo.markRead(unread) }
     }
 
     private fun loadCurrentUserProfile() {
@@ -83,6 +121,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                         ageOk && distOk
                     }
                 }
+                .combine(_swipedIds) { list, swiped -> list.filter { it.id !in swiped } }
                 .collect {
                     android.util.Log.d("SnugViewModel", "Loaded ${it.size} profiles")
                     _discoveryProfiles.value = it
@@ -94,7 +133,17 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             matchRepo.observeMatches().collect { list ->
                 val me = currentUserId
-                _matches.value = list.map { m ->
+                // One entry per person, even if older duplicate matches exist
+                val unique = list
+                    .groupBy { m -> m.userIds.firstOrNull { it != me } ?: m.id }
+                    .values
+                    .mapNotNull { group ->
+                        group.maxWithOrNull(
+                            compareBy({ it.lastMessage.isNotEmpty() }, { it.lastMessageAt?.toDate()?.time ?: 0L })
+                        )
+                    }
+                    .sortedByDescending { it.lastMessageAt?.toDate()?.time ?: 0L }
+                _matches.value = unique.map { m ->
                     val otherId = m.userIds.firstOrNull { it != me }
                     val other = otherId?.let { profileRepo.getProfile(it) }
                     m.copy(otherUser = other)
@@ -118,25 +167,24 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         _uiMessage.value = null
     }
 
-    fun nextProfile() {
-        if (_discoveryProfiles.value.isNotEmpty()) {
-            _currentProfileIndex.value = (_currentProfileIndex.value + 1) % _discoveryProfiles.value.size
-        }
-    }
 
     fun likeProfile(profileId: String) {
-        android.util.Log.d("SnugViewModel", "Liking profile: $profileId")
-        _uiMessage.value = "Liked!"
-        nextProfile()
+        _swipedIds.value = _swipedIds.value + profileId
         viewModelScope.launch {
-            matchRepo.createMatch(profileId)
+            val myName = _currentUserProfile.value?.displayName?.ifBlank { null } ?: "Someone"
+            val result = socialRepo.swipe(profileId, true, myName)
+            _uiMessage.value = when {
+                result.isFailure -> "Could not save like: ${result.exceptionOrNull()?.message}"
+                result.getOrDefault(false) -> "It's a match! \uD83C\uDF89"
+                else -> "Liked!"
+            }
         }
     }
 
     fun passProfile() {
-        android.util.Log.d("SnugViewModel", "Passing profile")
-        _uiMessage.value = "Passed"
-        nextProfile()
+        val id = currentProfile.value?.id ?: return
+        _swipedIds.value = _swipedIds.value + id
+        viewModelScope.launch { socialRepo.swipe(id, false, "") }
     }
 
     fun observeMessages(matchId: String): Flow<List<ChatMessage>> {
