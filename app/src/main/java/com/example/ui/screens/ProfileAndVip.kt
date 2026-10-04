@@ -1321,6 +1321,8 @@ fun LogoutConfirmDialog(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
 private fun ChoiceSection(
     title: String,
     options: List<String>,
@@ -1346,7 +1348,6 @@ private fun ChoiceSection(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EditProfileDialog(
     profile: UserProfile,
