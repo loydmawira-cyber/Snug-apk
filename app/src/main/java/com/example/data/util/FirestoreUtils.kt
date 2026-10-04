@@ -1,6 +1,9 @@
 package com.example.data.util
 
+import android.content.Context
+import android.location.Geocoder
 import android.util.Log
+import java.util.Locale
 import com.google.firebase.auth.FirebaseAuth
 import org.json.JSONArray
 import org.json.JSONObject
@@ -73,4 +76,18 @@ fun calculateAge(timestamp: com.google.firebase.Timestamp?): Int {
         age--
     }
     return age
+}
+
+/** Turns coordinates into (city, country) using the phone's geocoder. Returns empty strings if unavailable. */
+fun reverseGeocode(context: Context, lat: Double, lon: Double): Pair<String, String> = try {
+    if (!Geocoder.isPresent()) {
+        "" to ""
+    } else {
+        @Suppress("DEPRECATION")
+        val a = Geocoder(context, Locale.getDefault()).getFromLocation(lat, lon, 1)?.firstOrNull()
+        val city = a?.locality ?: a?.subAdminArea ?: a?.adminArea ?: ""
+        city to (a?.countryName ?: "")
+    }
+} catch (e: Exception) {
+    "" to ""
 }
