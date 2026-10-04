@@ -20,8 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.foundation.clickable
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Star
@@ -57,7 +57,6 @@ import com.example.ui.components.PresenceBadge
 import com.example.ui.components.SnugImage
 import com.example.data.model.UserProfile
 import com.example.data.model.avatarUrl
-import com.example.data.model.basics
 import com.example.data.model.placeAndDistance
 import com.example.data.util.calculateAge
 import com.example.data.util.formatDistance
@@ -321,14 +320,24 @@ fun ProfileCard(
         Box {
             val hasProfilePic = profile.profilePhoto.isNotBlank()
             val mainPhoto = profile.photos.firstOrNull()
-            SnugImage(
-                model = profile.avatarUrl(),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(if (!hasProfilePic && mainPhoto?.isBlurred == true) Modifier.blur(20.dp) else Modifier),
-                contentScale = ContentScale.Crop
-            )
+            val avatar = profile.avatarUrl()
+            if (profile.showPhotosToOthers && avatar != null) {
+                SnugImage(
+                    model = avatar,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(if (!hasProfilePic && mainPhoto?.isBlurred == true) Modifier.blur(20.dp) else Modifier),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(96.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             IconButton(
                 onClick = onOpenProfile,
                 modifier = Modifier
@@ -375,67 +384,47 @@ fun ProfileCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onOpenProfile() }) {
                     Text(
-                        text = "${profile.displayName}, ${calculateAge(profile.birthDate)}",
+                        text = if (profile.showAgeToOthers && profile.birthDate != null) "${profile.displayName}, ${calculateAge(profile.birthDate)}" else profile.displayName.ifBlank { "SNUG member" },
                         color = Color.White,
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    if (profile.isPhoneVerified) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = "Verified Phone",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
+                }
+                if (profile.showLocationToOthers && distanceText != "Location unknown") {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Location",
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = distanceText,
+                            color = Color.White.copy(alpha = 0.8f),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
-                PresenceBadge(profile, Color.White.copy(alpha = 0.9f))
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Location",
-                        tint = Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = distanceText,
-                        color = Color.White.copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium
-                    )
+                if (profile.showPresenceToOthers) {
+                    val isOnline = profile.isOnlineNow()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (isOnline) Color(0xFF4CAF50) else Color.LightGray)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            if (isOnline) "Online" else "Offline",
+                            color = Color.White.copy(alpha = 0.9f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
-                if (profile.lookingFor.isNotBlank()) {
-                    Text(
-                        text = "Looking for: ${profile.lookingFor}",
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-                val quickFacts = profile.basics().take(3).joinToString(" \u2022 ")
-                if (quickFacts.isNotBlank()) {
-                    Text(
-                        text = quickFacts,
-                        color = Color.White.copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                Text(
-                    text = profile.bio,
-                    color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodyLarge
-                )
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     FilledTonalIconButton(
@@ -513,8 +502,9 @@ fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) 
         }
     }
     val onlineNearby = profiles
-        .filter { it.isOnlineNow(now) }
+        .filter { it.showLocationToOthers && it.showPresenceToOthers && it.isOnlineNow(now) }
         .sortedBy { viewModel.distanceTo(me, it) ?: Double.MAX_VALUE } // closest first
+    val locationVisibleProfiles = profiles.filter { it.showLocationToOthers }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Online now", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -540,7 +530,7 @@ fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) 
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(profiles) { profile ->
+            items(locationVisibleProfiles) { profile ->
                 RadarItem(profile, placeAndDistance(profile, formatDistance(viewModel.distanceTo(me, profile)))) { onOpenProfile(profile.id) }
             }
         }
@@ -622,7 +612,9 @@ fun RadarItem(profile: UserProfile, distanceText: String, onClick: () -> Unit = 
                     .padding(8.dp)
             ) {
                 Text(profile.displayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                PresenceBadge(profile, Color.White.copy(alpha = 0.9f), compact = true)
+                if (profile.showPresenceToOthers) {
+                    PresenceBadge(profile, Color.White.copy(alpha = 0.9f), compact = true)
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,

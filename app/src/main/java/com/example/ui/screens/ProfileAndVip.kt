@@ -49,6 +49,7 @@ enum class ProfileSubScreen {
     NONE,
     ACCOUNT_VERIFICATION,
     PHOTOS_PRIVACY,
+    PROFILE_VISIBILITY,
     DISCOVERY_PREFERENCES,
     SECURITY_PIN_LOCK,
     VIP_MEMBERSHIP,
@@ -86,6 +87,13 @@ fun ProfileScreen(viewModel: SnugViewModel) {
         }
         ProfileSubScreen.PHOTOS_PRIVACY -> {
             PhotosPrivacySheet(
+                profile = profile,
+                viewModel = viewModel,
+                onDismiss = { activeSubScreen = ProfileSubScreen.NONE }
+            )
+        }
+        ProfileSubScreen.PROFILE_VISIBILITY -> {
+            ProfileVisibilitySheet(
                 profile = profile,
                 viewModel = viewModel,
                 onDismiss = { activeSubScreen = ProfileSubScreen.NONE }
@@ -369,8 +377,18 @@ fun ProfileScreen(viewModel: SnugViewModel) {
                     icon = Icons.Default.Collections,
                     iconTint = MaterialTheme.colorScheme.primary,
                     title = "My Photos & Privacy",
-                    subtitle = "${profile?.photos?.size ?: 0} photos uploaded • Blur toggles",
+                    subtitle = "${profile?.photos?.size ?: 0} photos uploaded • Visibility and blur",
                     onClick = { activeSubScreen = ProfileSubScreen.PHOTOS_PRIVACY }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsMenuRow(
+                    icon = Icons.Default.Visibility,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    title = "Profile Visibility",
+                    subtitle = "Choose what other members can see",
+                    onClick = { activeSubScreen = ProfileSubScreen.PROFILE_VISIBILITY }
                 )
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
@@ -769,7 +787,7 @@ fun AccountVerificationSheet(
 }
 
 @Composable
-fun PhotoItem(photo: UserPhoto, onDelete: () -> Unit, onToggleBlur: () -> Unit) {
+fun PhotoItem(photo: UserPhoto, onDelete: () -> Unit, onToggleBlur: () -> Unit, onTogglePublic: () -> Unit) {
     Box(
         modifier = Modifier
             .size(96.dp)
@@ -815,6 +833,20 @@ fun PhotoItem(photo: UserPhoto, onDelete: () -> Unit, onToggleBlur: () -> Unit) 
                 shape = CircleShape,
                 color = Color.Black.copy(alpha = 0.6f)
             ) {
+                IconButton(onClick = onTogglePublic) {
+                    Icon(
+                        if (photo.isPublic) Icons.Default.Public else Icons.Default.Lock,
+                        contentDescription = if (photo.isPublic) "Make photo private" else "Make photo public",
+                        tint = if (photo.isPublic) Color.White else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            }
+            Surface(
+                modifier = Modifier.size(26.dp),
+                shape = CircleShape,
+                color = Color.Black.copy(alpha = 0.6f)
+            ) {
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
@@ -825,6 +857,108 @@ fun PhotoItem(photo: UserPhoto, onDelete: () -> Unit, onToggleBlur: () -> Unit) 
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileVisibilitySheet(
+    profile: UserProfile?,
+    viewModel: SnugViewModel,
+    onDismiss: () -> Unit
+) {
+    val current = profile ?: return
+    var showName by remember(current.id) { mutableStateOf(current.showNameToOthers) }
+    var showAge by remember(current.id) { mutableStateOf(current.showAgeToOthers) }
+    var showLocation by remember(current.id) { mutableStateOf(current.showLocationToOthers) }
+    var showPhotos by remember(current.id) { mutableStateOf(current.showPhotosToOthers) }
+    var showBio by remember(current.id) { mutableStateOf(current.showBioToOthers) }
+    var showInterests by remember(current.id) { mutableStateOf(current.showInterestsToOthers) }
+    var showPrompts by remember(current.id) { mutableStateOf(current.showPromptsToOthers) }
+    var showAboutMe by remember(current.id) { mutableStateOf(current.showAboutMeToOthers) }
+    var showPresence by remember(current.id) { mutableStateOf(current.showPresenceToOthers) }
+    var showVerifiedBadge by remember(current.id) { mutableStateOf(current.showVerifiedBadgeToOthers) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text("Profile Visibility", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "Choose which profile details other members can see. Your Discover photo can also be hidden here.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            VisibilityPreferenceRow("Name", "Hide your name as “SNUG member”", showName) { showName = it }
+            VisibilityPreferenceRow("Age", "Show your age on profile cards and details", showAge) { showAge = it }
+            VisibilityPreferenceRow("Location", "Show your city, country, or distance", showLocation) { showLocation = it }
+            VisibilityPreferenceRow("Photos", "Show your profile photo and public gallery photos", showPhotos) { showPhotos = it }
+            VisibilityPreferenceRow("Bio", "Show your written bio", showBio) { showBio = it }
+            VisibilityPreferenceRow("Interests", "Show your selected interests", showInterests) { showInterests = it }
+            VisibilityPreferenceRow("Prompts", "Show your profile questions and answers", showPrompts) { showPrompts = it }
+            VisibilityPreferenceRow("About me", "Show gender, work, lifestyle, and what you’re looking for", showAboutMe) { showAboutMe = it }
+            VisibilityPreferenceRow("Online status", "Show whether you are online or when you were last active", showPresence) { showPresence = it }
+            VisibilityPreferenceRow("Verified badge", "Show your phone-verification badge", showVerifiedBadge) { showVerifiedBadge = it }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = {
+                    viewModel.updateUserProfile(
+                        current.copy(
+                            showNameToOthers = showName,
+                            showAgeToOthers = showAge,
+                            showLocationToOthers = showLocation,
+                            showPhotosToOthers = showPhotos,
+                            showBioToOthers = showBio,
+                            showInterestsToOthers = showInterests,
+                            showPromptsToOthers = showPrompts,
+                            showAboutMeToOthers = showAboutMe,
+                            showPresenceToOthers = showPresence,
+                            showVerifiedBadgeToOthers = showVerifiedBadge
+                        )
+                    )
+                    onDismiss()
+                },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = CircleShape
+            ) {
+                Text("Save visibility settings")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text("Cancel")
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun VisibilityPreferenceRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(title, fontWeight = FontWeight.SemiBold)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -860,7 +994,7 @@ fun PhotosPrivacySheet(
             ) {
                 Column {
                     Text("My Photos & Privacy", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Toggle blur to keep specific photos private", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Choose which photos are public and toggle blur", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 FilledTonalButton(
                     onClick = {
@@ -903,6 +1037,12 @@ fun PhotosPrivacySheet(
                             onToggleBlur = {
                                 val newList = profile.photos.toMutableList().apply {
                                     this[index] = photo.copy(isBlurred = !photo.isBlurred)
+                                }
+                                viewModel.updateUserProfile(profile.copy(photos = newList))
+                            },
+                            onTogglePublic = {
+                                val newList = profile.photos.toMutableList().apply {
+                                    this[index] = photo.copy(isPublic = !photo.isPublic)
                                 }
                                 viewModel.updateUserProfile(profile.copy(photos = newList))
                             }

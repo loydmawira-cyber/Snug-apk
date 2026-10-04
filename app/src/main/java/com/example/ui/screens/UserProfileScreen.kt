@@ -85,8 +85,8 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(user?.displayName ?: "Profile") },
+                TopAppBar(
+                title = { Text(user?.displayName?.ifBlank { "SNUG member" } ?: "Profile") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -112,6 +112,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 CircularProgressIndicator()
             }
         } else {
+            val publicName = u.displayName.ifBlank { "SNUG member" }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -147,11 +148,11 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "${u.displayName}, ${calculateAge(u.birthDate)}",
+                        if (u.showAgeToOthers && u.birthDate != null) "$publicName, ${calculateAge(u.birthDate)}" else publicName,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    if (u.isPhoneVerified) {
+                    if (u.showVerifiedBadgeToOthers && u.isPhoneVerified) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(
                             Icons.Default.Verified,
@@ -162,15 +163,22 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                     }
                 }
 
-                Text(
-                    placeAndDistance(u, formatDistance(viewModel.distanceTo(me, u))),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                PresenceBadge(u, MaterialTheme.colorScheme.onSurfaceVariant, showLastSeen = true)
+                if (u.showLocationToOthers) {
+                    val location = placeAndDistance(u, formatDistance(viewModel.distanceTo(me, u)))
+                    if (location != "Location unknown") {
+                        Text(
+                            location,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                if (u.showPresenceToOthers) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    PresenceBadge(u, MaterialTheme.colorScheme.onSurfaceVariant, showLastSeen = true)
+                }
 
-                if (u.gender.isNotBlank()) {
+                if (u.showAboutMeToOthers && u.gender.isNotBlank()) {
                     Text(
                         u.gender,
                         style = MaterialTheme.typography.bodyMedium,
@@ -178,12 +186,12 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                     )
                 }
 
-                if (u.bio.isNotBlank()) {
+                if (u.showBioToOthers && u.bio.isNotBlank()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(u.bio, style = MaterialTheme.typography.bodyLarge)
                 }
 
-                u.prompts.filter { it.question.isNotBlank() && it.answer.isNotBlank() }.forEach { prompt ->
+                if (u.showPromptsToOthers) u.prompts.filter { it.question.isNotBlank() && it.answer.isNotBlank() }.forEach { prompt ->
                     Spacer(modifier = Modifier.height(12.dp))
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -203,7 +211,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                     }
                 }
 
-                if (u.lookingFor.isNotBlank()) {
+                if (u.showAboutMeToOthers && u.lookingFor.isNotBlank()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Surface(
                         shape = RoundedCornerShape(50),
@@ -218,7 +226,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                     }
                 }
 
-                val basics = u.basics()
+                val basics = if (u.showAboutMeToOthers) u.basics() else emptyList()
                 if (basics.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Text(
@@ -237,7 +245,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                     }
                 }
 
-                if (u.interests.isNotEmpty()) {
+                if (u.showInterestsToOthers && u.interests.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Text(
                         "Interests",
@@ -273,7 +281,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                     }
                 }
 
-                if (u.photos.isNotEmpty()) {
+                if (u.showPhotosToOthers && u.photos.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Text(
                         "Photos",

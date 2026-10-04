@@ -550,7 +550,11 @@ fun LikesYouScreen(viewModel: SnugViewModel, navController: NavController) {
                                     )
                             )
                             Text(
-                                text = "${user.displayName}, ${com.example.data.util.calculateAge(user.birthDate)}",
+                                text = if (user.showAgeToOthers && user.birthDate != null) {
+                                    "${user.displayName}, ${com.example.data.util.calculateAge(user.birthDate)}"
+                                } else {
+                                    user.displayName.ifBlank { "SNUG member" }
+                                },
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.align(Alignment.BottomStart).padding(12.dp)
