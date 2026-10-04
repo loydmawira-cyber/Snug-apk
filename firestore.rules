@@ -13,9 +13,16 @@ service cloud.firestore {
     // ---------- USERS ----------
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isOwner(userId);
+      // The verified badge needs a phone number really linked to the account
+      // (the phone_number claim only exists after Firebase Phone Auth).
+      allow create: if isOwner(userId)
+        && request.resource.data.isVip == false
+        && (request.resource.data.isPhoneVerified == false
+            || request.auth.token.phone_number != null);
       allow update: if isOwner(userId)
-        && request.resource.data.isVip == resource.data.isVip;
+        && request.resource.data.isVip == resource.data.isVip
+        && (request.resource.data.isPhoneVerified == false
+            || request.auth.token.phone_number != null);
       allow delete: if isOwner(userId);
 
       match /private/{docId} {
@@ -66,8 +73,45 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.senderId == request.auth.uid
         && request.auth.uid in get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.userIds;
-      allow update: if false;
+      // The receiver may only stamp the message as seen
+      allow update: if isSignedIn()
+        && resource.data.senderId != request.auth.uid
+        && request.auth.uid in get(/databases/$(database)/documents/matches/$(resource.data.matchId)).data.userIds
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
+      // Either person may react with an emoji
+      allow update: if isSignedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/matches/$(resource.data.matchId)).data.userIds
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reaction']);
       allow delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
+    }
+
+    // ---------- TYPING INDICATORS (doc id = matchId_userId) ----------
+    match /typing/{typingId} {
+      allow read: if isSignedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/matches/$(typingId.split('_')[0])).data.userIds;
+      allow write: if isSignedIn()
+        && typingId.split('_')[1] == request.auth.uid
+        && request.auth.uid in get(/databases/$(database)/documents/matches/$(typingId.split('_')[0])).data.userIds;
+    }
+
+    // ---------- BLOCKS ----------
+    match /blocks/{blockId} {
+      allow get: if isSignedIn()
+        && (resource == null
+            || resource.data.blockerId == request.auth.uid
+            || resource.data.blockedId == request.auth.uid);
+      allow list: if isSignedIn()
+        && (resource.data.blockerId == request.auth.uid
+            || resource.data.blockedId == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.blockerId == request.auth.uid
+        && blockId == request.auth.uid + '_' + request.resource.data.blockedId;
+      allow delete: if isSignedIn() && resource.data.blockerId == request.auth.uid;
+    }
+
+    // ---------- REPORTS (write-only for users) ----------
+    match /reports/{reportId} {
+      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
     }
 
     match /{document=**} {
