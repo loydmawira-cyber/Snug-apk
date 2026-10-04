@@ -40,21 +40,26 @@ class ProfileRepository(private val db: FirebaseFirestore) {
 
     suspend fun getProfile(userId: String): UserProfile? {
         return try {
-            val base = db.collection("users").document(userId).get().await()
-                .toUserProfile()?.copy(id = userId) ?: return null
-            if (userId == auth.currentUser?.uid) {
-                // Phone numbers live in a private document nobody else can read
-                val phone = try {
-                    db.collection("users").document(userId).collection("private").document("contact")
-                        .get().await().getString("phoneNumber")
-                } catch (e: Exception) { null }
-                base.copy(phoneNumber = phone ?: "")
-            } else {
-                base.copy(phoneNumber = "")
-            }
+            getProfileOrThrow(userId)
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.GET, "users/$userId")
             null
+        }
+    }
+
+    /** Returns null only when the document is absent; read/permission errors must not look like a new user. */
+    suspend fun getProfileOrThrow(userId: String): UserProfile? {
+        val snapshot = db.collection("users").document(userId).get().await()
+        if (!snapshot.exists()) return null
+        val base = snapshot.toUserProfile()?.copy(id = userId)
+            ?: throw IllegalStateException("Profile document exists but could not be decoded")
+        if (userId == auth.currentUser?.uid) {
+            // A failed private-contact read must not silently replace a saved phone number with blank.
+            val phone = db.collection("users").document(userId).collection("private").document("contact")
+                .get().await().getString("phoneNumber")
+            base.copy(phoneNumber = phone.orEmpty())
+        } else {
+            base.copy(phoneNumber = "")
         }
     }
 
@@ -84,11 +89,12 @@ class ProfileRepository(private val db: FirebaseFirestore) {
                             "online" to true, // saving means the app is open
                             "lastActive" to FieldValue.serverTimestamp(),
                             "updatedAt" to FieldValue.serverTimestamp()
-                        )
+                        ),
+                        SetOptions.merge()
                     )
                     .await()
                 db.collection("users").document(uid).collection("private").document("contact")
-                    .set(mapOf("phoneNumber" to profile.phoneNumber))
+                    .set(mapOf("phoneNumber" to profile.phoneNumber), SetOptions.merge())
                     .await()
             }
             Result.success(Unit)
@@ -136,7 +142,11 @@ class ProfileRepository(private val db: FirebaseFirestore) {
     }
 
     /** [genders] narrows the query on the server (empty = everyone). [limit] grows as people run out. */
-    fun observeDiscoveryProfiles(genders: List<String> = emptyList(), limit: Long = 100): Flow<List<UserProfile>> {
+    fun observeDiscoveryProfiles(
+        genders: List<String> = emptyList(),
+        limit: Long = 100,
+        onError: (Exception) -> Unit = {}
+    ): Flow<List<UserProfile>> {
         var query: Query = db.collection("users")
         if (genders.isNotEmpty()) query = query.whereIn("gender", genders)
         return query
@@ -149,7 +159,10 @@ class ProfileRepository(private val db: FirebaseFirestore) {
                 profiles.filter { user -> user.id != getCurrentUserId() }
             }
             .catch { e ->
-                if (e is Exception) handleFirestoreError(e, OperationType.LIST, "users")
+                if (e is Exception) {
+                    handleFirestoreError(e, OperationType.LIST, "users")
+                    onError(e)
+                }
                 emit(emptyList())
             }
     }
