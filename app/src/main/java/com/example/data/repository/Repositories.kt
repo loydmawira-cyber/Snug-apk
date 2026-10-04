@@ -13,6 +13,7 @@ import com.example.data.model.AppNotification
 import com.example.data.model.ChatMessage
 import com.example.data.model.Match
 import com.example.data.model.UserProfile
+import com.example.data.model.publicViewForOthers
 import com.example.data.util.OperationType
 import com.example.data.util.handleFirestoreError
 import com.google.firebase.Firebase
@@ -40,7 +41,8 @@ class ProfileRepository(private val db: FirebaseFirestore) {
 
     suspend fun getProfile(userId: String): UserProfile? {
         return try {
-            getProfileOrThrow(userId)
+            val profile = getProfileOrThrow(userId)
+            if (userId == auth.currentUser?.uid) profile else profile?.publicViewForOthers()
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.GET, "users/$userId")
             null
@@ -639,6 +641,16 @@ private operator fun UserProfile.plus(other: Map<String, Any?>): Map<String, Any
         "heightCm" to this.heightCm,
         "isPaused" to this.isPaused,
         "hideDistance" to this.hideDistance,
+        "showNameToOthers" to this.showNameToOthers,
+        "showAgeToOthers" to this.showAgeToOthers,
+        "showLocationToOthers" to this.showLocationToOthers,
+        "showPhotosToOthers" to this.showPhotosToOthers,
+        "showBioToOthers" to this.showBioToOthers,
+        "showInterestsToOthers" to this.showInterestsToOthers,
+        "showPromptsToOthers" to this.showPromptsToOthers,
+        "showAboutMeToOthers" to this.showAboutMeToOthers,
+        "showPresenceToOthers" to this.showPresenceToOthers,
+        "showVerifiedBadgeToOthers" to this.showVerifiedBadgeToOthers,
         "onboarded" to this.onboarded,
         "superLikesUsed" to this.superLikesUsed,
         "lastSuperLikeDay" to this.lastSuperLikeDay,
@@ -660,6 +672,16 @@ private fun DocumentSnapshot.toUserProfile(): UserProfile? {
     return base.copy(
         isPaused = getBoolean("isPaused") ?: false,
         isPhoneVerified = getBoolean("isPhoneVerified") ?: false,
-        isVip = getBoolean("isVip") ?: false
+        isVip = getBoolean("isVip") ?: false,
+        showNameToOthers = getBoolean("showNameToOthers") ?: true,
+        showAgeToOthers = getBoolean("showAgeToOthers") ?: true,
+        showLocationToOthers = getBoolean("showLocationToOthers") ?: true,
+        showPhotosToOthers = getBoolean("showPhotosToOthers") ?: true,
+        showBioToOthers = getBoolean("showBioToOthers") ?: true,
+        showInterestsToOthers = getBoolean("showInterestsToOthers") ?: true,
+        showPromptsToOthers = getBoolean("showPromptsToOthers") ?: true,
+        showAboutMeToOthers = getBoolean("showAboutMeToOthers") ?: true,
+        showPresenceToOthers = getBoolean("showPresenceToOthers") ?: true,
+        showVerifiedBadgeToOthers = getBoolean("showVerifiedBadgeToOthers") ?: true
     )
 }
