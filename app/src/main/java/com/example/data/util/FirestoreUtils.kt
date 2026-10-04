@@ -61,8 +61,9 @@ fun distanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
 
 fun formatDistance(km: Double?): String = when {
     km == null -> "Distance unknown"
-    km < 1.0 -> "Less than 1 km away"
-    else -> "${Math.round(km)} km away"
+    km < 0.1 -> "Less than 100 m away"
+    km < 1.0 -> "${String.format(Locale.US, "%.1f", km)} km away"
+    else -> "${String.format(Locale.US, "%.1f", km)} km away"
 }
 
 fun calculateAge(timestamp: com.google.firebase.Timestamp?): Int {
