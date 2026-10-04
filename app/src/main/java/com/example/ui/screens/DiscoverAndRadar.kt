@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -229,15 +228,15 @@ fun ProfileCard(profile: UserProfile, distanceText: String, onOpenProfile: () ->
                         Icon(Icons.Default.Close, contentDescription = "Pass", modifier = Modifier.size(32.dp))
                     }
                     
-                    FilledTonalIconButton(
-                        onClick = { /* Super like logic */ },
-                        modifier = Modifier.size(64.dp).testTag("super_like_button"),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = Color.White.copy(alpha = 0.2f),
-                            contentColor = Color.Cyan
+                    OutlinedIconButton(
+                        onClick = onOpenProfile,
+                        modifier = Modifier.size(64.dp).testTag("view_profile_button"),
+                        colors = IconButtonDefaults.outlinedIconButtonColors(
+                            containerColor = Color.White.copy(alpha = 0.12f),
+                            contentColor = Color.White
                         )
                     ) {
-                        Icon(Icons.Default.Star, contentDescription = "Super Spark", modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.Info, contentDescription = "View full profile", modifier = Modifier.size(30.dp))
                     }
                     
                     FilledIconButton(
@@ -319,4 +318,3 @@ fun RadarItem(profile: UserProfile, distanceText: String, onClick: () -> Unit = 
         }
     }
 }
-
