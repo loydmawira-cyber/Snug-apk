@@ -10,6 +10,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Radar : Screen("radar", "Radar", Icons.Default.Radar)
     object Matches : Screen("matches", "Matches", Icons.Default.FavoriteBorder)
     object Likes : Screen("likes", "Liked You", Icons.Default.Favorite)
+    object Admin : Screen("admin", "Review", Icons.Default.Verified)
     object Messages : Screen("messages", "Messages", Icons.Default.Forum)
     object Profile : Screen("profile", "Profile", Icons.Default.Person)
     object UserDetail : Screen("user/{userId}", "Profile", Icons.Default.Person) {
