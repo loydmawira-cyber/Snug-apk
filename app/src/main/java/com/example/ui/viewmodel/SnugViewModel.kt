@@ -13,6 +13,8 @@ import com.example.data.model.afterSuperLike
 import com.example.data.model.superLikesLeft
 import com.example.data.model.UserPhoto
 import com.example.data.model.UserProfile
+import com.example.data.security.EmailVerifier
+import com.example.data.model.hasVerifiedBadge
 import com.example.data.model.publicViewForOthers
 import com.example.data.util.calculateAge
 import com.example.data.util.distanceKm
@@ -128,6 +130,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         loadBlocks()
+        loadVerificationStatus()
         loadLikesReceived()
         loadDiscoveryProfiles()
         loadMatches()
@@ -196,7 +199,43 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
 
     fun reportUser(userId: String, reason: String) {
         viewModelScope.launch {
-            _uiMessage.value = if (safetyRepo.report(userId, reason)) "Report sent. Thank you." else "Could not send report"
+            _uiMessage.value = when (safetyRepo.report(userId, reason)) {
+                0 -> "Report sent. Thank you."
+                1 -> "You already reported this person"
+                else -> "Could not send report"
+            }
+        }
+    }
+
+    // ---- Photo (selfie) verification, reviewed by an admin ----
+    private val _photoVerificationStatus = MutableStateFlow<String?>(null)
+    val photoVerificationStatus: StateFlow<String?> = _photoVerificationStatus.asStateFlow()
+
+    private fun loadVerificationStatus() {
+        viewModelScope.launch {
+            safetyRepo.observeVerificationStatus().collect { _photoVerificationStatus.value = it }
+        }
+    }
+
+    fun submitSelfie(pose: String, selfie: android.graphics.Bitmap) {
+        viewModelScope.launch {
+            val dataUri = withContext(Dispatchers.Default) {
+                val maxSide = 640
+                val scale = minOf(1f, maxSide.toFloat() / maxOf(selfie.width, selfie.height))
+                val bmp = if (scale < 1f) {
+                    android.graphics.Bitmap.createScaledBitmap(
+                        selfie, (selfie.width * scale).toInt(), (selfie.height * scale).toInt(), true
+                    )
+                } else selfie
+                val out = java.io.ByteArrayOutputStream()
+                bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, out)
+                "data:image/jpeg;base64," + android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP)
+            }
+            _uiMessage.value = if (safetyRepo.submitPhotoVerification(pose, dataUri)) {
+                "Selfie sent. We will review it soon."
+            } else {
+                "Could not send selfie"
+            }
         }
     }
 
@@ -300,7 +339,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 .combine(_blockedIds) { list, blocked ->
-                    list.filter { it.id !in blocked && !it.isPaused }
+                    list.filter { it.id !in blocked && !it.isPaused && !it.banned }
                 }
                 .collect { profiles ->
                     android.util.Log.d("SnugViewModel", "Loaded ${profiles.size} profiles")
@@ -311,7 +350,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
             combine(_nearbyProfiles, _likedIds, _passedIds, _filters) { list, liked, passed, f ->
                 // The deck never runs out: new people first, then people liked in the past,
                 // then everyone I already swiped on this session (oldest first), and it starts over.
-                list.filter { !f.verifiedOnly || it.isPhoneVerified }
+                list.filter { !f.verifiedOnly || it.hasVerifiedBadge() }
                     .filter { f.lookingFor.isBlank() || it.lookingFor == f.lookingFor }
                     .sortedBy { u ->
                         val i = passed.indexOf(u.id)
@@ -432,6 +471,10 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun sendPhoto(matchId: String, uri: android.net.Uri) {
+        if (!EmailVerifier.isVerified()) {
+            _emailGate.value = true
+            return
+        }
         viewModelScope.launch {
             _uiMessage.value = "Sending photo..."
             val enc = profileRepo.encodePhoto(getApplication(), uri, 800, 200_000)
@@ -473,10 +516,21 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { chatRepo.markSeen(unseen) }
     }
 
-    fun sendMessage(matchId: String, text: String) {
+    // Messaging needs a verified email (it keeps fake and throw-away accounts out of chats)
+    private val _emailGate = MutableStateFlow(false)
+    val emailGate: StateFlow<Boolean> = _emailGate.asStateFlow()
+    fun dismissEmailGate() { _emailGate.value = false }
+
+    /** Returns true if the message was sent, false if the email must be verified first. */
+    fun sendMessage(matchId: String, text: String): Boolean {
+        if (!EmailVerifier.isVerified()) {
+            _emailGate.value = true
+            return false
+        }
         viewModelScope.launch {
             chatRepo.sendMessage(matchId, text)
         }
+        return true
     }
 
     fun updateUserProfile(profile: UserProfile) {
