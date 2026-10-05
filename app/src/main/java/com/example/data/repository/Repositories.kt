@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -614,8 +615,21 @@ class SafetyRepository(private val db: FirebaseFirestore) {
             .catch { emit(null) }
     }
 
-    /** Saves a selfie for an admin to review. Only I (and admins in the Console) can read it. */
-    suspend fun submitPhotoVerification(pose: String, selfieDataUri: String): Boolean {
+    /** Why my last selfie was rejected ("" when there is no reason). */
+    fun observeVerificationReason(): Flow<String> {
+        val uid = auth.currentUser?.uid ?: return kotlinx.coroutines.flow.emptyFlow()
+        return db.collection("verificationRequests").document(uid).snapshots()
+            .map { snap -> snap.getString("rejectionReason") ?: "" }
+            .catch { emit("") }
+    }
+
+    /** Saves a selfie for an admin to review. Only I and admins can read it. */
+    suspend fun submitPhotoVerification(
+        pose: String,
+        selfieDataUri: String,
+        referenceDataUri: String = "",
+        name: String = ""
+    ): Boolean {
         val uid = auth.currentUser?.uid ?: return false
         return try {
             val ref = db.collection("verificationRequests").document(uid)
@@ -624,8 +638,10 @@ class SafetyRepository(private val db: FirebaseFirestore) {
             ref.set(
                 mapOf(
                     "uid" to uid,
+                    "name" to name,
                     "pose" to pose,
                     "selfie" to selfieDataUri,
+                    "reference" to referenceDataUri,
                     "status" to "pending",
                     "createdAt" to FieldValue.serverTimestamp()
                 )
@@ -634,6 +650,229 @@ class SafetyRepository(private val db: FirebaseFirestore) {
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.CREATE, "verificationRequests/$uid")
             false
+        }
+    }
+}
+
+/** Admin-only access to the photo-verification queue. The rules enforce who is an admin. */
+class AdminRepository(private val db: FirebaseFirestore) {
+    constructor(context: Context) : this(
+        FirebaseFirestore.getInstance(context.getString(R.string.firestore_database_id))
+    )
+
+    private val auth = Firebase.auth
+
+    suspend fun isAdmin(): Boolean {
+        val uid = auth.currentUser?.uid ?: return false
+        return try {
+            // Only admins are allowed to list verification requests, so a successful read means admin.
+            // The Firestore rules are the single source of truth for who is an admin.
+            db.collection("verificationRequests").limit(1).get().await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun observePending(): Flow<List<com.example.data.model.VerificationRequest>> {
+        return db.collection("verificationRequests")
+            .whereEqualTo("status", "pending")
+            .snapshots()
+            .map { snap ->
+                snap.documents.mapNotNull { d ->
+                    d.toObject(com.example.data.model.VerificationRequest::class.java)?.copy(uid = d.id)
+                }.sortedBy { it.createdAt?.seconds ?: 0L }
+            }
+            .catch { e ->
+                if (e is Exception) handleFirestoreError(e, OperationType.LIST, "verificationRequests")
+                emit(emptyList())
+            }
+    }
+
+    /** Counts users and reports on the server (cheap: no documents are downloaded). */
+    suspend fun loadStats(): com.example.data.model.AdminStats = kotlinx.coroutines.coroutineScope {
+        val users = db.collection("users")
+        val now = System.currentTimeMillis()
+        fun ago(ms: Long) = com.google.firebase.Timestamp(java.util.Date(now - ms))
+        suspend fun count(q: com.google.firebase.firestore.Query): Long = try {
+            q.count().get(com.google.firebase.firestore.AggregateSource.SERVER).await().count
+        } catch (e: Exception) {
+            -1L
+        }
+        val min5 = 5 * 60_000L
+        val day = 24 * 60 * 60_000L
+        val a = listOf(
+            async { count(users) },
+            async { count(users.whereGreaterThan("lastActive", ago(min5))) },
+            async { count(users.whereGreaterThan("lastActive", ago(day))) },
+            async { count(users.whereGreaterThan("lastActive", ago(7 * day))) },
+            async { count(users.whereGreaterThan("createdAt", ago(day))) },
+            async { count(users.whereGreaterThan("createdAt", ago(7 * day))) },
+            async { count(users.whereEqualTo("photoVerified", true)) },
+            async { count(users.whereEqualTo("isPhoneVerified", true)) },
+            async { count(users.whereEqualTo("isVip", true)) },
+            async { count(users.whereEqualTo("banned", true)) },
+            async { count(users.whereEqualTo("isPaused", true)) },
+            async { count(users.whereEqualTo("gender", "Male")) },
+            async { count(users.whereEqualTo("gender", "Female")) },
+            async { count(db.collection("reports")) },
+            async { count(db.collection("verificationRequests").whereEqualTo("status", "pending")) }
+        ).map { it.await() }
+        com.example.data.model.AdminStats(
+            totalUsers = a[0], activeNow = a[1], active24h = a[2], active7d = a[3],
+            newToday = a[4], new7d = a[5], photoVerified = a[6], phoneVerified = a[7],
+            vip = a[8], banned = a[9], paused = a[10], men = a[11], women = a[12],
+            reports = a[13], pendingReviews = a[14]
+        )
+    }
+
+    /** New users per day for the last [days] days (oldest first). */
+    suspend fun loadSignups(days: Int = 7): List<com.example.data.model.SignupDay> = kotlinx.coroutines.coroutineScope {
+        val cal = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val todayStart = cal.timeInMillis
+        val fmt = java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault())
+        val dayMs = 24 * 60 * 60_000L
+        (days - 1 downTo 0).map { back ->
+            val start = todayStart - back * dayMs
+            val end = start + dayMs
+            val label = fmt.format(java.util.Date(start))
+            async {
+                val n = try {
+                    db.collection("users")
+                        .whereGreaterThanOrEqualTo("createdAt", com.google.firebase.Timestamp(java.util.Date(start)))
+                        .whereLessThan("createdAt", com.google.firebase.Timestamp(java.util.Date(end)))
+                        .count().get(com.google.firebase.firestore.AggregateSource.SERVER).await().count
+                } catch (e: Exception) {
+                    0L
+                }
+                com.example.data.model.SignupDay(label, n)
+            }
+        }.map { it.await() }
+    }
+
+    /** The 10 most reported people (looks at the latest 500 reports). */
+    suspend fun loadMostReported(): List<com.example.data.model.ReportedUser> {
+        return try {
+            val docs = db.collection("reports").limit(500).get().await().documents
+            val grouped = docs.groupBy { it.getString("reportedId") ?: "" }.filterKeys { it.isNotBlank() }
+            grouped.entries.sortedByDescending { it.value.size }.take(10).mapNotNull { (id, list) ->
+                val u = db.collection("users").document(id).get().await()
+                    .toObject(UserProfile::class.java) ?: return@mapNotNull null
+                com.example.data.model.ReportedUser(
+                    userId = id,
+                    name = u.displayName,
+                    photo = u.profilePhoto.takeIf { it.isNotBlank() } ?: u.photos.firstOrNull()?.url ?: "",
+                    reports = list.size,
+                    reasons = list.mapNotNull { it.getString("reason") }.groupingBy { it }.eachCount()
+                        .entries.sortedByDescending { it.value }.take(3).map { "${it.key} (${it.value})" },
+                    banned = u.banned
+                )
+            }
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.LIST, "reports")
+            emptyList()
+        }
+    }
+
+    /** Suspends or lifts the suspension, and records it in the audit trail. Returns null on success. */
+    suspend fun setBanned(userId: String, name: String, banned: Boolean): String? {
+        val admin = auth.currentUser ?: return "Not signed in"
+        if (userId == admin.uid) return "You cannot suspend yourself."
+        return try {
+            val batch = db.batch()
+            batch.update(db.collection("users").document(userId), "banned", banned)
+            batch.set(
+                db.collection("verificationAudit").document(),
+                mapOf(
+                    "userId" to userId,
+                    "userName" to name,
+                    "adminId" to admin.uid,
+                    "adminEmail" to (admin.email ?: ""),
+                    "decision" to if (banned) "suspended" else "unsuspended",
+                    "reason" to "",
+                    "decidedAt" to FieldValue.serverTimestamp()
+                )
+            )
+            batch.commit().await()
+            null
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, "users/$userId")
+            e.message ?: "Could not update the account"
+        }
+    }
+
+    fun observeAudit(): Flow<List<com.example.data.model.VerificationAuditEntry>> {
+        return db.collection("verificationAudit")
+            .orderBy("decidedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(50)
+            .snapshots()
+            .map { snap -> snap.toObjects(com.example.data.model.VerificationAuditEntry::class.java) }
+            .catch { e ->
+                if (e is Exception) handleFirestoreError(e, OperationType.LIST, "verificationAudit")
+                emit(emptyList())
+            }
+    }
+
+    /**
+     * Approves or rejects a request, writes the audit entry and notifies the user.
+     * The selfie images are erased from the request as soon as a decision is made.
+     * Returns null on success, otherwise an error message.
+     */
+    suspend fun decide(
+        request: com.example.data.model.VerificationRequest,
+        approve: Boolean,
+        reason: String
+    ): String? {
+        val admin = auth.currentUser ?: return "Not signed in"
+        if (request.uid == admin.uid) return "You cannot review your own selfie."
+        return try {
+            val decision = if (approve) "approved" else "rejected"
+            val batch = db.batch()
+            batch.update(
+                db.collection("verificationRequests").document(request.uid),
+                mapOf(
+                    "status" to decision,
+                    "reviewedBy" to admin.uid,
+                    "reviewedAt" to FieldValue.serverTimestamp(),
+                    "rejectionReason" to if (approve) "" else reason,
+                    "selfie" to "",
+                    "reference" to ""
+                )
+            )
+            if (approve) {
+                batch.update(db.collection("users").document(request.uid), "photoVerified", true)
+            }
+            batch.set(
+                db.collection("verificationAudit").document(),
+                mapOf(
+                    "userId" to request.uid,
+                    "userName" to request.name,
+                    "adminId" to admin.uid,
+                    "adminEmail" to (admin.email ?: ""),
+                    "decision" to decision,
+                    "reason" to if (approve) "" else reason,
+                    "decidedAt" to FieldValue.serverTimestamp()
+                )
+            )
+            batch.commit().await()
+            // The decision is saved. Telling the user is best effort.
+            try {
+                val text = if (approve) {
+                    "Your photo is verified! You now have the blue check."
+                } else {
+                    "Your selfie was not accepted" + (if (reason.isNotBlank()) ": $reason" else "") + ". You can try again."
+                }
+                writeNotification(db, request.uid, "verification", text, "", "SNUG Team")
+            } catch (e: Exception) {
+                android.util.Log.w("AdminRepository", "notification failed", e)
+            }
+            null
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, "verificationRequests/${request.uid}")
+            e.message ?: "Could not save the decision"
         }
     }
 }
