@@ -16,6 +16,15 @@ service cloud.firestore {
       return request.auth.token.email_verified == true;
     }
 
+    // Admins are listed in the `admins` collection (added by hand in the Console, never by the app).
+    // Edit the email list below to add or remove admins without touching the Console data.
+    function isAdmin() {
+      return isSignedIn()
+        && (exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+            || (request.auth.token.email_verified == true
+                && request.auth.token.email in ['smarttechlab.apps@gmail.com', 'loydmawira@gmail.com']));
+    }
+
     function notBanned() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('banned', false) != true;
     }
@@ -43,6 +52,9 @@ service cloud.firestore {
         && request.resource.data.isVip == resource.data.isVip
         && (request.resource.data.isPhoneVerified == false
             || request.auth.token.phone_number != null);
+      // An admin can only ever flip the photo-verified badge or suspend / unsuspend someone
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoVerified', 'banned']);
       allow delete: if isOwner(userId);
 
       match /private/{docId} {
@@ -137,6 +149,7 @@ service cloud.firestore {
     // ---------- REPORTS (write-only for users) ----------
     // One report per person (the id is reporter_reported), so reports cannot be spammed.
     match /reports/{reportId} {
+      allow read: if isAdmin();
       allow create: if isSignedIn()
         && request.resource.data.reporterId == request.auth.uid
         && reportId == request.auth.uid + '_' + request.resource.data.reportedId;
@@ -144,11 +157,27 @@ service cloud.firestore {
 
     // ---------- PHOTO VERIFICATION REQUESTS (selfie, reviewed by an admin in the Console) ----------
     match /verificationRequests/{requestId} {
-      allow read, delete: if isOwner(requestId);
+      allow read: if isOwner(requestId) || isAdmin();
+      allow delete: if isOwner(requestId) || isAdmin();
       allow create: if isOwner(requestId)
         && notBanned()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.status == 'pending';
+      // Only an admin can decide a request
+      allow update: if isAdmin()
+        && request.resource.data.status in ['approved', 'rejected']
+        && request.resource.data.uid == resource.data.uid;
+    }
+
+    // Who is an admin (each person can only check their own entry; entries are added in the Console)
+    match /admins/{adminId} {
+      allow get: if isOwner(adminId);
+    }
+
+    // Audit trail of every approve / reject decision (append-only, admins only)
+    match /verificationAudit/{auditId} {
+      allow create: if isAdmin() && request.resource.data.adminId == request.auth.uid;
+      allow read: if isAdmin();
     }
 
     match /{document=**} {

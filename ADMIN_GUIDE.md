@@ -3,14 +3,20 @@
 Everything below is done in Firebase Console -> Firestore Database -> Data. The app cannot change these fields,
 only you can (the security rules block it).
 
-## Approve or reject a photo verification
-1. Open the `verificationRequests` collection. Each document id is the user's id and has `status: "pending"`.
-2. Look at the selfie: copy the long `selfie` value (starts with `data:image/jpeg;base64,`), paste it into the
-   address bar of Chrome and press Enter. The `pose` field tells you which pose the person had to make.
-3. Open `users/<same id>` and compare with their `profilePhoto` / `photos` the same way.
-4. Match -> in `users/<id>` add a boolean field `photoVerified` = true, then set the request `status` to `approved`.
-   No match -> set the request `status` to `rejected` (the person can then try again).
-5. Delete the request document when you are done so the selfie is not kept longer than needed.
+## Become an admin
+Easiest: put the admin email in `firestore.rules`, in the `isAdmin()` function (replace `ADMIN_EMAIL_HERE`,
+add more emails separated by commas), then publish the rules. The account must have a verified email
+(Google sign-in always does). Alternative: add a document to the `admins` collection whose id is the user's UID.
+Reopen the app and Profile shows **Admin: Verification review**.
+
+## Review photo verifications (in the app)
+1. Profile -> Admin: Verification review. The Pending tab lists every selfie waiting.
+2. Each card shows the reference photo (the user's profile photo at the time) next to the live selfie, plus the pose they had to make.
+3. Tap Approve (adds the blue check) or Reject (pick a reason; the user sees it and can try again).
+4. The user gets an in-app notification. The selfie and reference image are erased from the request as soon as you decide.
+5. The History tab is the audit trail: who decided, when, and the rejection reason.
+
+Console fallback: you can still edit `verificationRequests` and `users/<id>.photoVerified` by hand.
 
 ## Suspend a user (ban)
 In `users/<id>` add a boolean field `banned` = true. The person sees "Account suspended", disappears from
