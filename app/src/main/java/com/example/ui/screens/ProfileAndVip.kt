@@ -36,7 +36,9 @@ import com.example.data.model.completeness
 import com.example.data.model.ProfilePrompt
 import com.example.data.model.ProfileOptions
 import com.example.data.model.UserProfile
+import com.example.data.model.missingRequiredFields
 import com.example.data.security.PinManager
+import com.example.data.security.EmailVerifier
 import com.example.data.security.PhoneVerifier
 import kotlinx.coroutines.launch
 import com.example.data.util.calculateAge
@@ -324,11 +326,12 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // VIP Banner Card
+        // VIP Banner Card (admins and VIP members have every premium feature already)
+        val hasPremium = isAdmin || profile?.isVip == true
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { activeSubScreen = ProfileSubScreen.VIP_MEMBERSHIP },
+                .clickable(enabled = !hasPremium) { activeSubScreen = ProfileSubScreen.VIP_MEMBERSHIP },
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
@@ -347,15 +350,21 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
                 }
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Get SNUG VIP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("Unlimited likes, rewinds & 5 sparks", color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+                    Text(if (hasPremium) "SNUG VIP is active" else "Get SNUG VIP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        if (hasPremium) "All premium features are unlocked for you" else "Unlimited likes, rewinds & 5 sparks",
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 12.sp
+                    )
                 }
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowForwardIos,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.8f),
-                    modifier = Modifier.size(16.dp)
-                )
+                if (!hasPremium) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForwardIos,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
 
@@ -752,7 +761,7 @@ fun AccountVerificationSheet(
                 OutlinedTextField(
                     value = phoneNumber,
                     onValueChange = { if (it.all { c -> c.isDigit() || c == '+' || c == '-' || c == ' ' }) phoneNumber = it },
-                    label = { Text("Phone Number") },
+                    label = { RequiredLabel("Phone Number") },
                     placeholder = { Text("+1 234 567 890") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -1559,6 +1568,35 @@ fun LogoutConfirmDialog(
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/** Text followed by a red * when the field is compulsory. */
+@Composable
+private fun RequiredLabel(text: String, required: Boolean = true) {
+    Text(
+        androidx.compose.ui.text.buildAnnotatedString {
+            append(text)
+            if (required) {
+                androidx.compose.ui.text.withStyle(
+                    androidx.compose.ui.text.SpanStyle(color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+                ) { append(" *") }
+            }
+        }
+    )
+}
+
+@Composable
+private fun RequiredTitle(text: String) {
+    Text(
+        androidx.compose.ui.text.buildAnnotatedString {
+            append(text)
+            androidx.compose.ui.text.withStyle(
+                androidx.compose.ui.text.SpanStyle(color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+            ) { append(" *") }
+        },
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.Bold
+    )
+}
+
 @Composable
 private fun ChoiceSection(
     title: String,
@@ -1567,7 +1605,7 @@ private fun ChoiceSection(
     onSelect: (String) -> Unit
 ) {
     Spacer(modifier = Modifier.height(16.dp))
-    Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    RequiredTitle(title)
     Spacer(modifier = Modifier.height(8.dp))
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
@@ -1598,7 +1636,8 @@ fun EditProfileDialog(
     var gender by remember { mutableStateOf(profile.gender) }
     val interestedIn = remember { mutableStateListOf(*profile.interestedIn.toTypedArray()) }
     val interests = remember { mutableStateListOf(*profile.interests.toTypedArray()) }
-    var birthYear by remember { mutableStateOf((profile.birthDate?.toDate()?.year?.plus(1900) ?: 2000).toString()) }
+    var birthYear by remember { mutableStateOf(profile.birthDate?.toDate()?.year?.plus(1900)?.toString() ?: "") }
+    var saveError by remember { mutableStateOf<String?>(null) }
     var phoneNumber by remember { mutableStateOf(profile.phoneNumber) }
     var lookingFor by remember { mutableStateOf(profile.lookingFor) }
     var haveKids by remember { mutableStateOf(profile.haveKids) }
@@ -1634,6 +1673,16 @@ fun EditProfileDialog(
                     .verticalScroll(rememberScrollState())
             ) {
                 Text("Edit Profile", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(
+                    androidx.compose.ui.text.buildAnnotatedString {
+                        androidx.compose.ui.text.withStyle(
+                            androidx.compose.ui.text.SpanStyle(color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+                        ) { append("*") }
+                        append(" Required. Prompts, job title and height are optional.")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(modifier = Modifier.height(16.dp))
 
                 val dialogAvatar = profile.profilePhoto.takeIf { it.isNotBlank() } ?: profile.photos.firstOrNull()?.url
@@ -1666,7 +1715,7 @@ fun EditProfileDialog(
                         }
                     }
                     TextButton(onClick = onChangePicture) {
-                        Text(if (dialogAvatar != null) "Change picture" else "Add profile picture")
+                        RequiredLabel(if (dialogAvatar != null) "Change picture" else "Add profile picture")
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -1674,7 +1723,7 @@ fun EditProfileDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Display Name") },
+                    label = { RequiredLabel("Display Name") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -1684,7 +1733,7 @@ fun EditProfileDialog(
                 OutlinedTextField(
                     value = bio,
                     onValueChange = { bio = it },
-                    label = { Text("Bio") },
+                    label = { RequiredLabel("Bio") },
                     placeholder = { Text("Share what makes you unique...") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
@@ -1696,7 +1745,7 @@ fun EditProfileDialog(
                 OutlinedTextField(
                     value = birthYear,
                     onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) birthYear = it },
-                    label = { Text("Birth Year") },
+                    label = { RequiredLabel("Birth Year (18+)") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                     shape = RoundedCornerShape(12.dp)
@@ -1715,7 +1764,7 @@ fun EditProfileDialog(
                 )
                 
                 Spacer(modifier = Modifier.height(20.dp))
-                Text("I am", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                RequiredTitle("I am")
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     genders.forEach { g ->
@@ -1728,7 +1777,7 @@ fun EditProfileDialog(
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Interested In", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                RequiredTitle("Interested In")
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     genders.forEach { g ->
@@ -1743,7 +1792,7 @@ fun EditProfileDialog(
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Interests / Hobbies", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                RequiredTitle("Interests / Hobbies (pick at least 3)")
                 Spacer(modifier = Modifier.height(8.dp))
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -1859,25 +1908,30 @@ fun EditProfileDialog(
                     Switch(checked = hideDistance, onCheckedChange = { hideDistance = it })
                 }
 
+                saveError?.let {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
                 Spacer(modifier = Modifier.height(28.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = { 
-                            val year = birthYear.toIntOrNull() ?: 2000
+                            val year = birthYear.toIntOrNull() ?: 0
+                            val thisYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
                             val calendar = java.util.Calendar.getInstance().apply {
                                 set(java.util.Calendar.YEAR, year)
                                 set(java.util.Calendar.MONTH, 0)
                                 set(java.util.Calendar.DAY_OF_MONTH, 1)
                             }
-                            onSave(profile.copy(
+                            val candidate = profile.copy(
                                 displayName = name, 
                                 bio = bio, 
                                 gender = gender,
                                 phoneNumber = phoneNumber,
                                 isPhoneVerified = if (phoneNumber == profile.phoneNumber) profile.isPhoneVerified else false,
-                                birthDate = com.google.firebase.Timestamp(calendar.time),
+                                birthDate = if (year in 1900..(thisYear - 18)) com.google.firebase.Timestamp(calendar.time) else null,
                                 interestedIn = interestedIn.toList(),
                                 interests = interests.toList(),
                                 lookingFor = lookingFor,
@@ -1896,7 +1950,14 @@ fun EditProfileDialog(
                                 hideDistance = hideDistance,
                                 jobTitle = jobTitle.trim(),
                                 heightCm = heightText.toIntOrNull()?.takeIf { it in 100..250 } ?: 0
-                            )) 
+                            )
+                            val missing = candidate.missingRequiredFields()
+                            if (missing.isEmpty()) {
+                                saveError = null
+                                onSave(candidate)
+                            } else {
+                                saveError = "Still needed: " + missing.joinToString(", ")
+                            }
                         },
                         shape = CircleShape
                     ) {
@@ -1905,5 +1966,151 @@ fun EditProfileDialog(
                 }
             }
         }
+    }
+}
+
+/**
+ * Shown instead of the app until the email is verified and every required profile field is filled in.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SetupGateScreen(
+    viewModel: SnugViewModel,
+    profile: UserProfile,
+    missing: List<String>,
+    emailVerified: Boolean,
+    onEmailVerified: () -> Unit,
+    onLogout: () -> Unit
+) {
+    var showEdit by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var note by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val message by viewModel.uiMessage.collectAsState()
+    val avatarPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> uri?.let { viewModel.setProfilePicture(it) } }
+    )
+
+    if (showEdit) {
+        EditProfileDialog(
+            profile = profile,
+            onChangePicture = {
+                avatarPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            },
+            onDismiss = { showEdit = false },
+            onSave = { updated ->
+                viewModel.updateUserProfile(updated)
+                showEdit = false
+            }
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+        Text("Finish setting up", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "Complete both steps to start using SNUG. This keeps the community real and safe.",
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Step 1: email
+        Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (emailVerified) Icons.Default.CheckCircle else Icons.Default.Email,
+                        contentDescription = null,
+                        tint = if (emailVerified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("1. Verify your email", fontWeight = FontWeight.Bold)
+                }
+                if (!emailVerified) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "We will email a link to ${EmailVerifier.email().ifBlank { "your address" }}. Open it, then come back and tap I verified.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    note?.let {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            enabled = !busy,
+                            onClick = {
+                                busy = true
+                                scope.launch {
+                                    note = EmailVerifier.send() ?: "Email sent. Check your inbox and spam."
+                                    busy = false
+                                }
+                            }
+                        ) { Text("Send email") }
+                        Button(
+                            enabled = !busy,
+                            onClick = {
+                                busy = true
+                                scope.launch {
+                                    if (EmailVerifier.refresh()) onEmailVerified() else note = "Not verified yet. Open the link in the email first."
+                                    busy = false
+                                }
+                            }
+                        ) { Text("I verified") }
+                    }
+                } else {
+                    Text("Done", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Step 2: profile
+        Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (missing.isEmpty()) Icons.Default.CheckCircle else Icons.Default.Person,
+                        contentDescription = null,
+                        tint = if (missing.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("2. Complete your profile", fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                if (missing.isEmpty()) {
+                    Text("Done", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                } else {
+                    Text("Still needed:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    missing.forEach {
+                        Text("\u2022 $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(onClick = { showEdit = true }) { Text("Edit profile") }
+                }
+            }
+        }
+
+        message?.let {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        TextButton(onClick = onLogout) { Text("Log out") }
     }
 }

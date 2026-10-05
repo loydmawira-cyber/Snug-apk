@@ -77,6 +77,8 @@ fun DiscoverScreen(
     val profileLimit by viewModel.profileLimit.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
     val filters by viewModel.filters.collectAsState()
+    val isAdminUser by viewModel.isAdmin.collectAsState()
+    val isPremium = isAdminUser || me?.isVip == true
     val discoveryError by viewModel.discoveryError.collectAsState()
     val canUndo by viewModel.canUndo.collectAsState()
     val likedIds by viewModel.likedIds.collectAsState()
@@ -211,7 +213,7 @@ fun DiscoverScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     viewModel.nudge(profile!!.id)
                 },
-                superLikesLeft = me?.superLikesLeft() ?: 0,
+                superLikesLeft = if (isPremium) -1 else (me?.superLikesLeft() ?: 0),
                 autoAdvance = true,
                 onPass = {
                     swipeKey++
@@ -449,7 +451,7 @@ fun ProfileCard(
                         Icon(Icons.Default.Info, contentDescription = "View full profile", modifier = Modifier.size(24.dp))
                     }
                     
-                    BadgedBox(badge = { Badge { Text(superLikesLeft.toString()) } }) {
+                    BadgedBox(badge = { Badge { Text(if (superLikesLeft < 0) "\u221E" else superLikesLeft.toString()) } }) {
                         FilledTonalIconButton(
                             onClick = onSuperLike,
                             modifier = Modifier.size(50.dp).testTag("super_like_button"),
