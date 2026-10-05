@@ -26,6 +26,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1575,7 +1578,7 @@ private fun RequiredLabel(text: String, required: Boolean = true) {
         androidx.compose.ui.text.buildAnnotatedString {
             append(text)
             if (required) {
-                androidx.compose.ui.text.withStyle(
+                withStyle(
                     androidx.compose.ui.text.SpanStyle(color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
                 ) { append(" *") }
             }
@@ -1588,7 +1591,7 @@ private fun RequiredTitle(text: String) {
     Text(
         androidx.compose.ui.text.buildAnnotatedString {
             append(text)
-            androidx.compose.ui.text.withStyle(
+            withStyle(
                 androidx.compose.ui.text.SpanStyle(color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
             ) { append(" *") }
         },
@@ -1597,6 +1600,7 @@ private fun RequiredTitle(text: String) {
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChoiceSection(
     title: String,
@@ -1675,7 +1679,7 @@ fun EditProfileDialog(
                 Text("Edit Profile", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(
                     androidx.compose.ui.text.buildAnnotatedString {
-                        androidx.compose.ui.text.withStyle(
+                        withStyle(
                             androidx.compose.ui.text.SpanStyle(color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
                         ) { append("*") }
                         append(" Required. Prompts, job title and height are optional.")
