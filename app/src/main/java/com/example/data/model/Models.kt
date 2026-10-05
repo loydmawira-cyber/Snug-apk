@@ -321,3 +321,68 @@ object PhotoVerificationPoses {
         "Wave at the camera with an open hand"
     )
 }
+
+/** A selfie waiting for (or already given) an admin decision. Images are data URIs. */
+data class VerificationRequest(
+    val uid: String = "",
+    val name: String = "",
+    val pose: String = "",
+    val selfie: String = "",
+    val reference: String = "",
+    val status: String = "pending",
+    val rejectionReason: String = "",
+    val createdAt: Timestamp? = null
+)
+
+/** One approve / reject decision in the audit trail. */
+data class VerificationAuditEntry(
+    val userId: String = "",
+    val userName: String = "",
+    val adminId: String = "",
+    val adminEmail: String = "",
+    val decision: String = "",
+    val reason: String = "",
+    val decidedAt: Timestamp? = null
+)
+
+object RejectionReasons {
+    val all = listOf(
+        "Blurry photo",
+        "Face does not match profile photos",
+        "Face covered (hat, sunglasses, mask)",
+        "Wrong pose",
+        "Poor lighting",
+        "Other"
+    )
+}
+
+/** App-wide numbers for the admin dashboard. -1 means "could not be loaded". */
+data class AdminStats(
+    val totalUsers: Long = -1,
+    val activeNow: Long = -1,
+    val active24h: Long = -1,
+    val active7d: Long = -1,
+    val newToday: Long = -1,
+    val new7d: Long = -1,
+    val photoVerified: Long = -1,
+    val phoneVerified: Long = -1,
+    val vip: Long = -1,
+    val banned: Long = -1,
+    val paused: Long = -1,
+    val men: Long = -1,
+    val women: Long = -1,
+    val reports: Long = -1,
+    val pendingReviews: Long = -1
+)
+
+data class SignupDay(val label: String, val count: Long)
+
+/** Someone other users reported, with how often and why. */
+data class ReportedUser(
+    val userId: String,
+    val name: String,
+    val photo: String,
+    val reports: Int,
+    val reasons: List<String>,
+    val banned: Boolean
+)
