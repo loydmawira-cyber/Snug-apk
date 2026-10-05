@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.SnugImage
 import com.example.data.model.UserPhoto
+import com.example.data.model.hasVerifiedBadge
 import com.example.data.model.completeness
 import com.example.data.model.ProfilePrompt
 import com.example.data.model.ProfileOptions
@@ -48,6 +49,8 @@ import kotlin.math.roundToInt
 enum class ProfileSubScreen {
     NONE,
     ACCOUNT_VERIFICATION,
+    PHOTO_VERIFICATION,
+    SAFETY_CENTER,
     PHOTOS_PRIVACY,
     PROFILE_VISIBILITY,
     DISCOVERY_PREFERENCES,
@@ -61,6 +64,7 @@ enum class ProfileSubScreen {
 @Composable
 fun ProfileScreen(viewModel: SnugViewModel) {
     val profile by viewModel.currentUserProfile.collectAsState()
+    val verifyStatus by viewModel.photoVerificationStatus.collectAsState()
     var activeSubScreen by remember { mutableStateOf(ProfileSubScreen.NONE) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -84,6 +88,16 @@ fun ProfileScreen(viewModel: SnugViewModel) {
                 viewModel = viewModel,
                 onDismiss = { activeSubScreen = ProfileSubScreen.NONE }
             )
+        }
+        ProfileSubScreen.PHOTO_VERIFICATION -> {
+            PhotoVerificationSheet(
+                profile = profile,
+                viewModel = viewModel,
+                onDismiss = { activeSubScreen = ProfileSubScreen.NONE }
+            )
+        }
+        ProfileSubScreen.SAFETY_CENTER -> {
+            SafetyCenterSheet(onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
         }
         ProfileSubScreen.PHOTOS_PRIVACY -> {
             PhotosPrivacySheet(
@@ -261,7 +275,7 @@ fun ProfileScreen(viewModel: SnugViewModel) {
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
-                    if (profile?.isPhoneVerified == true) {
+                    if (profile?.hasVerifiedBadge() == true) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(
                             Icons.Default.Verified,
@@ -374,6 +388,27 @@ fun ProfileScreen(viewModel: SnugViewModel) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
 
                 SettingsMenuRow(
+                    icon = Icons.Default.Face,
+                    iconTint = if (profile?.photoVerified == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    title = "Photo & Email Verification",
+                    subtitle = when {
+                        profile?.photoVerified == true -> "Your selfie matched your photos"
+                        verifyStatus == "pending" -> "Selfie under review"
+                        verifyStatus == "rejected" -> "Selfie not accepted, try again"
+                        else -> "Take a selfie to prove it is really you"
+                    },
+                    badge = when {
+                        profile?.photoVerified == true -> "Verified"
+                        verifyStatus == "pending" -> "Pending"
+                        else -> "Recommended"
+                    },
+                    badgeColor = if (profile?.photoVerified == true || verifyStatus == "pending") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    onClick = { activeSubScreen = ProfileSubScreen.PHOTO_VERIFICATION }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsMenuRow(
                     icon = Icons.Default.Collections,
                     iconTint = MaterialTheme.colorScheme.primary,
                     title = "My Photos & Privacy",
@@ -429,6 +464,16 @@ fun ProfileScreen(viewModel: SnugViewModel) {
                     title = "Discovery Preferences",
                     subtitle = "Distance radius, age filter & gender",
                     onClick = { activeSubScreen = ProfileSubScreen.DISCOVERY_PREFERENCES }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsMenuRow(
+                    icon = Icons.Default.HealthAndSafety,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    title = "Safety Center",
+                    subtitle = "Dating safety tips and red flags",
+                    onClick = { activeSubScreen = ProfileSubScreen.SAFETY_CENTER }
                 )
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))

@@ -25,6 +25,7 @@ import com.example.ui.components.SnugImage
 import com.example.data.model.UserProfile
 import com.example.data.model.avatarUrl
 import com.example.data.model.basics
+import com.example.data.model.hasVerifiedBadge
 import com.example.data.model.placeAndDistance
 import com.example.data.model.ReportReasons
 import com.example.data.model.sharedInterestsWith
@@ -152,7 +153,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    if (u.showVerifiedBadgeToOthers && u.isPhoneVerified) {
+                    if (u.showVerifiedBadgeToOthers && u.hasVerifiedBadge()) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(
                             Icons.Default.Verified,

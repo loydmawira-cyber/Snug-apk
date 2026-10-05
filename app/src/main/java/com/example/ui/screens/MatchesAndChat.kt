@@ -39,6 +39,8 @@ import androidx.navigation.NavController
 import com.example.ui.components.SnugImage
 import com.example.data.model.ChatMessage
 import com.example.data.model.Match
+import com.example.data.model.ReportReasons
+import com.example.data.model.ScamGuard
 import com.example.data.model.avatarUrl
 import com.example.ui.Screen
 import com.example.ui.viewmodel.SnugViewModel
@@ -239,6 +241,9 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
     val other = allMatches.firstOrNull { it.id == matchId }?.otherUser
     val messages by viewModel.observeMessages(matchId).collectAsState(initial = emptyList())
     var text by remember { mutableStateOf("") }
+    var scamWarning by remember { mutableStateOf<String?>(null) }
+    val emailGate by viewModel.emailGate.collectAsState()
+    var showReport by remember { mutableStateOf(false) }
 
     val me by viewModel.currentUserProfile.collectAsState()
     val photoPicker = rememberLauncherForActivityResult(
@@ -284,6 +289,48 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
     }
     val lastSeenId = messages.lastOrNull { it.senderId == viewModel.currentUserId && it.readAt != null }?.id
 
+    if (emailGate) {
+        EmailGateDialog(
+            onDismiss = { viewModel.dismissEmailGate() },
+            onVerified = { viewModel.dismissEmailGate() }
+        )
+    }
+    scamWarning?.let { warning ->
+        AlertDialog(
+            onDismissRequest = { scamWarning = null },
+            title = { Text("Stay safe") },
+            text = { Text(warning) },
+            confirmButton = {
+                TextButton(onClick = {
+                    scamWarning = null
+                    if (viewModel.sendMessage(matchId, text)) text = ""
+                }) { Text("Send anyway") }
+            },
+            dismissButton = { TextButton(onClick = { scamWarning = null }) { Text("Edit message") } }
+        )
+    }
+    if (showReport) {
+        AlertDialog(
+            onDismissRequest = { showReport = false },
+            title = { Text("Report ${other?.displayName ?: "user"}") },
+            text = {
+                Column {
+                    ReportReasons.all.forEach { reason ->
+                        TextButton(
+                            onClick = {
+                                showReport = false
+                                other?.id?.takeIf { it.isNotBlank() }?.let { viewModel.reportUser(it, reason) }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(reason) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showReport = false }) { Text("Cancel") } }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -315,6 +362,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(text = { Text("Unmatch") }, onClick = { menuOpen = false; confirm = "unmatch" })
+                        DropdownMenuItem(text = { Text("Report") }, onClick = { menuOpen = false; showReport = true })
                         DropdownMenuItem(text = { Text("Block") }, onClick = { menuOpen = false; confirm = "block" })
                     }
                     confirm?.let { action ->
@@ -347,6 +395,15 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
         bottomBar = {
             Surface(tonalElevation = 8.dp) {
               Column {
+                if (messages.size < 5) {
+                    Text(
+                        "Stay safe: never send money or share bank details.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp, start = 12.dp, end = 12.dp)
+                    )
+                }
                 if (messages.isEmpty() && other != null) {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
@@ -385,8 +442,12 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                     IconButton(
                         onClick = {
                             if (text.isNotBlank()) {
-                                viewModel.sendMessage(matchId, text)
-                                text = ""
+                                val warning = ScamGuard.warningFor(text)
+                                if (warning != null) {
+                                    scamWarning = warning
+                                } else {
+                                    if (viewModel.sendMessage(matchId, text)) text = ""
+                                }
                             }
                         },
                         colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
