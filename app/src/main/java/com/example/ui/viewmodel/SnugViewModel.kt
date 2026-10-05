@@ -470,12 +470,16 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
             }
             if (superLike) {
                 val me = _currentUserProfile.value
-                if (me == null || me.superLikesLeft() <= 0) {
+                // Admins and VIP members have unlimited Super Likes
+                val premium = _isAdmin.value || me?.isVip == true
+                if (me == null || (!premium && me.superLikesLeft() <= 0)) {
                     _uiMessage.value = "No Super Likes left today. They refresh tomorrow."
                     return@launch
                 }
-                val updatedMe = me.afterSuperLike()
-                if (profileRepo.updateProfile(updatedMe).isSuccess) _currentUserProfile.value = updatedMe
+                if (!premium) {
+                    val updatedMe = me.afterSuperLike()
+                    if (profileRepo.updateProfile(updatedMe).isSuccess) _currentUserProfile.value = updatedMe
+                }
             }
             _likedIds.value = _likedIds.value + profileId
             val myName = _currentUserProfile.value?.displayName?.ifBlank { null } ?: "Someone"
