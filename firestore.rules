@@ -10,6 +10,22 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Suspended accounts (banned == true, set by an admin in the Console) cannot like, match or message.
+    // Messaging needs a verified email address (the token claim updates after the user verifies).
+    function emailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function notBanned() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('banned', false) != true;
+    }
+
+    // photoVerified and banned can only be changed by an admin in the Console, never by the app.
+    function adminFieldsUnchanged() {
+      return request.resource.data.get('photoVerified', false) == resource.data.get('photoVerified', false)
+        && request.resource.data.get('banned', false) == resource.data.get('banned', false);
+    }
+
     // ---------- USERS ----------
     match /users/{userId} {
       allow read: if isSignedIn();
@@ -17,9 +33,13 @@ service cloud.firestore {
       // (the phone_number claim only exists after Firebase Phone Auth).
       allow create: if isOwner(userId)
         && request.resource.data.isVip == false
+        && request.resource.data.get('photoVerified', false) == false
+        && request.resource.data.get('banned', false) == false
         && (request.resource.data.isPhoneVerified == false
             || request.auth.token.phone_number != null);
       allow update: if isOwner(userId)
+        && resource.data.get('banned', false) != true
+        && adminFieldsUnchanged()
         && request.resource.data.isVip == resource.data.isVip
         && (request.resource.data.isPhoneVerified == false
             || request.auth.token.phone_number != null);
@@ -41,6 +61,7 @@ service cloud.firestore {
         && (resource.data.fromUserId == request.auth.uid
             || resource.data.toUserId == request.auth.uid);
       allow create, update: if isSignedIn()
+        && notBanned()
         && request.resource.data.fromUserId == request.auth.uid
         && swipeId == request.auth.uid + '_' + request.resource.data.toUserId;
       allow delete: if isSignedIn() && resource.data.fromUserId == request.auth.uid;
@@ -50,6 +71,7 @@ service cloud.firestore {
     match /notifications/{notifId} {
       allow read, update, delete: if isSignedIn() && resource.data.toUserId == request.auth.uid;
       allow create: if isSignedIn()
+        && notBanned()
         && request.resource.data.fromUserId == request.auth.uid
         && request.resource.data.toUserId != request.auth.uid;
     }
@@ -58,6 +80,7 @@ service cloud.firestore {
     match /matches/{matchId} {
       allow read: if isSignedIn() && request.auth.uid in resource.data.userIds;
       allow create: if isSignedIn()
+        && notBanned()
         && request.auth.uid in request.resource.data.userIds
         && request.resource.data.userIds.size() == 2;
       allow update: if isSignedIn()
@@ -71,6 +94,8 @@ service cloud.firestore {
       allow read: if isSignedIn()
         && request.auth.uid in get(/databases/$(database)/documents/matches/$(resource.data.matchId)).data.userIds;
       allow create: if isSignedIn()
+        && notBanned()
+        && emailVerified()
         && request.resource.data.senderId == request.auth.uid
         && request.auth.uid in get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.userIds;
       // The receiver may only stamp the message as seen
@@ -110,8 +135,20 @@ service cloud.firestore {
     }
 
     // ---------- REPORTS (write-only for users) ----------
+    // One report per person (the id is reporter_reported), so reports cannot be spammed.
     match /reports/{reportId} {
-      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.reporterId == request.auth.uid
+        && reportId == request.auth.uid + '_' + request.resource.data.reportedId;
+    }
+
+    // ---------- PHOTO VERIFICATION REQUESTS (selfie, reviewed by an admin in the Console) ----------
+    match /verificationRequests/{requestId} {
+      allow read, delete: if isOwner(requestId);
+      allow create: if isOwner(requestId)
+        && notBanned()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending';
     }
 
     match /{document=**} {
