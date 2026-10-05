@@ -181,6 +181,12 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
 
     val hasProfile = myProfile != null
 
+    // Admin suspended this account: show only the suspension screen
+    if (myProfile?.banned == true) {
+        com.example.ui.screens.SuspendedScreen(onLogout = { viewModel.goOffline { Firebase.auth.signOut() } })
+        return
+    }
+
     // Online while the app is on screen, offline when it goes to the background
     val activity = appContext as? androidx.activity.ComponentActivity
     DisposableEffect(activity, viewModel) {
