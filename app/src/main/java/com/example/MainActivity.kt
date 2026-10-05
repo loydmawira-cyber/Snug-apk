@@ -237,6 +237,9 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
                 showNotifications = false
                 viewModel.markNotificationsRead()
                 when {
+                    n.type == "verification" -> navController.navigate(Screen.Profile.route) {
+                        launchSingleTop = true
+                    }
                     (n.type == "match" || n.type == "message") && n.matchId.isNotBlank() ->
                         navController.navigate(Screen.Chat.createRoute(n.matchId))
                     n.fromUserId.isNotBlank() ->
@@ -365,7 +368,10 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
             composable(Screen.Matches.route) { com.example.ui.screens.MatchesScreen(viewModel, navController) }
             composable(Screen.Likes.route) { com.example.ui.screens.LikesYouScreen(viewModel, navController) }
             composable(Screen.Messages.route) { com.example.ui.screens.MessagesScreen(viewModel, navController) }
-            composable(Screen.Profile.route) { com.example.ui.screens.ProfileScreen(viewModel) }
+            composable(Screen.Profile.route) {
+                com.example.ui.screens.ProfileScreen(viewModel, onOpenAdmin = { navController.navigate(Screen.Admin.route) })
+            }
+            composable(Screen.Admin.route) { com.example.ui.screens.AdminDashboardScreen(viewModel, navController) }
             composable(Screen.Chat.route) { backStackEntry ->
                 val matchId = backStackEntry.arguments?.getString("matchId") ?: ""
                 com.example.ui.screens.ChatScreen(
