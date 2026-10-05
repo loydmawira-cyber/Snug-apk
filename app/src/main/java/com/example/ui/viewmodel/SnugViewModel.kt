@@ -24,6 +24,7 @@ import kotlinx.coroutines.withContext
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import kotlinx.coroutines.tasks.await
+import com.example.data.repository.AdminRepository
 import com.example.data.repository.ChatRepository
 import com.example.data.repository.MatchRepository
 import com.example.data.repository.ProfileRepository
@@ -40,6 +41,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     private val chatRepo = ChatRepository(application)
     private val socialRepo = SocialRepository(application)
     private val safetyRepo = SafetyRepository(application)
+    private val adminRepo = AdminRepository(application)
 
     // People I blocked and people who blocked me (hidden both ways)
     private val _blockedIds = MutableStateFlow<Set<String>>(emptySet())
@@ -131,6 +133,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     init {
         loadBlocks()
         loadVerificationStatus()
+        loadAdmin()
         loadLikesReceived()
         loadDiscoveryProfiles()
         loadMatches()
@@ -211,9 +214,52 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     private val _photoVerificationStatus = MutableStateFlow<String?>(null)
     val photoVerificationStatus: StateFlow<String?> = _photoVerificationStatus.asStateFlow()
 
+    private val _photoRejectionReason = MutableStateFlow("")
+    val photoRejectionReason: StateFlow<String> = _photoRejectionReason.asStateFlow()
+
     private fun loadVerificationStatus() {
         viewModelScope.launch {
             safetyRepo.observeVerificationStatus().collect { _photoVerificationStatus.value = it }
+        }
+        viewModelScope.launch {
+            safetyRepo.observeVerificationReason().collect { _photoRejectionReason.value = it }
+        }
+    }
+
+    // ---- Admin review dashboard (only people listed in the `admins` collection) ----
+    private val _isAdmin = MutableStateFlow(false)
+    val isAdmin: StateFlow<Boolean> = _isAdmin.asStateFlow()
+
+    private val _pendingVerifications = MutableStateFlow<List<com.example.data.model.VerificationRequest>>(emptyList())
+    val pendingVerifications: StateFlow<List<com.example.data.model.VerificationRequest>> = _pendingVerifications.asStateFlow()
+
+    private fun loadAdmin() {
+        viewModelScope.launch {
+            if (adminRepo.isAdmin()) {
+                _isAdmin.value = true
+                adminRepo.observePending().collect { _pendingVerifications.value = it }
+            }
+        }
+    }
+
+    fun observeVerificationAudit() = adminRepo.observeAudit()
+
+    suspend fun loadAdminStats() = adminRepo.loadStats()
+    suspend fun loadSignups() = adminRepo.loadSignups()
+    suspend fun loadMostReported() = adminRepo.loadMostReported()
+
+    fun setSuspended(user: com.example.data.model.ReportedUser, banned: Boolean, onDone: () -> Unit) {
+        viewModelScope.launch {
+            val problem = adminRepo.setBanned(user.userId, user.name, banned)
+            _uiMessage.value = problem ?: if (banned) "${user.name} suspended" else "${user.name} reinstated"
+            if (problem == null) onDone()
+        }
+    }
+
+    fun decideVerification(request: com.example.data.model.VerificationRequest, approve: Boolean, reason: String = "") {
+        viewModelScope.launch {
+            val problem = adminRepo.decide(request, approve, reason)
+            _uiMessage.value = problem ?: if (approve) "Approved ${request.name.ifBlank { "user" }}" else "Rejected"
         }
     }
 
@@ -231,7 +277,9 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                 bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, out)
                 "data:image/jpeg;base64," + android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP)
             }
-            _uiMessage.value = if (safetyRepo.submitPhotoVerification(pose, dataUri)) {
+            val me = _currentUserProfile.value
+            val reference = me?.profilePhoto?.takeIf { it.isNotBlank() } ?: me?.photos?.firstOrNull()?.url ?: ""
+            _uiMessage.value = if (safetyRepo.submitPhotoVerification(pose, dataUri, reference, me?.displayName ?: "")) {
                 "Selfie sent. We will review it soon."
             } else {
                 "Could not send selfie"
