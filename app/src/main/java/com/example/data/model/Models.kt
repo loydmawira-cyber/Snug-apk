@@ -386,3 +386,34 @@ data class ReportedUser(
     val reasons: List<String>,
     val banned: Boolean
 )
+
+/**
+ * Everything a profile must have before the app can be used.
+ * Optional on purpose: profile prompts, job title and height.
+ */
+fun UserProfile.missingRequiredFields(): List<String> {
+    val out = mutableListOf<String>()
+    if (profilePhoto.isBlank() && photos.isEmpty()) out += "Profile picture"
+    if (displayName.isBlank() || displayName.trim() == "New User") out += "Display name"
+    if (bio.trim().length < 20) out += "Bio (at least 20 characters)"
+    val thisYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+    val birthYear = birthDate?.toDate()?.let {
+        java.util.Calendar.getInstance().apply { time = it }.get(java.util.Calendar.YEAR)
+    }
+    if (birthYear == null || birthYear < 1900 || birthYear > thisYear - 18) out += "Birth year (18 or older)"
+    if (phoneNumber.count { it.isDigit() } < 8) out += "Phone number"
+    if (gender.isBlank()) out += "I am"
+    if (interestedIn.isEmpty()) out += "Interested in"
+    if (interests.size < 3) out += "At least 3 interests"
+    if (lookingFor.isBlank()) out += "I'm looking for"
+    if (haveKids.isBlank()) out += "Kids"
+    if (wantKids.isBlank()) out += "Future plans for kids"
+    if (smoking.isBlank()) out += "Smoking"
+    if (drinking.isBlank()) out += "Drinking"
+    if (exercise.isBlank()) out += "Exercise"
+    if (religion.isBlank()) out += "Religion"
+    if (education.isBlank()) out += "Education"
+    if (pets.isBlank()) out += "Pets"
+    if (zodiac.isBlank()) out += "Zodiac sign"
+    return out
+}
