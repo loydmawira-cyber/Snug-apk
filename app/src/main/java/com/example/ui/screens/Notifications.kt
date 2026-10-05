@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -64,6 +65,7 @@ fun NotificationsSheet(
                         val icon: ImageVector = when (n.type) {
                             "match" -> Icons.Default.Favorite
                             "message" -> Icons.Default.Chat
+                            "verification" -> Icons.Default.Verified
                             else -> Icons.Default.FavoriteBorder
                         }
                         Row(

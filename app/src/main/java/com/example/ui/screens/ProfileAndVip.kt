@@ -62,9 +62,11 @@ enum class ProfileSubScreen {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(viewModel: SnugViewModel) {
+fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
     val profile by viewModel.currentUserProfile.collectAsState()
     val verifyStatus by viewModel.photoVerificationStatus.collectAsState()
+    val isAdmin by viewModel.isAdmin.collectAsState()
+    val pendingCount by viewModel.pendingVerifications.collectAsState()
     var activeSubScreen by remember { mutableStateOf(ProfileSubScreen.NONE) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -405,6 +407,20 @@ fun ProfileScreen(viewModel: SnugViewModel) {
                     badgeColor = if (profile?.photoVerified == true || verifyStatus == "pending") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     onClick = { activeSubScreen = ProfileSubScreen.PHOTO_VERIFICATION }
                 )
+
+                if (isAdmin) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                    SettingsMenuRow(
+                        icon = Icons.Default.Verified,
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        title = "Admin: Verification review",
+                        subtitle = "Compare selfies with profile photos",
+                        badge = "${pendingCount.size} pending",
+                        badgeColor = if (pendingCount.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                        onClick = onOpenAdmin
+                    )
+                }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
 

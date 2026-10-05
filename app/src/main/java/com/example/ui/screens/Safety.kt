@@ -47,8 +47,14 @@ fun PhotoVerificationSheet(
     var emailNote by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
-        if (bmp != null) selfie = bmp
+    val rejectionReason by viewModel.photoRejectionReason.collectAsState()
+    var showCamera by remember { mutableStateOf(false) }
+    if (showCamera) {
+        SelfieCaptureDialog(
+            pose = pose,
+            onCaptured = { selfie = it; showCamera = false },
+            onDismiss = { showCamera = false }
+        )
     }
     val hasPhoto = !profile?.avatarOrNull().isNullOrBlank()
 
@@ -105,7 +111,9 @@ fun PhotoVerificationSheet(
                             if (status == "rejected") {
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    "Your last selfie could not be matched. Make sure your face is clear and in good light, then try again.",
+                                    "Your last selfie was not accepted" +
+                                        (if (rejectionReason.isNotBlank()) " ($rejectionReason)" else "") +
+                                        ". Make sure your face is clear and in good light, then try again.",
                                     color = MaterialTheme.colorScheme.error,
                                     style = MaterialTheme.typography.bodySmall,
                                     textAlign = TextAlign.Center
@@ -144,7 +152,7 @@ fun PhotoVerificationSheet(
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
 
-                            OutlinedButton(onClick = { camera.launch(null) }, modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(onClick = { showCamera = true }, modifier = Modifier.fillMaxWidth()) {
                                 Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(if (shot == null) "Take selfie" else "Retake selfie")
