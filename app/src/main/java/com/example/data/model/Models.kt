@@ -26,6 +26,9 @@ data class UserProfile(
     val photos: List<UserPhoto> = emptyList(),
     val phoneNumber: String = "",
     val isPhoneVerified: Boolean = false,
+    // Set only by an admin in the Firebase Console (rules stop the app from changing these)
+    val photoVerified: Boolean = false,
+    val banned: Boolean = false,
     val isVip: Boolean = false,
     val dailyLikesUsed: Int = 0,
     val lastLikeReset: Timestamp? = null,
@@ -283,4 +286,38 @@ fun UserProfile.lastSeenText(now: Long = System.currentTimeMillis()): String {
         min < 60 * 24 -> "Last seen ${min / 60}h ago"
         else -> "Last seen ${min / (60 * 24)}d ago"
     }
+}
+
+/** Blue check: the phone is verified, or an admin confirmed the selfie matches the photos. */
+fun UserProfile.hasVerifiedBadge(): Boolean = isPhoneVerified || photoVerified
+
+/** Simple scam check on a message before it is sent. Returns a warning, or null if it looks fine. */
+object ScamGuard {
+    private val moneyWords = listOf(
+        "send money", "western union", "moneygram", "gift card", "giftcard", "bitcoin", "crypto", "usdt",
+        "wire transfer", "cash app", "cashapp", "paypal", "mpesa", "m-pesa", "bank account", "bank details",
+        "investment", "loan", "airtime", "iban", "send me cash"
+    )
+    private val linkPattern = Regex("https?://|www\\.", RegexOption.IGNORE_CASE)
+
+    fun warningFor(text: String): String? {
+        val t = text.lowercase()
+        if (moneyWords.any { it in t }) {
+            return "This message mentions money or payments. Never send money, gift cards or crypto to someone you have not met in person, whatever the story."
+        }
+        if (linkPattern.containsMatchIn(t)) {
+            return "This message contains a link. Only share links you trust. Scammers use links to steal passwords and money."
+        }
+        return null
+    }
+}
+
+object PhotoVerificationPoses {
+    val all = listOf(
+        "Smile and give a thumbs up",
+        "Make a peace sign next to your cheek",
+        "Hold up three fingers beside your face",
+        "Touch your nose with one finger and smile",
+        "Wave at the camera with an open hand"
+    )
 }
