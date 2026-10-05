@@ -38,6 +38,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.ui.components.SnugImage
 import com.example.data.security.PinManager
+import com.example.data.model.missingRequiredFields
 import com.example.ui.Screen
 import com.example.ui.components.EmailSignInFlow
 import com.example.ui.components.PinUnlockScreen
@@ -185,6 +186,23 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
     if (myProfile?.banned == true) {
         com.example.ui.screens.SuspendedScreen(onLogout = { viewModel.goOffline { Firebase.auth.signOut() } })
         return
+    }
+
+    // Nothing in the app works until the email is verified and the profile is complete
+    var emailOk by remember(myProfile?.id) { mutableStateOf(com.example.data.security.EmailVerifier.isVerified()) }
+    val missingFields = myProfile?.missingRequiredFields() ?: emptyList()
+    myProfile?.let { me ->
+        if (!emailOk || missingFields.isNotEmpty()) {
+            com.example.ui.screens.SetupGateScreen(
+                viewModel = viewModel,
+                profile = me,
+                missing = missingFields,
+                emailVerified = emailOk,
+                onEmailVerified = { emailOk = true },
+                onLogout = { viewModel.goOffline { Firebase.auth.signOut() } }
+            )
+            return
+        }
     }
 
     // Online while the app is on screen, offline when it goes to the background
