@@ -76,7 +76,13 @@ fun EmailSignInFlow(
                 coroutineScope.launch {
                     try {
                         if (isRegistering) {
-                            Firebase.auth.createUserWithEmailAndPassword(email, password).await()
+                            val created = Firebase.auth.createUserWithEmailAndPassword(email, password).await()
+                            // Send the verification email straight away (needed before messaging)
+                            try {
+                                created.user?.sendEmailVerification()?.await()
+                            } catch (e: Exception) {
+                                Log.w("Auth", "Could not send verification email", e)
+                            }
                         } else {
                             Firebase.auth.signInWithEmailAndPassword(email, password).await()
                         }
