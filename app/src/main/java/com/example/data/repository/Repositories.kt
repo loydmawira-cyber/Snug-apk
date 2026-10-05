@@ -568,6 +568,10 @@ class SafetyRepository(private val db: FirebaseFirestore) {
             for (n in db.collection("notifications").whereEqualTo("toUserId", uid).get().await().documents) {
                 n.reference.delete().await()
             }
+            try {
+                db.collection("verificationRequests").document(uid).delete().await()
+            } catch (_: Exception) {
+            }
             db.collection("users").document(uid).delete().await()
             user.delete().await()
             return null
@@ -577,10 +581,11 @@ class SafetyRepository(private val db: FirebaseFirestore) {
         }
     }
 
-    suspend fun report(otherUserId: String, reason: String): Boolean {
-        val uid = auth.currentUser?.uid ?: return false
+    /** 0 = sent, 1 = you already reported this person, 2 = failed. One report per person (stops spam). */
+    suspend fun report(otherUserId: String, reason: String): Int {
+        val uid = auth.currentUser?.uid ?: return 2
         return try {
-            db.collection("reports").add(
+            db.collection("reports").document("${uid}_$otherUserId").set(
                 mapOf(
                     "reporterId" to uid,
                     "reportedId" to otherUserId,
@@ -588,9 +593,46 @@ class SafetyRepository(private val db: FirebaseFirestore) {
                     "createdAt" to FieldValue.serverTimestamp()
                 )
             ).await()
+            0
+        } catch (e: Exception) {
+            if ((e as? com.google.firebase.firestore.FirebaseFirestoreException)?.code ==
+                com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED
+            ) {
+                1
+            } else {
+                handleFirestoreError(e, OperationType.CREATE, "reports")
+                2
+            }
+        }
+    }
+
+    /** Status of my photo-verification request: null = none, otherwise "pending", "approved" or "rejected". */
+    fun observeVerificationStatus(): Flow<String?> {
+        val uid = auth.currentUser?.uid ?: return kotlinx.coroutines.flow.emptyFlow()
+        return db.collection("verificationRequests").document(uid).snapshots()
+            .map { snap -> if (snap.exists()) snap.getString("status") ?: "pending" else null }
+            .catch { emit(null) }
+    }
+
+    /** Saves a selfie for an admin to review. Only I (and admins in the Console) can read it. */
+    suspend fun submitPhotoVerification(pose: String, selfieDataUri: String): Boolean {
+        val uid = auth.currentUser?.uid ?: return false
+        return try {
+            val ref = db.collection("verificationRequests").document(uid)
+            // A rejected or old request must be removed before a new one can be sent
+            if (ref.get().await().exists()) ref.delete().await()
+            ref.set(
+                mapOf(
+                    "uid" to uid,
+                    "pose" to pose,
+                    "selfie" to selfieDataUri,
+                    "status" to "pending",
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
             true
         } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.CREATE, "reports")
+            handleFirestoreError(e, OperationType.CREATE, "verificationRequests/$uid")
             false
         }
     }
