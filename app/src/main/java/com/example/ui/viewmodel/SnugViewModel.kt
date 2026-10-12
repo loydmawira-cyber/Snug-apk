@@ -46,14 +46,22 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     // People I blocked and people who blocked me (hidden both ways)
     private val _blockedIds = MutableStateFlow<Set<String>>(emptySet())
 
-    // How many profiles to fetch from Firestore; grows when the queue runs low
-    private val _profileLimit = MutableStateFlow(100)
-    val profileLimit: StateFlow<Int> = _profileLimit.asStateFlow()
+    // Discover loads people one page at a time (cursor paging) instead of one huge live list
+    private val _rawProfiles = MutableStateFlow<List<UserProfile>>(emptyList())
+    private var discoveryCursor: com.google.firebase.firestore.DocumentSnapshot? = null
+    private var discoveryLoading = false
+    private var discoveryGeneration = 0
+    private var lastDiscoveryLoadAt = 0L
+    private val _discoveryExhausted = MutableStateFlow(false)
+    val discoveryExhausted: StateFlow<Boolean> = _discoveryExhausted.asStateFlow()
+
+    // Counts finished page loads so the screen can ask again if a page held nobody I can see
+    private val _discoveryPagesLoaded = MutableStateFlow(0)
+    val discoveryPagesLoaded: StateFlow<Int> = _discoveryPagesLoaded.asStateFlow()
 
     private val _filters = MutableStateFlow(DiscoverFilters())
     val filters: StateFlow<DiscoverFilters> = _filters.asStateFlow()
 
-    private val _discoveryRetry = MutableStateFlow(0)
     private val _discoveryError = MutableStateFlow<String?>(null)
     val discoveryError: StateFlow<String?> = _discoveryError.asStateFlow()
 
@@ -80,6 +88,10 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     /** Starts the online heartbeat (every 2 minutes while the app is open). */
     fun goOnline() {
         presenceJob?.cancel()
+        // Back in the app after a while: reload page one so online dots are not stale
+        if (_currentUserProfile.value != null && lastDiscoveryLoadAt != 0L &&
+            System.currentTimeMillis() - lastDiscoveryLoadAt > 5 * 60_000L
+        ) reloadDiscovery()
         presenceJob = viewModelScope.launch {
             while (true) {
                 profileRepo.setPresence(true)
@@ -349,42 +361,91 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Called when the Discover queue is nearly empty: fetches more people (up to 500). */
+    /** Starts over from page one (new gender preference, retry, or coming back after a while). */
+    private fun reloadDiscovery() {
+        discoveryGeneration++
+        discoveryCursor = null
+        discoveryLoading = false
+        _discoveryExhausted.value = false
+        loadDiscoveryPages(replace = true)
+    }
+
+    /** Called when the Discover queue is nearly empty: fetches the next page of people. */
     fun loadMoreProfiles() {
-        if (_profileLimit.value < 500) _profileLimit.value = _profileLimit.value + 100
+        loadDiscoveryPages(replace = false)
     }
 
     fun retryDiscovery() {
         _discoveryError.value = null
-        _discoveryRetry.value += 1
+        reloadDiscovery()
+    }
+
+    /** Whether [u] belongs in my Discover/Radar (age, distance and mutual interest). */
+    private fun isCandidate(me: UserProfile, u: UserProfile): Boolean {
+        // They must also be interested in my gender (empty = open to everyone)
+        val theyLikeMe = u.interestedIn.isEmpty() || me.gender.isBlank() || me.gender in u.interestedIn
+        val age = calculateAge(u.birthDate)
+        val d = distanceTo(me, u)
+        // If either person has no location yet we can't measure, so keep them
+        val distOk = d == null || d <= me.radiusKm
+        return theyLikeMe && age in me.minAge..me.maxAge && distOk
+    }
+
+    /**
+     * Loads pages until about 20 people I can actually see are loaded (some pages are mostly
+     * filtered out by age/distance), at most 5 pages per call and 600 people in total.
+     */
+    private fun loadDiscoveryPages(replace: Boolean) {
+        if (discoveryLoading || _discoveryExhausted.value) return
+        val me = _currentUserProfile.value ?: return
+        val generation = discoveryGeneration
+        discoveryLoading = true
+        viewModelScope.launch {
+            try {
+                _discoveryError.value = null
+                var pages = 0
+                var all = if (replace) emptyList() else _rawProfiles.value
+                while (pages < 5) {
+                    val page = profileRepo.loadDiscoveryPage(me.interestedIn, discoveryCursor)
+                    if (generation != discoveryGeneration) return@launch // a newer reload took over
+                    discoveryCursor = page.cursor ?: discoveryCursor
+                    all = (all + page.profiles).distinctBy { it.id }
+                    pages++
+                    _rawProfiles.value = all // on a reload this replaces the old list as soon as page one is here
+                    if (page.exhausted || all.size >= 600) {
+                        _discoveryExhausted.value = true
+                        break
+                    }
+                    val blocked = _blockedIds.value
+                    val visible = all.count { isCandidate(me, it) && it.id !in blocked && !it.isPaused && !it.banned }
+                    if (visible >= 20) break
+                }
+                lastDiscoveryLoadAt = System.currentTimeMillis()
+                _discoveryPagesLoaded.value = _discoveryPagesLoaded.value + 1
+            } catch (e: Exception) {
+                if (generation == discoveryGeneration) {
+                    _discoveryError.value = e.message ?: "Check your connection and Firebase access."
+                }
+            } finally {
+                if (generation == discoveryGeneration) discoveryLoading = false
+            }
+        }
     }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun loadDiscoveryProfiles() {
+        // (Re)load page one when my profile first arrives or my "interested in" choice changes
         viewModelScope.launch {
-            combine(
-                _currentUserProfile.map { it?.interestedIn ?: emptyList() }.distinctUntilChanged(),
-                _profileLimit,
-                _discoveryRetry
-            ) { genders, limit, _ -> genders to limit }
-                .flatMapLatest { (genders, limit) ->
-                    _discoveryError.value = null
-                    profileRepo.observeDiscoveryProfiles(genders, limit.toLong()) { error ->
-                        _discoveryError.value = error.message ?: "Check your connection and Firebase access."
-                    }
-                }
+            _currentUserProfile
+                .filterNotNull()
+                .map { it.interestedIn }
+                .distinctUntilChanged()
+                .collect { reloadDiscovery() }
+        }
+        viewModelScope.launch {
+            _rawProfiles
                 .combine(_currentUserProfile) { list, me ->
-                    if (me == null) list
-                    else list.filter { u ->
-                        // They must also be interested in my gender (empty = open to everyone)
-                        val theyLikeMe = u.interestedIn.isEmpty() || me.gender.isBlank() || me.gender in u.interestedIn
-                        val age = calculateAge(u.birthDate)
-                        val ageOk = theyLikeMe && age in me.minAge..me.maxAge
-                        val d = distanceTo(me, u)
-                        // If either person has no location yet we can't measure, so keep them
-                        val distOk = d == null || d <= me.radiusKm
-                        ageOk && distOk
-                    }
+                    if (me == null) list else list.filter { u -> isCandidate(me, u) }
                 }
                 .combine(_blockedIds) { list, blocked ->
                     list.filter { it.id !in blocked && !it.isPaused && !it.banned }
@@ -437,7 +498,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun loadUser(id: String): UserProfile? =
-        profileRepo.getProfile(id) ?: _discoveryProfiles.value.firstOrNull { it.id == id }
+        profileRepo.getProfile(id, withPhotos = true) ?: _discoveryProfiles.value.firstOrNull { it.id == id }
 
     /** Opens (creating if needed) the chat with [userId] and returns the match id via [onReady]. */
     fun openChat(userId: String, onReady: (String) -> Unit) {
@@ -620,10 +681,9 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                     loc = client.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null).await()
                 }
                 if (loc != null) {
-                    // Rounded to 3 decimals (~100 m) so distances are useful without storing
-                    // an exact device position.
-                    val lat = Math.round(loc.latitude * 1000) / 1000.0
-                    val lon = Math.round(loc.longitude * 1000) / 1000.0
+                    // Rounded to 2 decimals (~1 km): distances stay useful, nobody can be pinpointed.
+                    val lat = Math.round(loc.latitude * 100) / 100.0
+                    val lon = Math.round(loc.longitude * 100) / 100.0
                     val me = _currentUserProfile.value ?: return@launch
                     if (me.latitude == lat && me.longitude == lon && me.city.isNotBlank()) return@launch
                     val (city, country) = withContext(Dispatchers.IO) {
@@ -649,8 +709,8 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val me = _currentUserProfile.value ?: return@launch
             _uiMessage.value = "Saving profile picture..."
-            // Keep the avatar sharp on modern phones while remaining small enough for Firestore.
-            val enc = profileRepo.encodePhoto(getApplication(), uri, 600, 90_000)
+            // Small enough that a page of 30 profiles stays light, sharp enough for a Discover card.
+            val enc = profileRepo.encodePhoto(getApplication(), uri, 640, 60_000)
             if (enc.isFailure) {
                 _uiMessage.value = "Picture failed: ${enc.exceptionOrNull()?.message}"
                 return@launch
@@ -680,18 +740,45 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             val latest = _currentUserProfile.value ?: me
-            val totalBytes = latest.profilePhoto.length + latest.photos.sumOf { it.url.length } + upload.getOrThrow().length
-            if (totalBytes > 800_000) {
-                _uiMessage.value = "Your photos use too much space. Remove one before adding another."
-                return@launch
-            }
-            val updated = latest.copy(photos = latest.photos + UserPhoto(url = upload.getOrThrow(), isPublic = true))
-            val saved = profileRepo.updateProfile(updated)
-            if (saved.isSuccess) {
+            val newList = latest.photos + UserPhoto(url = upload.getOrThrow(), isPublic = true)
+            val updated = saveGallery(latest, newList)
+            _uiMessage.value = if (updated != null) {
                 _currentUserProfile.value = updated
-                _uiMessage.value = "Photo added!"
+                "Photo added!"
             } else {
-                _uiMessage.value = "Photo save failed: ${saved.exceptionOrNull()?.message}"
+                "Photo save failed. Check your connection and try again."
+            }
+        }
+    }
+
+    /** Saves a changed gallery (delete, blur or public/private toggle). */
+    fun updateGallery(photos: List<UserPhoto>) {
+        viewModelScope.launch {
+            val me = _currentUserProfile.value ?: return@launch
+            val updated = saveGallery(me, photos.take(4))
+            if (updated != null) {
+                _currentUserProfile.value = updated
+                _uiMessage.value = "Profile updated!"
+            } else {
+                _uiMessage.value = "Save failed. Check your connection and try again."
+            }
+        }
+    }
+
+    /** Saves the gallery and refreshes the small cover copy used on Discover cards. */
+    private suspend fun saveGallery(me: UserProfile, photos: List<UserPhoto>): UserProfile? {
+        if (profileRepo.savePhotos(photos).isFailure) return null
+        val (cover, blurred) = profileRepo.coverFor(photos.firstOrNull { it.isPublic })
+        val updated = me.copy(photos = photos, coverPhoto = cover, coverBlurred = blurred)
+        return if (profileRepo.updateProfile(updated).isSuccess) updated else null
+    }
+
+    fun reportMessage(message: ChatMessage, reason: String) {
+        viewModelScope.launch {
+            _uiMessage.value = when (safetyRepo.reportMessage(message, reason)) {
+                0 -> "Message reported. Thank you."
+                1 -> "You already reported this message"
+                else -> "Could not send report"
             }
         }
     }
