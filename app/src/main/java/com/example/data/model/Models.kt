@@ -23,7 +23,11 @@ data class UserProfile(
     val interestedIn: List<String> = emptyList(),
     val interests: List<String> = emptyList(),
     val profilePhoto: String = "",
+    // Loaded on demand from users/{id}/photos (not stored in the profile document any more)
     val photos: List<UserPhoto> = emptyList(),
+    // Small copy of the first public gallery photo, shown on cards when there is no profile picture
+    val coverPhoto: String = "",
+    val coverBlurred: Boolean = false,
     val phoneNumber: String = "",
     val isPhoneVerified: Boolean = false,
     // Set only by an admin in the Firebase Console (rules stop the app from changing these)
@@ -95,7 +99,9 @@ data class ChatMessage(
 
 /** Best picture to show for a user: their profile picture, else the first gallery photo. */
 fun UserProfile.avatarUrl(): String? =
-    profilePhoto.takeIf { it.isNotBlank() } ?: photos.firstOrNull()?.url
+    profilePhoto.takeIf { it.isNotBlank() }
+        ?: coverPhoto.takeIf { it.isNotBlank() }
+        ?: photos.firstOrNull()?.url
 
 data class AppNotification(
     val id: String = "",
@@ -124,6 +130,7 @@ fun UserProfile.publicViewForOthers(): UserProfile {
         interestedIn = emptyList(),
         interests = if (showInterestsToOthers) interests else emptyList(),
         profilePhoto = if (showPhotosToOthers) profilePhoto else "",
+        coverPhoto = if (showPhotosToOthers) coverPhoto else "",
         photos = if (showPhotosToOthers) photos.filter { it.isPublic } else emptyList(),
         phoneNumber = "",
         minAge = 18,
