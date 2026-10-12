@@ -60,6 +60,16 @@ service cloud.firestore {
       match /private/{docId} {
         allow read, write: if isOwner(userId);
       }
+
+      // Gallery photos (users/{id}/photos/p0..p3). Other people can only read photos marked public,
+      // so a photo hidden in the app is really hidden, not just filtered on the phone.
+      match /photos/{photoId} {
+        allow read: if isOwner(userId)
+          || (isSignedIn() && resource.data.isPublic == true);
+        allow write: if isOwner(userId)
+          && (request.method == 'delete'
+              || (request.resource.data.url is string && request.resource.data.url.size() < 300000));
+      }
     }
 
     // ---------- SWIPES (likes and passes) ----------
@@ -153,6 +163,17 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.reporterId == request.auth.uid
         && reportId == request.auth.uid + '_' + request.resource.data.reportedId;
+    }
+
+    // ---------- MESSAGE REPORTS (write-only for users) ----------
+    // Admins cannot read private chats, so the report carries a copy of the message.
+    // One report per message (the id is reporter_messageId), so reports cannot be spammed.
+    match /messageReports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn()
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.reportedId != request.auth.uid
+        && reportId == request.auth.uid + '_' + request.resource.data.messageId;
     }
 
     // ---------- PHOTO VERIFICATION REQUESTS (selfie, reviewed by an admin in the Console) ----------

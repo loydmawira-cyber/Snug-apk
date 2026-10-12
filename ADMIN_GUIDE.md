@@ -27,6 +27,11 @@ Set `banned` back to false (or delete it) to lift the suspension.
 Open the `reports` collection. Each document is `<reporterId>_<reportedId>` with the `reason`. Several reports
 about the same `reportedId` are a strong sign to review and suspend that account.
 
+## Read message reports
+When someone long-presses a message and taps **Report message**, a document is added to `messageReports`
+(`<reporterId>_<messageId>`) with the message text (and photo, if it was a picture), the reason, `reportedId`
+and `matchId`. It also adds a normal person-level report, so the sender shows up in the dashboard's most-reported list.
+
 ## Email verification for messaging
 Sending a message (text or photo) needs a verified email. New accounts get the verification email automatically
 when they sign up. Existing accounts are asked to verify the first time they try to send a message.
