@@ -13,6 +13,7 @@ import com.example.R
 import com.example.data.model.AppNotification
 import com.example.data.model.ChatMessage
 import com.example.data.model.Match
+import com.example.data.model.UserPhoto
 import com.example.data.model.UserProfile
 import com.example.data.model.publicViewForOthers
 import com.example.data.util.OperationType
@@ -20,6 +21,7 @@ import com.example.data.util.handleFirestoreError
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.FirebaseFirestore
@@ -31,6 +33,18 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
+/** Gallery photos live in users/{uid}/photos/p0..p3, not inside the profile document. */
+private const val MAX_GALLERY_PHOTOS = 4
+
+/** One page of people for Discover. [cursor] is passed back to load the next page. */
+data class DiscoveryPage(
+    val profiles: List<UserProfile>,
+    val cursor: DocumentSnapshot?,
+    val exhausted: Boolean
+)
+
+private fun roundCoord(v: Double?): Double? = v?.let { Math.round(it * 100) / 100.0 } // ~1 km
+
 class ProfileRepository(private val db: FirebaseFirestore) {
     constructor(context: Context) : this(
         FirebaseFirestore.getInstance(context.getString(R.string.firestore_database_id))
@@ -40,10 +54,22 @@ class ProfileRepository(private val db: FirebaseFirestore) {
 
     fun getCurrentUserId(): String? = auth.currentUser?.uid
 
-    suspend fun getProfile(userId: String): UserProfile? {
+    /**
+     * [withPhotos] also loads the person's public gallery (extra reads), so only the full
+     * profile screen asks for it. Lists such as matches only need the avatar.
+     */
+    suspend fun getProfile(userId: String, withPhotos: Boolean = false): UserProfile? {
         return try {
             val profile = getProfileOrThrow(userId)
-            if (userId == auth.currentUser?.uid) profile else profile?.publicViewForOthers()
+            if (userId == auth.currentUser?.uid) {
+                profile
+            } else {
+                val full = if (withPhotos && profile != null && profile.showPhotosToOthers) {
+                    // Old profiles may still carry their photos inside the document
+                    profile.copy(photos = loadPublicPhotos(userId).ifEmpty { profile.photos })
+                } else profile
+                full?.publicViewForOthers()
+            }
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.GET, "users/$userId")
             null
@@ -60,10 +86,128 @@ class ProfileRepository(private val db: FirebaseFirestore) {
             // A failed private-contact read must not silently replace a saved phone number with blank.
             val phone = db.collection("users").document(userId).collection("private").document("contact")
                 .get().await().getString("phoneNumber")
-            base.copy(phoneNumber = phone.orEmpty())
+            // A failed gallery read must throw too, otherwise saving would wipe the gallery.
+            val gallery = loadOwnPhotos(userId)
+            val withGallery = base.copy(
+                phoneNumber = phone.orEmpty(),
+                photos = gallery.ifEmpty { base.photos } // old layout: photos still in the document
+            )
+            slimDownOwnProfile(userId, withGallery, hasLegacyField = snapshot.contains("photos"), galleryMigrated = gallery.isNotEmpty())
         } else {
             base.copy(phoneNumber = "")
         }
+    }
+
+    private fun photosCollection(uid: String) =
+        db.collection("users").document(uid).collection("photos")
+
+    private fun DocumentSnapshot.toUserPhoto(): UserPhoto? {
+        val url = getString("url") ?: return null
+        @Suppress("UNCHECKED_CAST")
+        val allowed = (get("allowedUserIds") as? List<String>) ?: emptyList()
+        return UserPhoto(
+            url = url,
+            isBlurred = getBoolean("isBlurred") ?: false,
+            isPublic = getBoolean("isPublic") ?: true,
+            allowedUserIds = allowed
+        )
+    }
+
+    private suspend fun loadOwnPhotos(uid: String): List<UserPhoto> =
+        photosCollection(uid).get().await().documents
+            .sortedBy { it.getLong("order") ?: 0L }
+            .mapNotNull { it.toUserPhoto() }
+
+    /** Other people's gallery: the rules only let the query return photos marked public. */
+    private suspend fun loadPublicPhotos(uid: String): List<UserPhoto> = try {
+        photosCollection(uid).whereEqualTo("isPublic", true).get().await().documents
+            .sortedBy { it.getLong("order") ?: 0L }
+            .mapNotNull { it.toUserPhoto() }
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+    /** Replaces my whole gallery (max 4 photos) in one atomic write. */
+    suspend fun savePhotos(photos: List<UserPhoto>): Result<Unit> {
+        val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Not signed in"))
+        return try {
+            val batch = db.batch()
+            for (i in 0 until MAX_GALLERY_PHOTOS) {
+                val ref = photosCollection(uid).document("p$i")
+                val photo = photos.getOrNull(i)
+                if (photo != null) {
+                    batch.set(
+                        ref,
+                        mapOf(
+                            "url" to photo.url,
+                            "isBlurred" to photo.isBlurred,
+                            "isPublic" to photo.isPublic,
+                            "allowedUserIds" to photo.allowedUserIds,
+                            "order" to i
+                        )
+                    )
+                } else {
+                    batch.delete(ref)
+                }
+            }
+            withTimeout(20000) { batch.commit().await() }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.WRITE, "users/$uid/photos")
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * The picture shown on Discover cards when someone has no profile picture: a small copy of
+     * their first public gallery photo, plus whether it should be blurred.
+     */
+    suspend fun coverFor(photo: UserPhoto?): Pair<String, Boolean> {
+        if (photo == null) return "" to false
+        val small = if (photo.url.startsWith("data:image")) {
+            shrinkDataUri(photo.url, 640, 60_000) ?: ""
+        } else photo.url
+        return small to photo.isBlurred
+    }
+
+    /**
+     * One-time clean-up of profiles saved by older app versions: gallery photos move out of the
+     * profile document and an oversized avatar is shrunk. Best effort, never blocks login.
+     */
+    private suspend fun slimDownOwnProfile(
+        uid: String,
+        profile: UserProfile,
+        hasLegacyField: Boolean,
+        galleryMigrated: Boolean
+    ): UserProfile {
+        var result = profile
+        try {
+            val updates = mutableMapOf<String, Any>()
+            if (hasLegacyField) {
+                val safeToDrop = galleryMigrated || profile.photos.isEmpty() || savePhotos(profile.photos).isSuccess
+                if (safeToDrop) updates["photos"] = FieldValue.delete()
+            }
+            if (profile.profilePhoto.length > 80_000) {
+                shrinkDataUri(profile.profilePhoto, 640, 60_000)?.let {
+                    updates["profilePhoto"] = it
+                    result = result.copy(profilePhoto = it)
+                }
+            }
+            if (profile.coverPhoto.isBlank() && profile.photos.any { it.isPublic }) {
+                val (cover, blurred) = coverFor(profile.photos.first { it.isPublic })
+                if (cover.isNotBlank()) {
+                    updates["coverPhoto"] = cover
+                    updates["coverBlurred"] = blurred
+                    result = result.copy(coverPhoto = cover, coverBlurred = blurred)
+                }
+            }
+            if (updates.isNotEmpty()) {
+                db.collection("users").document(uid).update(updates).await()
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("ProfileRepository", "Profile clean-up skipped", e)
+        }
+        return result
     }
 
     /** Heartbeat: tells everyone whether I am online. Silent if it fails. */
@@ -89,6 +233,9 @@ class ProfileRepository(private val db: FirebaseFirestore) {
                     .set(
                         profile.copy(id = uid, isPhoneVerified = verified) + mapOf(
                             "phoneNumber" to "", // never stored on the public profile
+                            // Public location is only accurate to about 1 km
+                            "latitude" to roundCoord(profile.latitude),
+                            "longitude" to roundCoord(profile.longitude),
                             "online" to true, // saving means the app is open
                             "lastActive" to FieldValue.serverTimestamp(),
                             "updatedAt" to FieldValue.serverTimestamp()
@@ -107,7 +254,7 @@ class ProfileRepository(private val db: FirebaseFirestore) {
         }
     }
 
-    // Spark plan: no Firebase Storage. Photos are shrunk and saved inside the document as a data URI.
+    // Spark plan: no Firebase Storage. Photos are shrunk and saved as a data URI.
     // Firestore documents are limited to 1 MB, so every photo is squeezed under [maxBytes].
     suspend fun encodePhoto(
         context: Context,
@@ -118,56 +265,80 @@ class ProfileRepository(private val db: FirebaseFirestore) {
         try {
             val original = context.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
                 ?: return@withContext Result.failure(Exception("Could not read image"))
-            var side = maxSide
-            var bytes = ByteArray(0)
-            while (true) {
-                val scale = minOf(1f, side.toFloat() / maxOf(original.width, original.height))
-                val bmp = if (scale < 1f)
-                    Bitmap.createScaledBitmap(original, (original.width * scale).toInt(), (original.height * scale).toInt(), true)
-                else original
-                var quality = 82
-                while (true) {
-                    val out = ByteArrayOutputStream()
-                    bmp.compress(Bitmap.CompressFormat.JPEG, quality, out)
-                    bytes = out.toByteArray()
-                    if (bytes.size <= maxBytes || quality <= 45) break
-                    quality -= 10
-                }
-                if (bytes.size <= maxBytes || side <= 320) break
-                side = (side * 0.8f).toInt()
-            }
-            val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-            Result.success("data:image/jpeg;base64,$b64")
+            Result.success(toDataUri(compressBitmap(original, maxSide, maxBytes)))
         } catch (e: Exception) {
             android.util.Log.e("PhotoEncode", "Failed", e)
             Result.failure(e)
         }
     }
 
-    /** [genders] narrows the query on the server (empty = everyone). [limit] grows as people run out. */
-    fun observeDiscoveryProfiles(
-        genders: List<String> = emptyList(),
-        limit: Long = 100,
-        onError: (Exception) -> Unit = {}
-    ): Flow<List<UserProfile>> {
-        var query: Query = db.collection("users")
-        if (genders.isNotEmpty()) query = query.whereIn("gender", genders)
-        return query
-            .limit(limit)
-            .snapshots()
-            .map { snapshot -> 
-                val profiles = snapshot.documents.mapNotNull { d ->
-                    d.toUserProfile()?.copy(id = d.id)
-                }
-                profiles.filter { user -> user.id != getCurrentUserId() }
+    /** Re-compresses a saved "data:image/..." photo into a smaller one. Null if it is not a data URI. */
+    suspend fun shrinkDataUri(dataUri: String, maxSide: Int, maxBytes: Int): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                if (!dataUri.startsWith("data:image")) return@withContext null
+                val raw = Base64.decode(dataUri.substringAfter("base64,"), Base64.DEFAULT)
+                val bmp = BitmapFactory.decodeByteArray(raw, 0, raw.size) ?: return@withContext null
+                toDataUri(compressBitmap(bmp, maxSide, maxBytes))
+            } catch (e: Exception) {
+                android.util.Log.w("PhotoEncode", "Shrink failed", e)
+                null
             }
-            .catch { e ->
-                if (e is Exception) {
-                    handleFirestoreError(e, OperationType.LIST, "users")
-                    onError(e)
-                }
-                emit(emptyList())
+        }
+
+    private fun toDataUri(jpeg: ByteArray) =
+        "data:image/jpeg;base64," + Base64.encodeToString(jpeg, Base64.NO_WRAP)
+
+    private fun compressBitmap(original: Bitmap, maxSide: Int, maxBytes: Int): ByteArray {
+        var side = maxSide
+        var bytes = ByteArray(0)
+        while (true) {
+            val scale = minOf(1f, side.toFloat() / maxOf(original.width, original.height))
+            val bmp = if (scale < 1f)
+                Bitmap.createScaledBitmap(original, (original.width * scale).toInt(), (original.height * scale).toInt(), true)
+            else original
+            var quality = 82
+            while (true) {
+                val out = ByteArrayOutputStream()
+                bmp.compress(Bitmap.CompressFormat.JPEG, quality, out)
+                bytes = out.toByteArray()
+                if (bytes.size <= maxBytes || quality <= 45) break
+                quality -= 10
             }
+            if (bytes.size <= maxBytes || side <= 320) break
+            side = (side * 0.8f).toInt()
+        }
+        return bytes
+    }
+
+    /**
+     * One page of people, [pageSize] at a time (one read per person). [genders] narrows the
+     * query on the server (empty = everyone). Pass the returned cursor to get the next page.
+     * This replaces a live listener on the whole list, so other people's presence updates
+     * no longer cost reads on every phone.
+     */
+    suspend fun loadDiscoveryPage(
+        genders: List<String>,
+        after: DocumentSnapshot?,
+        pageSize: Long = 30
+    ): DiscoveryPage {
+        try {
+            var query: Query = db.collection("users")
+            if (genders.isNotEmpty()) query = query.whereIn("gender", genders)
+            query = query.orderBy(FieldPath.documentId())
+            if (after != null) query = query.startAfter(after)
+            val snapshot = query.limit(pageSize).get().await()
+            val me = getCurrentUserId()
+            val profiles = snapshot.documents
+                .mapNotNull { d -> d.toUserProfile()?.copy(id = d.id) }
+                .filter { it.id != me }
+                // Old profiles still carry their gallery here; cards only need the first one
+                .map { it.copy(photos = it.photos.take(1)) }
+            return DiscoveryPage(profiles, snapshot.documents.lastOrNull(), snapshot.size() < pageSize)
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.LIST, "users")
+            throw e
+        }
     }
 }
 
@@ -573,6 +744,11 @@ class SafetyRepository(private val db: FirebaseFirestore) {
                 db.collection("verificationRequests").document(uid).delete().await()
             } catch (_: Exception) {
             }
+            // Subcollections are not deleted with the user document, so remove them first
+            for (i in 0 until MAX_GALLERY_PHOTOS) {
+                db.collection("users").document(uid).collection("photos").document("p$i").delete().await()
+            }
+            db.collection("users").document(uid).collection("private").document("contact").delete().await()
             db.collection("users").document(uid).delete().await()
             user.delete().await()
             return null
@@ -602,6 +778,41 @@ class SafetyRepository(private val db: FirebaseFirestore) {
                 1
             } else {
                 handleFirestoreError(e, OperationType.CREATE, "reports")
+                2
+            }
+        }
+    }
+
+    /**
+     * Reports one message (text or photo). A copy of the message is saved with the report because
+     * admins cannot read private chats. 0 = sent, 1 = you already reported it, 2 = failed.
+     */
+    suspend fun reportMessage(message: ChatMessage, reason: String): Int {
+        val uid = auth.currentUser?.uid ?: return 2
+        if (message.id.isBlank() || message.senderId.isBlank() || message.senderId == uid) return 2
+        return try {
+            db.collection("messageReports").document("${uid}_${message.id}").set(
+                mapOf(
+                    "reporterId" to uid,
+                    "reportedId" to message.senderId,
+                    "messageId" to message.id,
+                    "matchId" to message.matchId,
+                    "text" to message.text.take(500),
+                    "imageUrl" to message.imageUrl,
+                    "reason" to reason,
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
+            // Also counts towards the person-level list the admin dashboard ranks (ignored if already reported)
+            report(message.senderId, "Message: $reason")
+            0
+        } catch (e: Exception) {
+            if ((e as? com.google.firebase.firestore.FirebaseFirestoreException)?.code ==
+                com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED
+            ) {
+                1
+            } else {
+                handleFirestoreError(e, OperationType.CREATE, "messageReports")
                 2
             }
         }
@@ -764,7 +975,7 @@ class AdminRepository(private val db: FirebaseFirestore) {
                 com.example.data.model.ReportedUser(
                     userId = id,
                     name = u.displayName,
-                    photo = u.profilePhoto.takeIf { it.isNotBlank() } ?: u.photos.firstOrNull()?.url ?: "",
+                    photo = u.profilePhoto.takeIf { it.isNotBlank() } ?: u.coverPhoto.takeIf { it.isNotBlank() } ?: u.photos.firstOrNull()?.url ?: "",
                     reports = list.size,
                     reasons = list.mapNotNull { it.getString("reason") }.groupingBy { it }.eachCount()
                         .entries.sortedByDescending { it.value }.take(3).map { "${it.key} (${it.value})" },
@@ -889,14 +1100,9 @@ private operator fun UserProfile.plus(other: Map<String, Any?>): Map<String, Any
         "interestedIn" to this.interestedIn,
         "interests" to this.interests,
         "profilePhoto" to this.profilePhoto,
-        "photos" to this.photos.map { photo ->
-            mapOf(
-                "url" to photo.url,
-                "isBlurred" to photo.isBlurred,
-                "isPublic" to photo.isPublic,
-                "allowedUserIds" to photo.allowedUserIds
-            )
-        },
+        // Gallery photos are saved separately (savePhotos), never inside the profile document
+        "coverPhoto" to this.coverPhoto,
+        "coverBlurred" to this.coverBlurred,
         "phoneNumber" to this.phoneNumber,
         "isPhoneVerified" to this.isPhoneVerified,
         "isVip" to this.isVip,
