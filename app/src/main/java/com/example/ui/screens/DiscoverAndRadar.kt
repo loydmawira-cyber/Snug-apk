@@ -74,7 +74,8 @@ fun DiscoverScreen(
 ) {
     val profile by viewModel.currentProfile.collectAsState()
     val profiles by viewModel.discoveryProfiles.collectAsState()
-    val profileLimit by viewModel.profileLimit.collectAsState()
+    val discoveryExhausted by viewModel.discoveryExhausted.collectAsState()
+    val pagesLoaded by viewModel.discoveryPagesLoaded.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
     val filters by viewModel.filters.collectAsState()
     val isAdminUser by viewModel.isAdmin.collectAsState()
@@ -85,9 +86,9 @@ fun DiscoverScreen(
     var swipeKey by remember { mutableStateOf(0) }
     var showFilters by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
-    LaunchedEffect(profiles.size, profileLimit, discoveryError) {
-        if (profiles.size <= 3 && profileLimit < 500 && discoveryError == null) {
-            // Give the current query time to return before expanding its server-side limit.
+    LaunchedEffect(profiles.size, discoveryExhausted, pagesLoaded, discoveryError) {
+        if (profiles.size <= 3 && !discoveryExhausted && discoveryError == null) {
+            // Ask for the next page of people (ignored while one is already loading)
             delay(500)
             viewModel.loadMoreProfiles()
         }
@@ -329,7 +330,7 @@ fun ProfileCard(
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(if (!hasProfilePic && mainPhoto?.isBlurred == true) Modifier.blur(20.dp) else Modifier),
+                        .then(if (!hasProfilePic && (profile.coverBlurred || mainPhoto?.isBlurred == true)) Modifier.blur(20.dp) else Modifier),
                     contentScale = ContentScale.Crop
                 )
             } else {
@@ -595,7 +596,7 @@ fun RadarItem(profile: UserProfile, distanceText: String, onClick: () -> Unit = 
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(if (!hasProfilePic && photo?.isBlurred == true) Modifier.blur(10.dp) else Modifier),
+                    .then(if (!hasProfilePic && (profile.coverBlurred || photo?.isBlurred == true)) Modifier.blur(10.dp) else Modifier),
                 contentScale = ContentScale.Crop
             )
             Box(

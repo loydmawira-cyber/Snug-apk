@@ -245,7 +245,7 @@ fun PhotoVerificationSheet(
 }
 
 private fun UserProfile.avatarOrNull(): String? =
-    profilePhoto.takeIf { it.isNotBlank() } ?: photos.firstOrNull()?.url
+    profilePhoto.takeIf { it.isNotBlank() } ?: coverPhoto.takeIf { it.isNotBlank() } ?: photos.firstOrNull()?.url
 
 /** Plain-language safety guide. */
 @OptIn(ExperimentalMaterial3Api::class)

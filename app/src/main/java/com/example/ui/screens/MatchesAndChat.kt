@@ -244,6 +244,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
     var scamWarning by remember { mutableStateOf<String?>(null) }
     val emailGate by viewModel.emailGate.collectAsState()
     var showReport by remember { mutableStateOf(false) }
+    var reportingMessage by remember { mutableStateOf<ChatMessage?>(null) }
 
     val me by viewModel.currentUserProfile.collectAsState()
     val photoPicker = rememberLauncherForActivityResult(
@@ -328,6 +329,28 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
             },
             confirmButton = {},
             dismissButton = { TextButton(onClick = { showReport = false }) { Text("Cancel") } }
+        )
+    }
+
+    reportingMessage?.let { target ->
+        AlertDialog(
+            onDismissRequest = { reportingMessage = null },
+            title = { Text("Report this message") },
+            text = {
+                Column {
+                    ReportReasons.all.forEach { reason ->
+                        TextButton(
+                            onClick = {
+                                reportingMessage = null
+                                viewModel.reportMessage(target, reason)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(reason) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { reportingMessage = null }) { Text("Cancel") } }
         )
     }
 
@@ -470,7 +493,11 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                     ChatBubble(
                         message,
                         isMe = message.senderId == viewModel.currentUserId,
-                        onReact = { viewModel.setReaction(message.id, it) }
+                        onReact = { viewModel.setReaction(message.id, it) },
+                        // Only messages from the other person can be reported
+                        onReport = if (message.senderId != viewModel.currentUserId) {
+                            { reportingMessage = message }
+                        } else null
                     )
                     if (message.id == lastSeenId) {
                         Text(
@@ -497,7 +524,12 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
 }
 
 @Composable
-fun ChatBubble(message: ChatMessage, isMe: Boolean, onReact: (String) -> Unit = {}) {
+fun ChatBubble(
+    message: ChatMessage,
+    isMe: Boolean,
+    onReact: (String) -> Unit = {},
+    onReport: (() -> Unit)? = null
+) {
     var menuOpen by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -545,6 +577,15 @@ fun ChatBubble(message: ChatMessage, isMe: Boolean, onReact: (String) -> Unit = 
                             onReact(if (message.reaction == emoji) "" else emoji)
                         }) { Text(emoji, fontSize = 20.sp) }
                     }
+                }
+                if (onReport != null) {
+                    DropdownMenuItem(
+                        text = { Text("Report message") },
+                        onClick = {
+                            menuOpen = false
+                            onReport()
+                        }
+                    )
                 }
             }
         }

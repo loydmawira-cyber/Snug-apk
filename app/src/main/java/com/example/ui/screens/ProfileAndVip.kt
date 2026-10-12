@@ -1105,19 +1105,19 @@ fun PhotosPrivacySheet(
                             photo = photo,
                             onDelete = {
                                 val newList = profile.photos.toMutableList().apply { removeAt(index) }
-                                viewModel.updateUserProfile(profile.copy(photos = newList))
+                                viewModel.updateGallery(newList)
                             },
                             onToggleBlur = {
                                 val newList = profile.photos.toMutableList().apply {
                                     this[index] = photo.copy(isBlurred = !photo.isBlurred)
                                 }
-                                viewModel.updateUserProfile(profile.copy(photos = newList))
+                                viewModel.updateGallery(newList)
                             },
                             onTogglePublic = {
                                 val newList = profile.photos.toMutableList().apply {
                                     this[index] = photo.copy(isPublic = !photo.isPublic)
                                 }
-                                viewModel.updateUserProfile(profile.copy(photos = newList))
+                                viewModel.updateGallery(newList)
                             }
                         )
                     }
