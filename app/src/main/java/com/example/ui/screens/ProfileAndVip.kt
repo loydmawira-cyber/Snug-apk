@@ -68,6 +68,7 @@ enum class ProfileSubScreen {
 fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
     val profile by viewModel.currentUserProfile.collectAsState()
     val verifyStatus by viewModel.photoVerificationStatus.collectAsState()
+    var emailVerified by remember { mutableStateOf(EmailVerifier.isVerified()) }
     val isAdmin by viewModel.isAdmin.collectAsState()
     val pendingCount by viewModel.pendingVerifications.collectAsState()
     var activeSubScreen by remember { mutableStateOf(ProfileSubScreen.NONE) }
@@ -91,6 +92,7 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
             PhotoVerificationSheet(
                 profile = profile,
                 viewModel = viewModel,
+                onEmailVerified = { emailVerified = true },
                 onDismiss = { activeSubScreen = ProfileSubScreen.NONE }
             )
         }
@@ -381,6 +383,18 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
         ) {
             Column {
                 SettingsMenuRow(
+                    icon = Icons.Default.Email,
+                    iconTint = if (emailVerified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    title = "Email Verification",
+                    subtitle = if (emailVerified) "${EmailVerifier.email()} is verified" else "Verify your email address",
+                    badge = if (emailVerified) "Verified" else "Verify",
+                    badgeColor = if (emailVerified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    onClick = { activeSubScreen = ProfileSubScreen.PHOTO_VERIFICATION }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsMenuRow(
                     icon = Icons.Default.Face,
                     iconTint = if (profile?.photoVerified == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     title = "Photo Verification",
@@ -388,12 +402,12 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
                         profile?.photoVerified == true -> "Your selfie matched your photos"
                         verifyStatus == "pending" -> "Selfie under review"
                         verifyStatus == "rejected" -> "Selfie not accepted, try again"
-                        else -> "Take a selfie to prove it is really you"
+                        else -> "Take a selfie to earn your badge"
                     },
                     badge = when {
                         profile?.photoVerified == true -> "Verified"
                         verifyStatus == "pending" -> "Pending"
-                        else -> "Recommended"
+                        else -> "Verify"
                     },
                     badgeColor = if (profile?.photoVerified == true || verifyStatus == "pending") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     onClick = { activeSubScreen = ProfileSubScreen.PHOTO_VERIFICATION }
