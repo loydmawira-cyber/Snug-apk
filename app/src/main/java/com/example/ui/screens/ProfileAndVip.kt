@@ -136,7 +136,7 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
             )
         }
         ProfileSubScreen.VIP_MEMBERSHIP -> {
-            VipUpgradeSheet(onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
+            VipUpgradeSheet(viewModel = viewModel, onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
         }
         ProfileSubScreen.HELP_SUPPORT -> {
             HelpAndSupportSheet(onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
@@ -355,7 +355,7 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(if (hasPremium) "SNUG VIP is active" else "Get SNUG VIP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        if (hasPremium) "All premium features are unlocked for you" else "Unlimited likes, rewinds & 5 sparks",
+                        if (hasPremium) "All premium features are unlocked for you" else "Unlimited likes, rewinds & Super Likes",
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 12.sp
                     )
@@ -1367,7 +1367,24 @@ fun SecurityPinSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VipUpgradeSheet(onDismiss: () -> Unit) {
+fun VipUpgradeSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val billing = viewModel.billing
+    val plans by billing.plans.collectAsState()
+    val loading by billing.loading.collectAsState()
+    val busy by billing.busy.collectAsState()
+    val message by billing.message.collectAsState()
+    val me by viewModel.currentUserProfile.collectAsState()
+
+    // Default to the 6-month plan (the "popular" one), else the first plan
+    var selectedId by remember { mutableStateOf<String?>(null) }
+    val selected = plans.firstOrNull { it.basePlanId == selectedId }
+        ?: plans.firstOrNull { it.months == 6 } ?: plans.firstOrNull()
+
+    // Close the sheet as soon as the server confirmed VIP
+    LaunchedEffect(me?.isVip) { if (me?.isVip == true) onDismiss() }
+    DisposableEffect(Unit) { onDispose { billing.clearMessage() } }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -1387,28 +1404,80 @@ fun VipUpgradeSheet(onDismiss: () -> Unit) {
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             VipBenefitItem("Unlimited Likes", "Swipe to your heart's content")
             VipBenefitItem("Unlimited Rewinds", "Oops! Bring them back")
-            VipBenefitItem("5 Daily Super Sparks", "Stand out from the crowd")
-            VipBenefitItem("Passport", "Match anywhere in the world")
-            
+            VipBenefitItem("Unlimited Super Likes", "Stand out from the crowd")
+            // "Passport" is listed again once the feature exists
+
             Spacer(modifier = Modifier.height(24.dp))
-            
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PriceTier("1 Month", "$9.99")
-                PriceTier("6 Months", "$7.49/mo", isPopular = true)
-                PriceTier("12 Months", "$4.99/mo")
+
+            when {
+                loading -> CircularProgressIndicator()
+                plans.isEmpty() -> Text(
+                    "Subscriptions are not available right now. Check your connection and Google Play, then try again.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+                else -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    plans.forEach { plan ->
+                        PriceTier(
+                            title = if (plan.months == 12) "12 Months" else if (plan.months == 1) "1 Month" else "${plan.months} Months",
+                            price = if (plan.months > 1 && plan.perMonthText.isNotBlank()) "${plan.perMonthText}/mo" else plan.priceText,
+                            isPopular = plan.months == 6,
+                            isSelected = plan.basePlanId == selected?.basePlanId,
+                            onClick = { selectedId = plan.basePlanId }
+                        )
+                    }
+                }
             }
-            
+
+            message?.let {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             Button(
-                onClick = onDismiss,
+                onClick = {
+                    val activity = context.findActivity()
+                    if (activity != null && selected != null) billing.launchPurchase(activity, selected)
+                },
+                enabled = selected != null && !busy,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = CircleShape
             ) {
-                Text("START 7-DAY FREE TRIAL")
+                if (busy) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                else Text(
+                    if (selected != null && selected.trialDays > 0) "START ${selected.trialDays}-DAY FREE TRIAL" else "SUBSCRIBE"
+                )
+            }
+
+            if (selected != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    (if (selected.trialDays > 0) "Free for ${selected.trialDays} days, then " else "") +
+                        "${selected.priceText} every ${if (selected.months == 1) "month" else if (selected.months == 12) "year" else "${selected.months} months"}. " +
+                        "Renews automatically until cancelled. Cancel anytime in Google Play > Subscriptions.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(onClick = { viewModel.restorePurchases() }) {
+                    Text("Restore purchases")
+                }
+                TextButton(onClick = {
+                    val uri = android.net.Uri.parse(
+                        "https://play.google.com/store/account/subscriptions?sku=${com.example.data.billing.BillingManager.PRODUCT_ID}&package=${context.packageName}"
+                    )
+                    context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
+                }) {
+                    Text("Manage subscription")
+                }
             }
             TextButton(onClick = onDismiss) {
                 Text("No thanks", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
@@ -1416,6 +1485,12 @@ fun VipUpgradeSheet(onDismiss: () -> Unit) {
             Spacer(modifier = Modifier.height(20.dp))
         }
     }
+}
+
+private tailrec fun android.content.Context.findActivity(): android.app.Activity? = when (this) {
+    is android.app.Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1490,12 +1565,18 @@ fun VipBenefitItem(title: String, subtitle: String) {
 }
 
 @Composable
-fun RowScope.PriceTier(title: String, price: String, isPopular: Boolean = false) {
+fun RowScope.PriceTier(
+    title: String,
+    price: String,
+    isPopular: Boolean = false,
+    isSelected: Boolean = false,
+    onClick: () -> Unit = {}
+) {
     Surface(
-        modifier = Modifier.weight(1f),
+        modifier = Modifier.weight(1f).clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        border = if (isPopular) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-        color = if (isPopular) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant
+        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
