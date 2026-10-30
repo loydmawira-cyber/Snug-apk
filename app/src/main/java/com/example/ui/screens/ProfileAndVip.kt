@@ -42,7 +42,6 @@ import com.example.data.model.UserProfile
 import com.example.data.model.missingRequiredFields
 import com.example.data.security.PinManager
 import com.example.data.security.EmailVerifier
-import com.example.data.security.PhoneVerifier
 import kotlinx.coroutines.launch
 import com.example.data.util.calculateAge
 import com.example.ui.components.PinSetupDialog
@@ -53,7 +52,6 @@ import kotlin.math.roundToInt
 
 enum class ProfileSubScreen {
     NONE,
-    ACCOUNT_VERIFICATION,
     PHOTO_VERIFICATION,
     SAFETY_CENTER,
     PHOTOS_PRIVACY,
@@ -89,13 +87,6 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
 
     // Sub-screens / Bottom Sheets
     when (activeSubScreen) {
-        ProfileSubScreen.ACCOUNT_VERIFICATION -> {
-            AccountVerificationSheet(
-                profile = profile,
-                viewModel = viewModel,
-                onDismiss = { activeSubScreen = ProfileSubScreen.NONE }
-            )
-        }
         ProfileSubScreen.PHOTO_VERIFICATION -> {
             PhotoVerificationSheet(
                 profile = profile,
@@ -390,21 +381,9 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
         ) {
             Column {
                 SettingsMenuRow(
-                    icon = Icons.Default.VerifiedUser,
-                    iconTint = if (profile?.isPhoneVerified == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    title = "Account Verification",
-                    subtitle = if (profile?.isPhoneVerified == true) "Phone Verified • ${profile?.phoneNumber}" else "Verify phone number to earn badge",
-                    badge = if (profile?.isPhoneVerified == true) "Verified" else "Action Needed",
-                    badgeColor = if (profile?.isPhoneVerified == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                    onClick = { activeSubScreen = ProfileSubScreen.ACCOUNT_VERIFICATION }
-                )
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
-
-                SettingsMenuRow(
                     icon = Icons.Default.Face,
                     iconTint = if (profile?.photoVerified == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    title = "Photo & Email Verification",
+                    title = "Photo Verification",
                     subtitle = when {
                         profile?.photoVerified == true -> "Your selfie matched your photos"
                         verifyStatus == "pending" -> "Selfie under review"
@@ -651,213 +630,6 @@ fun SettingsMenuRow(
 // -------------------------------------------------------------
 // SUB-SCREENS / MODAL BOTTOM SHEETS
 // -------------------------------------------------------------
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AccountVerificationSheet(
-    profile: UserProfile?,
-    viewModel: SnugViewModel,
-    onDismiss: () -> Unit
-) {
-    var phoneNumber by remember { mutableStateOf(profile?.phoneNumber ?: "") }
-    var code by remember { mutableStateOf("") }
-    var step by remember { mutableStateOf(if (profile?.isPhoneVerified == true) 0 else 1) } // 0: Status, 1: Enter Phone, 2: Enter Code
-    var verificationId by remember { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
-    val ctx = LocalContext.current
-    val activity = remember(ctx) {
-        var c = ctx
-        while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
-        c as? android.app.Activity
-    }
-
-    fun finishLink(credential: com.google.firebase.auth.PhoneAuthCredential, number: String) {
-        scope.launch {
-            val problem = PhoneVerifier.link(credential)
-            busy = false
-            if (problem == null && profile != null) {
-                viewModel.updateUserProfile(profile.copy(phoneNumber = number, isPhoneVerified = true))
-                step = 0
-            } else {
-                error = problem
-            }
-        }
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = if (profile?.isPhoneVerified == true) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(56.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        if (profile?.isPhoneVerified == true) Icons.Default.VerifiedUser else Icons.Default.PhoneAndroid,
-                        contentDescription = null,
-                        tint = if (profile?.isPhoneVerified == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(14.dp))
-            
-            Text(
-                "Account Verification",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(6.dp))
-            
-            Text(
-                "Verify your phone number to get a verified trust badge on your profile and discovery cards.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            if (step == 0) {
-                // Verified Status Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Verified Phone Number", fontWeight = FontWeight.Bold)
-                            Text(profile?.phoneNumber ?: "", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-                OutlinedButton(
-                    onClick = { step = 1 },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Change Phone Number")
-                }
-            } else if (step == 1) {
-                OutlinedTextField(
-                    value = phoneNumber,
-                    onValueChange = { if (it.all { c -> c.isDigit() || c == '+' || c == '-' || c == ' ' }) phoneNumber = it },
-                    label = { RequiredLabel("Phone Number") },
-                    placeholder = { Text("+1 234 567 890") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                Text(
-                    "Use the international format, e.g. +254712345678",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                error?.let {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(
-                    onClick = {
-                        val number = PhoneVerifier.normalize(phoneNumber)
-                        if (!number.startsWith("+") || number.length < 9) {
-                            error = "Enter the number with its country code, like +254712345678"
-                        } else if (activity == null) {
-                            error = "Could not start verification"
-                        } else {
-                            error = null
-                            busy = true
-                            PhoneVerifier.sendCode(
-                                activity = activity,
-                                phone = number,
-                                onSent = { id -> verificationId = id; busy = false; step = 2 },
-                                onAutoVerified = { cred -> finishLink(cred, number) },
-                                onError = { msg -> busy = false; error = msg }
-                            )
-                        }
-                    },
-                    enabled = !busy && phoneNumber.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = CircleShape
-                ) {
-                    Text(if (busy) "Sending..." else "Send Verification Code")
-                }
-            } else {
-                Text(
-                    "Enter the 6-digit code sent to $phoneNumber",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = code,
-                    onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) code = it },
-                    label = { Text("Verification Code") },
-                    placeholder = { Text("123456") },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontSize = 20.sp, fontWeight = FontWeight.Bold),
-                    singleLine = true,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                Button(
-                    onClick = {
-                        if (code.length == 6 && verificationId.isNotBlank()) {
-                            error = null
-                            busy = true
-                            finishLink(
-                                PhoneVerifier.credentialFor(verificationId, code),
-                                PhoneVerifier.normalize(phoneNumber)
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    enabled = code.length == 6 && !busy,
-                    shape = CircleShape
-                ) {
-                    Text(if (busy) "Verifying..." else "Confirm & Verify")
-                }
-                error?.let {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
 
 @Composable
 fun PhotoItem(photo: UserPhoto, onDelete: () -> Unit, onToggleBlur: () -> Unit, onTogglePublic: () -> Unit) {
@@ -1723,7 +1495,6 @@ fun EditProfileDialog(
     val interests = remember { mutableStateListOf(*profile.interests.toTypedArray()) }
     var birthYear by remember { mutableStateOf(profile.birthDate?.toDate()?.year?.plus(1900)?.toString() ?: "") }
     var saveError by remember { mutableStateOf<String?>(null) }
-    var phoneNumber by remember { mutableStateOf(profile.phoneNumber) }
     var lookingFor by remember { mutableStateOf(profile.lookingFor) }
     var haveKids by remember { mutableStateOf(profile.haveKids) }
     var wantKids by remember { mutableStateOf(profile.wantKids) }
@@ -1838,16 +1609,6 @@ fun EditProfileDialog(
                 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                OutlinedTextField(
-                    value = phoneNumber,
-                    onValueChange = { if (it.all { c -> c.isDigit() || c == '+' || c == '-' || c == ' ' }) phoneNumber = it },
-                    label = { Text("Phone Number") },
-                    placeholder = { Text("+1 234 567 890") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                
                 Spacer(modifier = Modifier.height(20.dp))
                 RequiredTitle("I am")
                 Spacer(modifier = Modifier.height(8.dp))
@@ -2014,8 +1775,6 @@ fun EditProfileDialog(
                                 displayName = name, 
                                 bio = bio, 
                                 gender = gender,
-                                phoneNumber = phoneNumber,
-                                isPhoneVerified = if (phoneNumber == profile.phoneNumber) profile.isPhoneVerified else false,
                                 birthDate = if (year in 1900..(thisYear - 18)) com.google.firebase.Timestamp(calendar.time) else null,
                                 interestedIn = interestedIn.toList(),
                                 interests = interests.toList(),

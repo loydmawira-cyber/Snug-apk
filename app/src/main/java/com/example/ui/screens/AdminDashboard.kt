@@ -285,7 +285,6 @@ private fun StatsTab(
         "New today" to n(stats.newToday),
         "New this week" to n(stats.new7d),
         "Photo verified" to n(stats.photoVerified),
-        "Phone verified" to n(stats.phoneVerified),
         "VIP members" to n(stats.vip),
         "Men" to n(stats.men),
         "Women" to n(stats.women),
