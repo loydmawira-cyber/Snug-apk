@@ -32,7 +32,15 @@ service cloud.firestore {
     // photoVerified and banned can only be changed by an admin in the Console, never by the app.
     function adminFieldsUnchanged() {
       return request.resource.data.get('photoVerified', false) == resource.data.get('photoVerified', false)
-        && request.resource.data.get('banned', false) == resource.data.get('banned', false);
+        && request.resource.data.get('banned', false) == resource.data.get('banned', false)
+        && vipFieldsUnchanged();
+    }
+
+    // isVip, vipExpiresAt, vipProductId and vipState are written only by the Cloud Functions (Admin SDK)
+    function vipFieldsUnchanged() {
+      return request.resource.data.get('vipExpiresAt', null) == resource.data.get('vipExpiresAt', null)
+        && request.resource.data.get('vipProductId', null) == resource.data.get('vipProductId', null)
+        && request.resource.data.get('vipState', null) == resource.data.get('vipState', null);
     }
 
     // ---------- USERS ----------
@@ -42,6 +50,7 @@ service cloud.firestore {
       // (the phone_number claim only exists after Firebase Phone Auth).
       allow create: if isOwner(userId)
         && request.resource.data.isVip == false
+        && !request.resource.data.keys().hasAny(['vipExpiresAt', 'vipProductId', 'vipState'])
         && request.resource.data.get('photoVerified', false) == false
         && request.resource.data.get('banned', false) == false
         && (request.resource.data.isPhoneVerified == false
