@@ -1,6 +1,5 @@
 package com.example.ui.components
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -11,12 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
@@ -29,9 +26,12 @@ fun EmailSignInFlow(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var isRegistering by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
+    var showConfirmPassword by remember { mutableStateOf(false) }
+    var resetMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     Column(
@@ -40,7 +40,7 @@ fun EmailSignInFlow(
     ) {
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = { email = it.trim(); resetMessage = null },
             label = { Text("Email") },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -56,20 +56,71 @@ fun EmailSignInFlow(
             visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
                 IconButton(onClick = { showPassword = !showPassword }) {
-                    Icon(if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null)
+                    Icon(if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = if (showPassword) "Hide password" else "Show password")
                 }
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             singleLine = true,
             shape = MaterialTheme.shapes.medium
         )
-        
+        if (isRegistering) {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label = { Text("Confirm password") },
+                modifier = Modifier.fillMaxWidth(),
+                visualTransformation = if (showConfirmPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) {
+                        Icon(if (showConfirmPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = if (showConfirmPassword) "Hide confirmation password" else "Show confirmation password")
+                    }
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                shape = MaterialTheme.shapes.medium
+            )
+        }
+        if (resetMessage != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(resetMessage!!, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+        }
+        if (!isRegistering) {
+            TextButton(
+                onClick = {
+                    if (email.isBlank()) {
+                        onAuthError("Enter your email address first")
+                        return@TextButton
+                    }
+                    isLoading = true
+                    resetMessage = null
+                    coroutineScope.launch {
+                        try {
+                            Firebase.auth.sendPasswordResetEmail(email).await()
+                            resetMessage = "Password reset email sent. Open the link to choose a new password."
+                            onAuthError("")
+                        } catch (e: Exception) {
+                            Log.e("Auth", "Could not send password reset email", e)
+                            onAuthError(e.localizedMessage ?: "Could not send password reset email")
+                        } finally {
+                            isLoading = false
+                        }
+                    }
+                },
+                enabled = !isLoading,
+                modifier = Modifier.align(Alignment.End)
+            ) { Text("Forgot password?") }
+        }
         Spacer(modifier = Modifier.height(24.dp))
         
         Button(
             onClick = {
-                if (email.isEmpty() || password.isEmpty()) {
+                if (email.isBlank() || password.isEmpty() || (isRegistering && confirmPassword.isEmpty())) {
                     onAuthError("Please fill all fields")
+                    return@Button
+                }
+                if (isRegistering && password != confirmPassword) {
+                    onAuthError("Passwords do not match")
                     return@Button
                 }
                 isLoading = true
@@ -108,7 +159,12 @@ fun EmailSignInFlow(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        TextButton(onClick = { isRegistering = !isRegistering }) {
+        TextButton(onClick = {
+            isRegistering = !isRegistering
+            confirmPassword = ""
+            resetMessage = null
+            onAuthError("")
+        }) {
             Text(if (isRegistering) "Already have an account? Sign In" else "New to SNUG? Create Account")
         }
     }
