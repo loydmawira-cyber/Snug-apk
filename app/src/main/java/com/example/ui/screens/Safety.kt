@@ -37,6 +37,7 @@ import kotlinx.coroutines.launch
 fun PhotoVerificationSheet(
     profile: UserProfile?,
     viewModel: SnugViewModel,
+    onEmailVerified: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val status by viewModel.photoVerificationStatus.collectAsState()
@@ -226,6 +227,7 @@ fun PhotoVerificationSheet(
                                     emailBusy = true
                                     scope.launch {
                                         emailVerified = EmailVerifier.refresh()
+                                        if (emailVerified) onEmailVerified()
                                         emailNote = if (emailVerified) "Email verified" else "Not verified yet"
                                         emailBusy = false
                                     }
