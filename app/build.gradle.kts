@@ -48,7 +48,8 @@ android {
   buildTypes {
     release {
       isCrunchPngs = false
-      isMinifyEnabled = false
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       // CI and local contributors can assemble an unsigned release artifact. Configure
       // KEYSTORE_PATH, STORE_PASSWORD, and KEY_PASSWORD for a signed release build.
@@ -110,6 +111,8 @@ dependencies {
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
   implementation(libs.firebase.firestore)
+  implementation(libs.firebase.functions)
+  implementation(libs.billing.ktx)
 
   // Uncomment ALL FOUR of the following dependencies together to use Firebase Auth and Google
   // Sign-In via Credential Manager:
