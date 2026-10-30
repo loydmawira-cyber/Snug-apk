@@ -32,8 +32,6 @@ class SeedRepository(private val db: FirebaseFirestore, private val context: Con
                     interestedIn = listOf("Male"),
                     interests = listOf("Architecture", "Photography", "Travel"),
                     photos = listOf(UserPhoto(url = "android.resource://$packageName/drawable/img_jane_avatar_1791028912976")),
-                    phoneNumber = "+1 555 019 2831",
-                    isPhoneVerified = true,
                     createdAt = Timestamp.now(),
                     updatedAt = Timestamp.now()
                 ),
@@ -46,8 +44,6 @@ class SeedRepository(private val db: FirebaseFirestore, private val context: Con
                     interestedIn = listOf("Female"),
                     interests = listOf("Hiking", "Outdoors", "Fitness"),
                     photos = listOf(UserPhoto(url = "android.resource://$packageName/drawable/img_peter_avatar_1791028926931")),
-                    phoneNumber = "+1 555 018 7329",
-                    isPhoneVerified = true,
                     createdAt = Timestamp.now(),
                     updatedAt = Timestamp.now()
                 ),
@@ -60,8 +56,6 @@ class SeedRepository(private val db: FirebaseFirestore, private val context: Con
                     interestedIn = listOf("Male", "Female"),
                     interests = listOf("Art", "Painting", "Music"),
                     photos = listOf(UserPhoto(url = "android.resource://$packageName/drawable/img_bridget_avatar_1791028942614")),
-                    phoneNumber = "+1 555 014 9922",
-                    isPhoneVerified = true,
                     createdAt = Timestamp.now(),
                     updatedAt = Timestamp.now()
                 ),
@@ -74,8 +68,6 @@ class SeedRepository(private val db: FirebaseFirestore, private val context: Con
                     interestedIn = listOf("Male"),
                     interests = listOf("Reading", "History", "Chess"),
                     photos = listOf(UserPhoto(url = "android.resource://$packageName/drawable/img_agnes_avatar_1791028955213")),
-                    phoneNumber = "+1 555 012 4430",
-                    isPhoneVerified = true,
                     createdAt = Timestamp.now(),
                     updatedAt = Timestamp.now()
                 )

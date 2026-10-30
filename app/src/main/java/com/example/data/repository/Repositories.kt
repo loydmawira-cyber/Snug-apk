@@ -83,18 +83,19 @@ class ProfileRepository(private val db: FirebaseFirestore) {
         val base = snapshot.toUserProfile()?.copy(id = userId)
             ?: throw IllegalStateException("Profile document exists but could not be decoded")
         return if (userId == auth.currentUser?.uid) {
-            // A failed private-contact read must not silently replace a saved phone number with blank.
-            val phone = db.collection("users").document(userId).collection("private").document("contact")
-                .get().await().getString("phoneNumber")
+            // Remove legacy phone fields from this account's profile and private contact record.
+            db.collection("users").document(userId).set(
+                mapOf("phoneNumber" to FieldValue.delete(), "isPhoneVerified" to FieldValue.delete()),
+                SetOptions.merge()
+            ).await()
+            db.collection("users").document(userId).collection("private").document("contact")
+                .set(mapOf("phoneNumber" to FieldValue.delete()), SetOptions.merge()).await()
             // A failed gallery read must throw too, otherwise saving would wipe the gallery.
             val gallery = loadOwnPhotos(userId)
-            val withGallery = base.copy(
-                phoneNumber = phone.orEmpty(),
-                photos = gallery.ifEmpty { base.photos } // old layout: photos still in the document
-            )
+            val withGallery = base.copy(photos = gallery.ifEmpty { base.photos }) // old layout: photos still in the document
             slimDownOwnProfile(userId, withGallery, hasLegacyField = snapshot.contains("photos"), galleryMigrated = gallery.isNotEmpty())
         } else {
-            base.copy(phoneNumber = "")
+            base
         }
     }
 
@@ -226,13 +227,12 @@ class ProfileRepository(private val db: FirebaseFirestore) {
     suspend fun updateProfile(profile: UserProfile): Result<Unit> {
         val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Not signed in"))
         return try {
-            // The verified badge only counts if a phone number is really linked to this account
-            val verified = profile.isPhoneVerified && !auth.currentUser?.phoneNumber.isNullOrBlank()
             withTimeout(20000) {
                 db.collection("users").document(uid)
                     .set(
-                        profile.copy(id = uid, isPhoneVerified = verified) + mapOf(
-                            "phoneNumber" to "", // never stored on the public profile
+                        profile.copy(id = uid) + mapOf(
+                            "phoneNumber" to FieldValue.delete(),
+                            "isPhoneVerified" to FieldValue.delete(),
                             // Public location is only accurate to about 1 km
                             "latitude" to roundCoord(profile.latitude),
                             "longitude" to roundCoord(profile.longitude),
@@ -242,9 +242,6 @@ class ProfileRepository(private val db: FirebaseFirestore) {
                         ),
                         SetOptions.merge()
                     )
-                    .await()
-                db.collection("users").document(uid).collection("private").document("contact")
-                    .set(mapOf("phoneNumber" to profile.phoneNumber), SetOptions.merge())
                     .await()
             }
             Result.success(Unit)
@@ -920,7 +917,6 @@ class AdminRepository(private val db: FirebaseFirestore) {
             async { count(users.whereGreaterThan("createdAt", ago(day))) },
             async { count(users.whereGreaterThan("createdAt", ago(7 * day))) },
             async { count(users.whereEqualTo("photoVerified", true)) },
-            async { count(users.whereEqualTo("isPhoneVerified", true)) },
             async { count(users.whereEqualTo("isVip", true)) },
             async { count(users.whereEqualTo("banned", true)) },
             async { count(users.whereEqualTo("isPaused", true)) },
@@ -931,9 +927,9 @@ class AdminRepository(private val db: FirebaseFirestore) {
         ).map { it.await() }
         com.example.data.model.AdminStats(
             totalUsers = a[0], activeNow = a[1], active24h = a[2], active7d = a[3],
-            newToday = a[4], new7d = a[5], photoVerified = a[6], phoneVerified = a[7],
-            vip = a[8], banned = a[9], paused = a[10], men = a[11], women = a[12],
-            reports = a[13], pendingReviews = a[14]
+            newToday = a[4], new7d = a[5], photoVerified = a[6],
+            vip = a[7], banned = a[8], paused = a[9], men = a[10], women = a[11],
+            reports = a[12], pendingReviews = a[13]
         )
     }
 
@@ -1103,8 +1099,6 @@ private operator fun UserProfile.plus(other: Map<String, Any?>): Map<String, Any
         // Gallery photos are saved separately (savePhotos), never inside the profile document
         "coverPhoto" to this.coverPhoto,
         "coverBlurred" to this.coverBlurred,
-        "phoneNumber" to this.phoneNumber,
-        "isPhoneVerified" to this.isPhoneVerified,
         "isVip" to this.isVip,
         "dailyLikesUsed" to this.dailyLikesUsed,
         "lastLikeReset" to this.lastLikeReset,
@@ -1158,7 +1152,6 @@ private fun DocumentSnapshot.toUserProfile(): UserProfile? {
     val base = toObject(UserProfile::class.java) ?: return null
     return base.copy(
         isPaused = getBoolean("isPaused") ?: false,
-        isPhoneVerified = getBoolean("isPhoneVerified") ?: false,
         isVip = getBoolean("isVip") ?: false,
         showNameToOthers = getBoolean("showNameToOthers") ?: true,
         showAgeToOthers = getBoolean("showAgeToOthers") ?: true,
