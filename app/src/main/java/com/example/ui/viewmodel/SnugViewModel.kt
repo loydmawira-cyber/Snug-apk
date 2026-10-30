@@ -367,15 +367,7 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                     if (saved.isSuccess) _currentUserProfile.value = newProfile
                     else _uiMessage.value = "Could not create profile: ${saved.exceptionOrNull()?.message}"
                 } else {
-                    // Clear any badge that is not backed by a really linked phone number
-                    val phoneLinked = !com.google.firebase.Firebase.auth.currentUser?.phoneNumber.isNullOrBlank()
-                    if (profile.isPhoneVerified && !phoneLinked) {
-                        val fixed = profile.copy(isPhoneVerified = false)
-                        profileRepo.updateProfile(fixed)
-                        _currentUserProfile.value = fixed
-                    } else {
-                        _currentUserProfile.value = profile
-                    }
+                    _currentUserProfile.value = profile
                 }
             } catch (e: Exception) {
                 _uiMessage.value = "Profile Error: ${e.message}"
