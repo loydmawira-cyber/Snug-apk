@@ -9,6 +9,7 @@ import com.example.data.model.ChatMessage
 import com.example.data.model.Match
 import com.example.data.model.DiscoverFilters
 import com.google.firebase.auth.auth
+import com.example.data.billing.BillingManager
 import com.example.data.model.afterSuperLike
 import com.example.data.model.superLikesLeft
 import com.example.data.model.UserPhoto
@@ -71,6 +72,21 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val currentUserId = profileRepo.getCurrentUserId()
+
+    // Google Play Billing (VIP). The server decides who is VIP; this only reloads the profile afterwards.
+    val billing = BillingManager(application, viewModelScope) { refreshVipStatus() }
+
+    fun restorePurchases() {
+        viewModelScope.launch { billing.restore(silent = false) }
+    }
+
+    fun refreshVipStatus() {
+        val uid = currentUserId ?: return
+        viewModelScope.launch {
+            val fresh = profileRepo.getProfile(uid) ?: return@launch
+            _currentUserProfile.value = _currentUserProfile.value?.copy(isVip = fresh.isVip) ?: fresh
+        }
+    }
 
     private val _discoveryProfiles = MutableStateFlow<List<UserProfile>>(emptyList())
     val discoveryProfiles: StateFlow<List<UserProfile>> = _discoveryProfiles.asStateFlow()
@@ -152,6 +168,12 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         loadCurrentUserProfile()
         loadSwipes()
         loadNotifications()
+        billing.start()
+    }
+
+    override fun onCleared() {
+        billing.end()
+        super.onCleared()
     }
 
     private fun loadLikesReceived() {
