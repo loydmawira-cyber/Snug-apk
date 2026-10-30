@@ -152,7 +152,7 @@ fun SignInScreen() {
             }
             EmailSignInFlow(
                 onAuthSuccess = { authError = null },
-                onAuthError = { authError = it }
+                onAuthError = { authError = it.takeIf(String::isNotBlank) }
             )
         }
     }
