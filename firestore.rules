@@ -46,21 +46,15 @@ service cloud.firestore {
     // ---------- USERS ----------
     match /users/{userId} {
       allow read: if isSignedIn();
-      // The verified badge needs a phone number really linked to the account
-      // (the phone_number claim only exists after Firebase Phone Auth).
       allow create: if isOwner(userId)
         && request.resource.data.isVip == false
         && !request.resource.data.keys().hasAny(['vipExpiresAt', 'vipProductId', 'vipState'])
         && request.resource.data.get('photoVerified', false) == false
-        && request.resource.data.get('banned', false) == false
-        && (request.resource.data.isPhoneVerified == false
-            || request.auth.token.phone_number != null);
+        && request.resource.data.get('banned', false) == false;
       allow update: if isOwner(userId)
         && resource.data.get('banned', false) != true
         && adminFieldsUnchanged()
-        && request.resource.data.isVip == resource.data.isVip
-        && (request.resource.data.isPhoneVerified == false
-            || request.auth.token.phone_number != null);
+        && request.resource.data.isVip == resource.data.isVip;
       // An admin can only ever flip the photo-verified badge or suspend / unsuspend someone
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoVerified', 'banned']);
