@@ -28,8 +28,6 @@ data class UserProfile(
     // Small copy of the first public gallery photo, shown on cards when there is no profile picture
     val coverPhoto: String = "",
     val coverBlurred: Boolean = false,
-    val phoneNumber: String = "",
-    val isPhoneVerified: Boolean = false,
     // Set only by an admin in the Firebase Console (rules stop the app from changing these)
     val photoVerified: Boolean = false,
     val banned: Boolean = false,
@@ -132,7 +130,6 @@ fun UserProfile.publicViewForOthers(): UserProfile {
         profilePhoto = if (showPhotosToOthers) profilePhoto else "",
         coverPhoto = if (showPhotosToOthers) coverPhoto else "",
         photos = if (showPhotosToOthers) photos.filter { it.isPublic } else emptyList(),
-        phoneNumber = "",
         minAge = 18,
         maxAge = 99,
         radiusKm = 20_000,
@@ -295,8 +292,8 @@ fun UserProfile.lastSeenText(now: Long = System.currentTimeMillis()): String {
     }
 }
 
-/** Blue check: the phone is verified, or an admin confirmed the selfie matches the photos. */
-fun UserProfile.hasVerifiedBadge(): Boolean = isPhoneVerified || photoVerified
+/** Blue check is awarded only after an admin approves the user's photo verification. */
+fun UserProfile.hasVerifiedBadge(): Boolean = photoVerified
 
 /** Simple scam check on a message before it is sent. Returns a warning, or null if it looks fine. */
 object ScamGuard {
@@ -372,7 +369,6 @@ data class AdminStats(
     val newToday: Long = -1,
     val new7d: Long = -1,
     val photoVerified: Long = -1,
-    val phoneVerified: Long = -1,
     val vip: Long = -1,
     val banned: Long = -1,
     val paused: Long = -1,
@@ -408,7 +404,6 @@ fun UserProfile.missingRequiredFields(): List<String> {
         java.util.Calendar.getInstance().apply { time = it }.get(java.util.Calendar.YEAR)
     }
     if (birthYear == null || birthYear < 1900 || birthYear > thisYear - 18) out += "Birth year (18 or older)"
-    if (phoneNumber.count { it.isDigit() } < 8) out += "Phone number"
     if (gender.isBlank()) out += "I am"
     if (interestedIn.isEmpty()) out += "Interested in"
     if (interests.size < 3) out += "At least 3 interests"
