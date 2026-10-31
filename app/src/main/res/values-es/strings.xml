@@ -7,4 +7,77 @@
     <string name="new_near_you">Nuevos cerca de ti</string><string name="new_near_you_description">Perfiles recientes dentro de tu radio de búsqueda</string><string name="no_new_nearby">No hay perfiles nuevos cerca ahora.</string><string name="close_matches_worldwide">Afinidades en todo el mundo</string><string name="worldwide_description">Personas fuera de tu radio, ordenadas por afinidad</string><string name="worldwide_empty">Aparecerán más afinidades cuando se carguen perfiles nuevos.</string>
     <string name="online_now">En línea ahora</string><string name="online_subtitle">Mira quién está aquí y listo para conectar</string><string name="who_liked_you">A quién le gustas</string><string name="online_near_you">En línea cerca de ti</string><string name="new_and_online">Nuevos y en línea</string><string name="no_liked_online">Nadie a quien le gustes está en línea ahora.</string><string name="no_one_nearby_online">Nadie cerca está en línea ahora.</string><string name="no_new_online">No hay perfiles nuevos en línea ahora.</string>
     <string name="language_settings_title">Idioma / Language</string><string name="language_settings_subtitle">%1$s · Cambiar idioma de la app</string><string name="language_name_en">Inglés (EE. UU.)</string><string name="language_name_es">Español</string><string name="language_name_fr">Francés</string><string name="language_name_de">Alemán</string><string name="language_name_sw">Suajili</string><string name="language_sheet_title">Idioma de la app</string><string name="language_sheet_description">Elige tu idioma preferido para SNUG.</string><string name="confirm_language">Confirmar idioma</string>
+
+    <!-- Profile, Matches, and Messages tabs -->
+    <string name="account_credentials">Credenciales y contraseña de la cuenta</string>
+    <string name="account_privacy">Cuenta y privacidad</string>
+    <string name="active_chats">Chats activos</string>
+    <string name="add_profile_picture">Añadir foto de perfil</string>
+    <string name="admin_verify_review">Admin: revisión de verificaciones</string>
+    <string name="app_preferences">App y preferencias</string>
+    <string name="archive">Archivar</string>
+    <string name="archived_count">Archivados (%1$d)</string>
+    <string name="change_password_email">Cambiar contraseña y actualizar correo</string>
+    <string name="change_profile_picture">Cambiar foto de perfil</string>
+    <string name="choose_visibility">Elige qué pueden ver otros miembros</string>
+    <string name="clear_search">Borrar</string>
+    <string name="compare_selfies">Comparar selfies con fotos de perfil</string>
+    <string name="data_privacy_export">Privacidad y exportación de datos</string>
+    <string name="dating_safety_tips">Consejos de seguridad y señales de alerta</string>
+    <string name="delete_account">Eliminar cuenta</string>
+    <string name="device_sessions">Dispositivos y sesiones activas</string>
+    <string name="discovery_preferences">Preferencias de descubrimiento</string>
+    <string name="distance_age_gender">Radio, edad y género</string>
+    <string name="download_account_json">Descarga el archivo de datos de tu cuenta (JSON)</string>
+    <string name="edit_profile_bio">Editar perfil y biografía</string>
+    <string name="email_verification">Verificación de correo</string>
+    <string name="enabled">Activado</string>
+    <string name="get_vip">Obtener SNUG VIP</string>
+    <string name="help_guidelines">Ayuda y normas de la comunidad</string>
+    <string name="likes_you_count">Personas a las que les gustas: %1$d</string>
+    <string name="log_out">Cerrar sesión</string>
+    <string name="manage_devices">Gestiona dispositivos y cierra otras sesiones</string>
+    <string name="matches_empty">Aún no hay matches. ¡Sigue deslizando!</string>
+    <string name="message_action">Mensaje</string>
+    <string name="messages_title">Mensajes</string>
+    <string name="my_photos_privacy">Mis fotos y privacidad</string>
+    <string name="new_match_say_hello">¡Nuevo match! Saluda</string>
+    <string name="new_matches">Nuevos matches</string>
+    <string name="no_archived_conversations">No hay conversaciones archivadas.</string>
+    <string name="no_conversations_yet">Aún no hay matches. Dale a Me gusta a alguien para empezar a chatear.</string>
+    <string name="no_matching_conversations">No se encontraron conversaciones.</string>
+    <string name="notifications_quiet">Notificaciones y horas de silencio</string>
+    <string name="off">Desactivado</string>
+    <string name="options">Opciones</string>
+    <string name="pause_profile">Pausar mi perfil</string>
+    <string name="pending">Pendiente</string>
+    <string name="pending_count">%1$d pendientes</string>
+    <string name="photo_verification">Verificación de foto</string>
+    <string name="photos_uploaded_visibility">%1$d fotos subidas · Visibilidad y desenfoque</string>
+    <string name="pin_active">Bloqueo con PIN de 4 dígitos activo</string>
+    <string name="pin_unlock">Desbloqueo rápido con PIN de 4 dígitos</string>
+    <string name="premium_unlocked">Tienes todas las funciones premium desbloqueadas</string>
+    <string name="profile_complete">Perfil completo al %1$d%%</string>
+    <string name="profile_photo">Foto de perfil</string>
+    <string name="profile_visibility">Visibilidad del perfil</string>
+    <string name="push_matches_quiet">Alertas, matches y horario de silencio</string>
+    <string name="resume_profile">Reactivar mi perfil</string>
+    <string name="safety_center">Centro de seguridad</string>
+    <string name="safety_faq_support">Seguridad, preguntas frecuentes y soporte</string>
+    <string name="search_conversations">Buscar conversaciones…</string>
+    <string name="security_pin_lock">Seguridad y bloqueo con PIN</string>
+    <string name="see_who">Ver quién</string>
+    <string name="selfie_matches">Tu selfie coincide con tus fotos</string>
+    <string name="selfie_rejected">Selfie no aceptada, inténtalo de nuevo</string>
+    <string name="selfie_review">Selfie en revisión</string>
+    <string name="sign_out_account">Salir de tu cuenta</string>
+    <string name="someone">Alguien</string>
+    <string name="take_selfie_badge">Hazte un selfie para obtener tu insignia</string>
+    <string name="unarchive">Desarchivar</string>
+    <string name="verified">Verificado</string>
+    <string name="verified_email">%1$s está verificado</string>
+    <string name="verify">Verificar</string>
+    <string name="verify_email_address">Verifica tu dirección de correo</string>
+    <string name="vip_active">SNUG VIP está activo</string>
+    <string name="vip_benefits">Me gusta, retrocesos y Super Likes ilimitados</string>
 </resources>
