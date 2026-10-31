@@ -1530,6 +1530,7 @@ fun AccountSecuritySheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isError by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1574,7 +1575,7 @@ fun AccountSecuritySheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                     viewModel.changePassword(newPassword) { success, err ->
                         busy = false
                         isError = !success
-                        statusMessage = if (success) stringResource(R.string.password_updated_successfully) else err ?: stringResource(R.string.password_update_failed)
+                        statusMessage = if (success) context.getString(R.string.password_updated_successfully) else err ?: context.getString(R.string.password_update_failed)
                         if (success) {
                             newPassword = ""
                             confirmPassword = ""
@@ -1645,6 +1646,7 @@ fun AccountSecuritySheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
 @Composable
 fun DeviceSessionsSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
     var signOutNotice by remember { mutableStateOf<String?>(null) }
+    val sessionsRevokedNotice = stringResource(R.string.sessions_revoked_notice)
     val deviceModel = android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() } + " " + android.os.Build.MODEL
     val osVersion = "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})"
 
@@ -1703,7 +1705,7 @@ fun DeviceSessionsSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedButton(
                         onClick = {
-                            signOutNotice = stringResource(R.string.sessions_revoked_notice)
+                            signOutNotice = sessionsRevokedNotice
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -2197,6 +2199,7 @@ fun EditProfileDialog(
     var jobTitle by remember { mutableStateOf(profile.jobTitle) }
     var heightText by remember { mutableStateOf(if (profile.heightCm > 0) profile.heightCm.toString() else "") }
     var hideDistance by remember { mutableStateOf(profile.hideDistance) }
+    val stillNeededPrefix = stringResource(R.string.still_needed_prefix)
 
     val promptQuestions = remember { mutableStateListOf(*Array(3) { profile.prompts.getOrNull(it)?.question ?: "" }) }
     val promptAnswers = remember { mutableStateListOf(*Array(3) { profile.prompts.getOrNull(it)?.answer ?: "" }) }
@@ -2489,7 +2492,7 @@ fun EditProfileDialog(
                                 saveError = null
                                 onSave(candidate)
                             } else {
-                                saveError = stringResource(R.string.still_needed_prefix) + missing.joinToString(", ")
+                                saveError = stillNeededPrefix + missing.joinToString(", ")
                             }
                         },
                         shape = CircleShape
@@ -2519,6 +2522,8 @@ fun SetupGateScreen(
     var busy by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val emailSentNote = stringResource(R.string.email_sent_check_inbox)
+    val emailNotVerifiedNote = stringResource(R.string.email_not_verified_yet)
     val message by viewModel.uiMessage.collectAsState()
     val avatarPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -2588,7 +2593,7 @@ fun SetupGateScreen(
                             onClick = {
                                 busy = true
                                 scope.launch {
-                                    note = EmailVerifier.send() ?: stringResource(R.string.email_sent_check_inbox)
+                                    note = EmailVerifier.send() ?: emailSentNote
                                     busy = false
                                 }
                             }
@@ -2598,7 +2603,7 @@ fun SetupGateScreen(
                             onClick = {
                                 busy = true
                                 scope.launch {
-                                    if (EmailVerifier.refresh()) onEmailVerified() else note = stringResource(R.string.email_not_verified_yet)
+                                    if (EmailVerifier.refresh()) onEmailVerified() else note = emailNotVerifiedNote
                                     busy = false
                                 }
                             }
