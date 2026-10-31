@@ -307,7 +307,7 @@
     <string name="action_like_person">Like %1$s</string>
     <string name="member_fallback">SNUG member</string>
     <string name="compat_match">%1$d%% match</string>
-    <string name="match_celebration">It's a match!</string>
+    <string name="match_celebration">It\'s a match!</string>
     <string name="match_mutual_likes">You and %1$s liked each other.</string>
     <string name="report_user_title">Report %1$s</string>
     <string name="block_user_title">Block %1$s?</string>
@@ -633,7 +633,7 @@
     <string name="profile_required_optional_note">Required. Prompts, job title and height are optional.</string>
     <string name="profile_email_verification_instructions">We will email a link to %s. Open it, then come back and tap I verified.</string>
     <string name="profile_your_address">your address</string>
-    <string name="profile_age_range_years">%d - %d yrs</string>
+    <string name="profile_age_range_years">%1d - %2d yrs</string>
     <string name="chat_title_fallback">Chat</string>
     <string name="distance_unknown">Distance unknown</string>
     <string name="distance_under_100m">Less than 100 m away</string>
