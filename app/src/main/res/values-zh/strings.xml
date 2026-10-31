@@ -594,7 +594,7 @@
     <string name="visibility_verified_badge">认证徽章</string>
     <string name="visibility_verified_desc">显示手机认证徽章</string>
     <string name="zodiac_sign">星座</string>
-    <string name="profile_age_range_years">%d - %d 岁</string>
+    <string name="profile_age_range_years">%1$d - %1$d 岁</string>
     <string name="profile_all_vip">全部 VIP 权益</string>
     <string name="profile_basic">基础</string>
     <string name="profile_blurred">模糊</string>
