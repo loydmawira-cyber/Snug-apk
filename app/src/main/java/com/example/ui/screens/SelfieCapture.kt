@@ -211,7 +211,7 @@ fun SelfieCaptureDialog(
                                             image.close()
                                         }
                                         capturing = false
-                                        if (bmp != null) onCaptured(bmp) else problem = problem = context.getString(R.string.ui_take_photo_error)
+                                        if (bmp != null) onCaptured(bmp) else problem = context.getString(R.string.ui_take_photo_error)
                                     }
 
                                     override fun onError(exception: ImageCaptureException) {
