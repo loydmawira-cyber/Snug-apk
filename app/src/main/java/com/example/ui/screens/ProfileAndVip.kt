@@ -188,8 +188,8 @@ fun ProfileScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete your account?") },
-            text = { Text("This permanently deletes your profile, matches and likes. It cannot be undone.") },
+            title = { Text(stringResource(R.string.delete_account_confirm_title)) },
+            text = { Text(stringResource(R.string.delete_account_confirm_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
@@ -197,9 +197,9 @@ fun ProfileScreen(
                         com.example.data.security.DemoAuthManager.signOut(context)
                         Firebase.auth.signOut()
                     }
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
@@ -283,7 +283,7 @@ fun ProfileScreen(
                         ) {
                             Icon(
                                 Icons.Default.Person,
-                                contentDescription = "Add profile picture",
+                                contentDescription = stringResource(R.string.add_profile_picture),
                                 modifier = Modifier.padding(24.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -299,7 +299,7 @@ fun ProfileScreen(
                     ) {
                         Icon(
                             Icons.Default.CameraAlt,
-                            contentDescription = "Change profile picture",
+                            contentDescription = stringResource(R.string.change_profile_picture),
                             modifier = Modifier.padding(6.dp),
                             tint = Color.White
                         )
@@ -779,7 +779,7 @@ fun PhotoItem(photo: UserPhoto, onDelete: () -> Unit, onToggleBlur: () -> Unit, 
                 IconButton(onClick = onToggleBlur) {
                     Icon(
                         if (photo.isBlurred) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = "Toggle Blur",
+                        contentDescription = stringResource(R.string.toggle_blur),
                         tint = if (photo.isBlurred) MaterialTheme.colorScheme.primary else Color.White,
                         modifier = Modifier.size(15.dp)
                     )
@@ -807,7 +807,7 @@ fun PhotoItem(photo: UserPhoto, onDelete: () -> Unit, onToggleBlur: () -> Unit, 
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.delete),
                         tint = Color.White,
                         modifier = Modifier.size(15.dp)
                     )
@@ -847,7 +847,7 @@ fun ProfileVisibilitySheet(
                 .padding(horizontal = 24.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("Profile Visibility", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.profile_visibility), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 "Choose which profile details other members can see. Your Discover photo can also be hidden here.",
@@ -889,11 +889,11 @@ fun ProfileVisibilitySheet(
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = CircleShape
             ) {
-                Text("Save visibility settings")
+                Text(stringResource(R.string.save_visibility_settings))
             }
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -950,8 +950,8 @@ fun PhotosPrivacySheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("My Photos & Privacy", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Choose which photos are public and toggle blur", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.my_photos_privacy), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.photos_privacy_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 FilledTonalButton(
                     onClick = {
@@ -961,7 +961,7 @@ fun PhotosPrivacySheet(
                 ) {
                     Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Add Photo")
+                    Text(stringResource(R.string.add_photo))
                 }
             }
 
@@ -975,7 +975,7 @@ fun PhotosPrivacySheet(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("No photos yet. Add your favorite pictures!", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.no_photos_yet), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else {
@@ -1014,7 +1014,7 @@ fun PhotosPrivacySheet(
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = CircleShape
             ) {
-                Text("Done")
+                Text(stringResource(R.string.done))
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -1050,8 +1050,8 @@ fun DiscoveryPreferencesSheet(
                 .padding(horizontal = 24.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("Discovery Preferences", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Adjust who you see in your discover deck", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.discovery_preferences), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.discovery_preferences_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -1061,7 +1061,7 @@ fun DiscoveryPreferencesSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Maximum Distance", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.maximum_distance), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
@@ -1090,7 +1090,7 @@ fun DiscoveryPreferencesSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Age Preference", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.age_preference), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
@@ -1128,7 +1128,7 @@ fun DiscoveryPreferencesSheet(
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = CircleShape
             ) {
-                Text("Save Preferences")
+                Text(stringResource(R.string.save_preferences))
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -1184,7 +1184,7 @@ fun SecurityPinSheet(
             
             Spacer(modifier = Modifier.height(14.dp))
             
-            Text("4-Digit PIN Lock", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.pin_lock_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 "Protect your account and unlock the app swiftly using a 4-digit PIN instead of entering your email & password every time.",
@@ -1206,7 +1206,7 @@ fun SecurityPinSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Enable 4-Digit PIN Lock", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.enable_pin_lock), fontWeight = FontWeight.Bold)
                         Text(if (isPinEnabled) "PIN lock is enabled" else "PIN lock is disabled", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
@@ -1232,7 +1232,7 @@ fun SecurityPinSheet(
                 ) {
                     Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Change 4-Digit PIN")
+                    Text(stringResource(R.string.change_pin))
                 }
             }
 
@@ -1242,7 +1242,7 @@ fun SecurityPinSheet(
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = CircleShape
             ) {
-                Text("Close")
+                Text(stringResource(R.string.close))
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -1296,9 +1296,9 @@ fun VipUpgradeSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
             Spacer(modifier = Modifier.height(14.dp))
 
             TabRow(selectedTabIndex = currentTab) {
-                Tab(selected = currentTab == 0, onClick = { currentTab = 0 }, text = { Text("Tiers") })
-                Tab(selected = currentTab == 1, onClick = { currentTab = 1 }, text = { Text("Compare") })
-                Tab(selected = currentTab == 2, onClick = { currentTab = 2 }, text = { Text("Manage") })
+                Tab(selected = currentTab == 0, onClick = { currentTab = 0 }, text = { Text(stringResource(R.string.vip_tiers)) })
+                Tab(selected = currentTab == 1, onClick = { currentTab = 1 }, text = { Text(stringResource(R.string.vip_compare)) })
+                Tab(selected = currentTab == 2, onClick = { currentTab = 2 }, text = { Text(stringResource(R.string.vip_manage)) })
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1402,10 +1402,10 @@ fun VipUpgradeSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(onClick = { viewModel.restorePurchases() }) {
-                    Text("Restore purchases")
+                    Text(stringResource(R.string.restore_purchases))
                 }
                 TextButton(onClick = onDismiss) {
-                    Text("Close", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Text(stringResource(R.string.close), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -1422,9 +1422,9 @@ fun VipComparisonTable() {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                Text("Feature", modifier = Modifier.weight(1.8f), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
-                Text("Free", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
-                Text("VIP", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.feature), modifier = Modifier.weight(1.8f), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.free), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.vip), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
             }
             HorizontalDivider()
 
@@ -1460,7 +1460,7 @@ fun VipManagementTab(profile: UserProfile?, onManage: () -> Unit, onRestore: () 
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Current Subscription Status", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.current_subscription_status), fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -1485,7 +1485,7 @@ fun VipManagementTab(profile: UserProfile?, onManage: () -> Unit, onRestore: () 
                 )
                 Spacer(modifier = Modifier.height(14.dp))
                 Button(onClick = onManage, modifier = Modifier.fillMaxWidth()) {
-                    Text("Manage on Google Play")
+                    Text(stringResource(R.string.manage_google_play))
                 }
             }
         }
@@ -1498,7 +1498,7 @@ fun VipManagementTab(profile: UserProfile?, onManage: () -> Unit, onRestore: () 
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Billing & Purchase History", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.billing_purchase_history), fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "All SNUG billing is processed securely through Google Play. Invoices and receipts are sent to your Google account email.",
@@ -1507,7 +1507,7 @@ fun VipManagementTab(profile: UserProfile?, onManage: () -> Unit, onRestore: () 
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedButton(onClick = onRestore, modifier = Modifier.fillMaxWidth()) {
-                    Text("Restore & Sync Purchases")
+                    Text(stringResource(R.string.restore_sync_purchases))
                 }
             }
         }
@@ -1535,17 +1535,17 @@ fun AccountSecuritySheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("Account Credentials & Security", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Update your password or change your registered email address.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.account_credentials_security), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.account_credentials_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Text("Change Password", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.change_password), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = newPassword,
                 onValueChange = { newPassword = it },
-                label = { Text("New Password (min 6 chars)") },
+                label = { Text(stringResource(R.string.new_password)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
@@ -1554,7 +1554,7 @@ fun AccountSecuritySheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
-                label = { Text("Confirm New Password") },
+                label = { Text(stringResource(R.string.confirm_new_password)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
@@ -1576,21 +1576,21 @@ fun AccountSecuritySheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Update Password")
+                Text(stringResource(R.string.update_password))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(20.dp))
 
-            Text("Change Email Address", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.change_email_address), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Current: ${EmailVerifier.email().ifBlank { "Not set" }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.current_email, EmailVerifier.email().ifBlank { stringResource(R.string.not_set) }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = newEmail,
                 onValueChange = { newEmail = it },
-                label = { Text("New Email Address") },
+                label = { Text(stringResource(R.string.new_email_address)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -1608,7 +1608,7 @@ fun AccountSecuritySheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Send Email Verification Link")
+                Text(stringResource(R.string.send_email_verification))
             }
 
             statusMessage?.let {
@@ -1628,7 +1628,7 @@ fun AccountSecuritySheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Done") }
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.done)) }
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -1652,8 +1652,8 @@ fun DeviceSessionsSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("Device & Active Sessions", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Manage devices currently logged into your SNUG account.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.device_sessions), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.device_sessions_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -1670,11 +1670,11 @@ fun DeviceSessionsSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                             Text(deviceModel, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primary) {
-                                Text("This Device", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                Text(stringResource(R.string.this_device), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }
                         }
                         Text(osVersion, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Active Now \u2022 Verified Session", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.active_verified_session), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -1686,7 +1686,7 @@ fun DeviceSessionsSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Sign out other devices", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.sign_out_other_devices), fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         "If you lost a device or signed in on a shared phone, this will revoke session tokens and require sign-in everywhere else.",
@@ -1700,7 +1700,7 @@ fun DeviceSessionsSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Revoke Other Sessions")
+                        Text(stringResource(R.string.revoke_other_sessions))
                     }
                 }
             }
@@ -1711,7 +1711,7 @@ fun DeviceSessionsSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Done") }
+            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.done)) }
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -1755,7 +1755,7 @@ fun DataExportSheet(profile: UserProfile?, onDismiss: () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("Account Privacy & Data Export", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.data_privacy_export), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text(
                 "You have full ownership of your data. You can download or copy your complete SNUG profile information at any time.",
                 style = MaterialTheme.typography.bodySmall,
@@ -1792,7 +1792,7 @@ fun DataExportSheet(profile: UserProfile?, onDismiss: () -> Unit) {
             }
 
             Spacer(modifier = Modifier.height(10.dp))
-            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Close") }
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.close)) }
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -1820,12 +1820,12 @@ fun NotificationSettingsSheet(onDismiss: () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("Notification Preferences", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Customize push alerts and quiet hours.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.notifications_quiet), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.notification_preferences_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Text("Push Notifications", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.push_notifications), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
 
             NotificationToggleRow("New Matches", "When someone likes you back", matchAlerts) { matchAlerts = it }
@@ -1837,7 +1837,7 @@ fun NotificationSettingsSheet(onDismiss: () -> Unit) {
             NotificationToggleRow("Weekly Email Summary", "Highlights of new matches in your area", emailDigest) { emailDigest = it }
 
             Spacer(modifier = Modifier.height(20.dp))
-            Text("Quiet Hours (Do Not Disturb)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.quiet_hours), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(6.dp))
             NotificationToggleRow("Enable Quiet Hours", "Mutes all push notifications while you rest", quietHoursEnabled) { quietHoursEnabled = it }
 
@@ -1850,14 +1850,14 @@ fun NotificationSettingsSheet(onDismiss: () -> Unit) {
                     OutlinedTextField(
                         value = quietHoursStart,
                         onValueChange = { quietHoursStart = it },
-                        label = { Text("Start Time") },
+                        label = { Text(stringResource(R.string.start_time)) },
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = quietHoursEnd,
                         onValueChange = { quietHoursEnd = it },
-                        label = { Text("End Time") },
+                        label = { Text(stringResource(R.string.end_time)) },
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
@@ -1865,7 +1865,7 @@ fun NotificationSettingsSheet(onDismiss: () -> Unit) {
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Save Preferences") }
+            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.save_preferences)) }
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -1957,8 +1957,8 @@ fun HelpAndSupportSheet(onDismiss: () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("Help & Safety Center", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Everything you need for a cozy & safe experience", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.help_safety_center), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.help_safety_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -1974,7 +1974,7 @@ fun HelpAndSupportSheet(onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = CircleShape
             ) {
-                Text("Done")
+                Text(stringResource(R.string.done))
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -2033,7 +2033,7 @@ fun RowScope.PriceTier(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (isPopular) {
-                Text("POPULAR", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.popular), fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
             Text(title, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             Text(price, fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -2067,10 +2067,10 @@ fun LogoutConfirmDialog(
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Log Out of SNUG?", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.logout_confirm_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "You will need to sign in with your email and password or use your 4-digit PIN lock next time.",
+                    stringResource(R.string.logout_confirm_message),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -2085,7 +2085,7 @@ fun LogoutConfirmDialog(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                     Button(
                         onClick = onConfirm,
@@ -2093,7 +2093,7 @@ fun LogoutConfirmDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Log Out")
+                        Text(stringResource(R.string.log_out))
                     }
                 }
             }
@@ -2206,7 +2206,7 @@ fun EditProfileDialog(
                     .padding(24.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                Text("Edit Profile", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.edit_profile), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(
                     androidx.compose.ui.text.buildAnnotatedString {
                         withStyle(
@@ -2227,7 +2227,7 @@ fun EditProfileDialog(
                     if (dialogAvatar != null) {
                         SnugImage(
                             model = dialogAvatar,
-                            contentDescription = "Profile picture",
+                            contentDescription = stringResource(R.string.profile_photo),
                             modifier = Modifier
                                 .size(96.dp)
                                 .clip(CircleShape)
@@ -2242,7 +2242,7 @@ fun EditProfileDialog(
                         ) {
                             Icon(
                                 Icons.Default.Person,
-                                contentDescription = "Add profile picture",
+                                contentDescription = stringResource(R.string.add_profile_picture),
                                 modifier = Modifier.padding(24.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -2268,7 +2268,7 @@ fun EditProfileDialog(
                     value = bio,
                     onValueChange = { bio = it },
                     label = { RequiredLabel("Bio") },
-                    placeholder = { Text("Share what makes you unique...") },
+                    placeholder = { Text(stringResource(R.string.bio_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     shape = RoundedCornerShape(12.dp)
@@ -2337,7 +2337,7 @@ fun EditProfileDialog(
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Profile prompts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.profile_prompts), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
                     "Answer up to 3 to show your personality.",
                     style = MaterialTheme.typography.bodySmall,
@@ -2366,7 +2366,7 @@ fun EditProfileDialog(
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text("Clear") },
+                                text = { Text(stringResource(R.string.clear_search)) },
                                 onClick = { promptQuestions[slot] = ""; promptAnswers[slot] = ""; menuOpen = false }
                             )
                         }
@@ -2376,7 +2376,7 @@ fun EditProfileDialog(
                         OutlinedTextField(
                             value = promptAnswers[slot],
                             onValueChange = { if (it.length <= 150) promptAnswers[slot] = it },
-                            label = { Text("Your answer") },
+                            label = { Text(stringResource(R.string.your_answer)) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         )
@@ -2386,7 +2386,7 @@ fun EditProfileDialog(
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("More about me", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.more_about_me), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
                 ChoiceSection("I'm looking for", ProfileOptions.lookingFor, lookingFor) { lookingFor = it }
                 ChoiceSection("Kids", ProfileOptions.haveKids, haveKids) { haveKids = it }
@@ -2403,7 +2403,7 @@ fun EditProfileDialog(
                 OutlinedTextField(
                     value = jobTitle,
                     onValueChange = { if (it.length <= 40) jobTitle = it },
-                    label = { Text("Job title") },
+                    label = { Text(stringResource(R.string.job_title)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp)
@@ -2412,7 +2412,7 @@ fun EditProfileDialog(
                 OutlinedTextField(
                     value = heightText,
                     onValueChange = { if (it.length <= 3 && it.all { c -> c.isDigit() }) heightText = it },
-                    label = { Text("Height (cm)") },
+                    label = { Text(stringResource(R.string.height_cm)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
@@ -2422,7 +2422,7 @@ fun EditProfileDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Hide my distance", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.hide_my_distance), fontWeight = FontWeight.SemiBold)
                         Text(
                             "Others will see your city but not how far away you are.",
                             style = MaterialTheme.typography.bodySmall,
@@ -2438,7 +2438,7 @@ fun EditProfileDialog(
                 }
                 Spacer(modifier = Modifier.height(28.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = { 
@@ -2483,7 +2483,7 @@ fun EditProfileDialog(
                         },
                         shape = CircleShape
                     ) {
-                        Text("Save Profile")
+                        Text(stringResource(R.string.save_profile))
                     }
                 }
             }
@@ -2538,7 +2538,7 @@ fun SetupGateScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(24.dp))
-        Text("Finish setting up", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.finish_setting_up), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             "Complete both steps to start using SNUG. This keeps the community real and safe.",
@@ -2557,7 +2557,7 @@ fun SetupGateScreen(
                         tint = if (emailVerified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text("1. Verify your email", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.setup_verify_email), fontWeight = FontWeight.Bold)
                 }
                 if (!emailVerified) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -2581,7 +2581,7 @@ fun SetupGateScreen(
                                     busy = false
                                 }
                             }
-                        ) { Text("Send email") }
+                        ) { Text(stringResource(R.string.send_email)) }
                         Button(
                             enabled = !busy,
                             onClick = {
@@ -2591,10 +2591,10 @@ fun SetupGateScreen(
                                     busy = false
                                 }
                             }
-                        ) { Text("I verified") }
+                        ) { Text(stringResource(R.string.i_verified)) }
                     }
                 } else {
-                    Text("Done", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.done), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -2611,18 +2611,18 @@ fun SetupGateScreen(
                         tint = if (missing.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text("2. Complete your profile", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.setup_complete_profile), fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 if (missing.isEmpty()) {
-                    Text("Done", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.done), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 } else {
-                    Text("Still needed:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.still_needed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     missing.forEach {
                         Text("\u2022 $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
                     Spacer(modifier = Modifier.height(10.dp))
-                    Button(onClick = { showEdit = true }) { Text("Edit profile") }
+                    Button(onClick = { showEdit = true }) { Text(stringResource(R.string.edit_profile)) }
                 }
             }
         }
@@ -2633,6 +2633,6 @@ fun SetupGateScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        TextButton(onClick = onLogout) { Text("Log out") }
+        TextButton(onClick = onLogout) { Text(stringResource(R.string.log_out)) }
     }
 }
