@@ -121,12 +121,12 @@ fun DiscoverScreen(
         AlertDialog(
             onDismissRequest = { viewModel.completeOnboarding() },
             title = { Text("Welcome to SNUG! \uD83D\uDC4B") },
-            text = { Text("Profiles with a photo, a bio and a few interests get far more matches. It takes a minute to set yours up.") },
+            text = { Text(stringResource(R.string.ui_profiles_with_a_photo_a_bio_and_a_few_interests_get_far)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.completeOnboarding(); onSetupProfile() }) { Text("Set up profile") }
+                TextButton(onClick = { viewModel.completeOnboarding(); onSetupProfile() }) { Text(stringResource(R.string.ui_set_up_profile)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.completeOnboarding() }) { Text("Later") }
+                TextButton(onClick = { viewModel.completeOnboarding() }) { Text(stringResource(R.string.ui_later)) }
             }
         )
     }
@@ -134,10 +134,10 @@ fun DiscoverScreen(
     if (showFilters) {
         AlertDialog(
             onDismissRequest = { showFilters = false },
-            title = { Text("Filters & Preferences", fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.ui_filters_preferences), fontWeight = FontWeight.Bold) },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text("Looking for", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.ui_looking_for), fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -156,7 +156,7 @@ fun DiscoverScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(14.dp))
-                    Text("Filter by Interest", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.ui_filter_by_interest), fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -175,7 +175,7 @@ fun DiscoverScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(14.dp))
-                    Text("Minimum Compatibility", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.ui_minimum_compatibility), fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to "Any", 70 to "70%+", 80 to "80%+", 90 to "90%+").forEach { (score, label) ->
@@ -188,7 +188,7 @@ fun DiscoverScreen(
                     }
                     Spacer(modifier = Modifier.height(14.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Verified photos only", modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.ui_verified_photos_only), modifier = Modifier.weight(1f))
                         Switch(
                             checked = filters.verifiedOnly,
                             onCheckedChange = { viewModel.setFilters(filters.copy(verifiedOnly = it)) }
@@ -196,7 +196,7 @@ fun DiscoverScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Online now only", modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.ui_online_now_only), modifier = Modifier.weight(1f))
                         Switch(
                             checked = filters.onlineOnly,
                             onCheckedChange = { viewModel.setFilters(filters.copy(onlineOnly = it)) }
@@ -204,9 +204,9 @@ fun DiscoverScreen(
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showFilters = false }) { Text("Done") } },
+            confirmButton = { TextButton(onClick = { showFilters = false }) { Text(stringResource(R.string.ui_done)) } },
             dismissButton = {
-                TextButton(onClick = { viewModel.setFilters(DiscoverFilters()) }) { Text("Reset") }
+                TextButton(onClick = { viewModel.setFilters(DiscoverFilters()) }) { Text(stringResource(R.string.ui_reset)) }
             }
         )
     }
@@ -311,11 +311,11 @@ fun DiscoverScreen(
         
         if (me?.isPaused == true) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
-                Text("Your profile is paused", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.ui_your_profile_is_paused), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Nobody can see you while you are on snooze.", textAlign = TextAlign.Center)
+                Text(stringResource(R.string.ui_nobody_can_see_you_while_you_are_on_snooze), textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { viewModel.setPaused(false) }) { Text("Resume") }
+                Button(onClick = { viewModel.setPaused(false) }) { Text(stringResource(R.string.ui_resume)) }
             }
         } else if (profile == null && discoveryError != null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
@@ -326,7 +326,7 @@ fun DiscoverScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(discoveryError.orEmpty(), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(onClick = { viewModel.retryDiscovery() }) { Text("Retry") }
+                OutlinedButton(onClick = { viewModel.retryDiscovery() }) { Text(stringResource(R.string.ui_retry)) }
             }
         } else if (profile == null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
@@ -336,7 +336,7 @@ fun DiscoverScreen(
                 )
                 if (filters.isActive) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedButton(onClick = { viewModel.setFilters(DiscoverFilters()) }) { Text("Clear filters") }
+                    OutlinedButton(onClick = { viewModel.setFilters(DiscoverFilters()) }) { Text(stringResource(R.string.ui_clear_filters)) }
                 }
             }
         } else {
@@ -560,7 +560,7 @@ fun ProfileCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Location",
+                            contentDescription = stringResource(R.string.ui_location),
                             tint = Color.White.copy(alpha = 0.8f),
                             modifier = Modifier.size(16.dp)
                         )
@@ -814,7 +814,7 @@ fun RadarItem(profile: UserProfile, distanceText: String, modifier: Modifier = M
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Location",
+                        contentDescription = stringResource(R.string.ui_location),
                         tint = Color.White.copy(alpha = 0.8f),
                         modifier = Modifier.size(13.dp)
                     )
@@ -851,8 +851,8 @@ fun MatchCelebrationDialog(other: UserProfile?, onDismiss: () -> Unit, onSayHi: 
             }
         },
         confirmButton = {
-            TextButton(onClick = { onDismiss(); onSayHi(other.id) }) { Text("Say hi") }
+            TextButton(onClick = { onDismiss(); onSayHi(other.id) }) { Text(stringResource(R.string.ui_say_hi)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Keep swiping") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.ui_keep_swiping)) } }
     )
 }

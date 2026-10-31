@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.res.stringResource
 
 /** Admin-only: compare each live selfie with the user's reference photo, then approve or reject. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -71,7 +72,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
             title = { Text("Reject ${req.name.ifBlank { "this selfie" }}?") },
             text = {
                 Column {
-                    Text("Pick a reason. The user sees it and can try again.", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.ui_pick_a_reason_the_user_sees_it_and_can_try_again), style = MaterialTheme.typography.bodySmall)
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -94,19 +95,19 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
                         viewModel.decideVerification(req, approve = false, reason = reason)
                         rejecting = null
                     }
-                ) { Text("Reject", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(R.string.ui_reject), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { rejecting = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { rejecting = null }) { Text(stringResource(R.string.ui_cancel)) } }
         )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Admin Dashboard") },
+                title = { Text(stringResource(R.string.ui_admin_dashboard)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.ui_back))
                     }
                 }
             )
@@ -114,15 +115,15 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
     ) { padding ->
         if (!isAdmin) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("You do not have access to this page.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.ui_you_do_not_have_access_to_this_page), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             return@Scaffold
         }
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             TabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Pending (${pending.size})") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("History") })
-                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Users & Stats") })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.ui_history)) })
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text(stringResource(R.string.ui_users_stats)) })
             }
             if (tab == 2) {
                 StatsTab(
@@ -136,7 +137,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
             } else if (tab == 0) {
                 if (pending.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No selfies waiting. All caught up!", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.ui_no_selfies_waiting_all_caught_up), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
                     Column(modifier = Modifier.fillMaxSize()) {
@@ -176,7 +177,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
             } else {
                 if (audit.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No decisions yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.ui_no_decisions_yet), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
                     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -211,8 +212,8 @@ private fun RequestCard(req: VerificationRequest, onApprove: () -> Unit, onRejec
                     onClick = onReject,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Reject") }
-                Button(onClick = onApprove, modifier = Modifier.weight(1f)) { Text("Approve") }
+                ) { Text(stringResource(R.string.ui_reject)) }
+                Button(onClick = onApprove, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.ui_approve)) }
             }
         }
     }
@@ -230,7 +231,7 @@ private fun PhotoColumn(label: String, image: String, modifier: Modifier) {
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text("No photo", textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.ui_no_photo), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
                 }
             }
         } else {
@@ -323,7 +324,7 @@ private fun StatsTab(
                     Text(if (user.banned) "Reinstate" else "Suspend", color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.ui_cancel)) } }
         )
     }
     if (stats == null) {
@@ -370,7 +371,7 @@ private fun StatsTab(
             item {
                 Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("New users, last 7 days", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.ui_new_users_last_7_days), fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(12.dp))
                         val maxCount = (signups.maxOf { it.count }).coerceAtLeast(1L)
                         Row(
@@ -413,18 +414,18 @@ private fun StatsTab(
         }
         item {
             Column {
-                Text("User Management & Reports", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.ui_user_management_reports), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = userSearch,
                     onValueChange = { userSearch = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search users by name or report reason...") },
+                    placeholder = { Text(stringResource(R.string.ui_search_users_by_name_or_report_reason)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (userSearch.isNotEmpty()) {
                             IconButton(onClick = { userSearch = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear")
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.ui_clear))
                             }
                         }
                     },
@@ -482,7 +483,7 @@ private fun StatsTab(
                             TextButton(onClick = { onToggleVip(user.userId, true) }) {
                                 Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Grant VIP")
+                                Text(stringResource(R.string.ui_grant_vip))
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             TextButton(onClick = { confirm = user }) {
@@ -497,7 +498,7 @@ private fun StatsTab(
             }
         }
         item {
-            OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) { Text("Refresh") }
+            OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.ui_refresh)) }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Online now = active in the last 5 minutes. A dash means the number could not be loaded.",

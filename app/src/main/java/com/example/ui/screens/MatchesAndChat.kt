@@ -427,7 +427,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
     scamWarning?.let { warning ->
         AlertDialog(
             onDismissRequest = { scamWarning = null },
-            title = { Text("Stay safe") },
+            title = { Text(stringResource(R.string.ui_stay_safe)) },
             text = { Text(warning) },
             confirmButton = {
                 TextButton(onClick = {
@@ -440,9 +440,9 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                         text = ""
                         replyingTo = null
                     }
-                }) { Text("Send anyway") }
+                }) { Text(stringResource(R.string.ui_send_anyway)) }
             },
-            dismissButton = { TextButton(onClick = { scamWarning = null }) { Text("Edit message") } }
+            dismissButton = { TextButton(onClick = { scamWarning = null }) { Text(stringResource(R.string.ui_edit_message)) } }
         )
     }
     if (showReport) {
@@ -463,14 +463,14 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { showReport = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showReport = false }) { Text(stringResource(R.string.ui_cancel)) } }
         )
     }
 
     reportingMessage?.let { target ->
         AlertDialog(
             onDismissRequest = { reportingMessage = null },
-            title = { Text("Report this message") },
+            title = { Text(stringResource(R.string.ui_report_this_message)) },
             text = {
                 Column {
                     ReportReasons.all.forEach { reason ->
@@ -485,7 +485,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { reportingMessage = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { reportingMessage = null }) { Text(stringResource(R.string.ui_cancel)) } }
         )
     }
 
@@ -508,24 +508,24 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                             Column {
                                 Text(other?.displayName ?: "Chat", style = MaterialTheme.typography.titleMedium)
                                 if (disappearingMode) {
-                                    Text("Disappearing messages on", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                    Text(stringResource(R.string.ui_disappearing_messages_on), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.ui_back))
                         }
                     },
                     actions = {
                         IconButton(onClick = { isSearching = !isSearching }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search messages")
+                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.ui_search_messages))
                         }
                         var menuOpen by remember { mutableStateOf(false) }
                         var confirm by remember { mutableStateOf<String?>(null) }
                         IconButton(onClick = { menuOpen = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.ui_more))
                         }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             DropdownMenuItem(
@@ -536,9 +536,9 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                                     menuOpen = false
                                 }
                             )
-                            DropdownMenuItem(text = { Text("Unmatch") }, onClick = { menuOpen = false; confirm = "unmatch" })
-                            DropdownMenuItem(text = { Text("Report") }, onClick = { menuOpen = false; showReport = true })
-                            DropdownMenuItem(text = { Text("Block") }, onClick = { menuOpen = false; confirm = "block" })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.ui_unmatch)) }, onClick = { menuOpen = false; confirm = "unmatch" })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.ui_report)) }, onClick = { menuOpen = false; showReport = true })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.ui_block)) }, onClick = { menuOpen = false; confirm = "block" })
                         }
                         confirm?.let { action ->
                             AlertDialog(
@@ -561,7 +561,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                                         onBack()
                                     }) { Text(if (action == "block") "Block" else "Unmatch") }
                                 },
-                                dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } }
+                                dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.ui_cancel)) } }
                             )
                         }
                     }
@@ -572,11 +572,11 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                        placeholder = { Text("Search messages in this chat...") },
+                        placeholder = { Text(stringResource(R.string.ui_search_messages_in_this_chat)) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         trailingIcon = {
                             IconButton(onClick = { isSearching = false; searchQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = "Close search")
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.ui_close_search))
                             }
                         },
                         singleLine = true,
@@ -593,7 +593,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.PushPin, contentDescription = "Pinned", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.PushPin, contentDescription = stringResource(R.string.ui_pinned), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 "Pinned: ${pinnedMessage.text.ifEmpty { "Photo" }}",
@@ -603,7 +603,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                                 modifier = Modifier.weight(1f)
                             )
                             IconButton(onClick = { viewModel.togglePinMessage(pinnedMessage.id, false) }, modifier = Modifier.size(24.dp)) {
-                                Icon(Icons.Default.Close, contentDescription = "Unpin", modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.ui_unpin), modifier = Modifier.size(16.dp))
                             }
                         }
                     }
@@ -654,7 +654,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                                 )
                             }
                             IconButton(onClick = { replyingTo = null }, modifier = Modifier.size(24.dp)) {
-                                Icon(Icons.Default.Close, contentDescription = "Cancel reply", modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.ui_cancel_reply), modifier = Modifier.size(16.dp))
                             }
                         }
                     }
@@ -680,7 +680,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                     IconButton(onClick = {
                         photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     }) {
-                        Icon(Icons.Default.Image, contentDescription = "Send photo")
+                        Icon(Icons.Default.Image, contentDescription = stringResource(R.string.ui_send_photo))
                     }
                     TextField(
                         value = text,
@@ -714,7 +714,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                         },
                         colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.ui_send), tint = Color.White)
                     }
                 }
               }
@@ -829,7 +829,7 @@ fun ChatBubble(
                     if (message.imageUrl != null) {
                         SnugImage(
                             model = message.imageUrl,
-                            contentDescription = "Photo",
+                            contentDescription = stringResource(R.string.ui_photo),
                             modifier = Modifier.size(width = 220.dp, height = 260.dp).clip(RoundedCornerShape(16.dp)),
                             contentScale = ContentScale.Crop
                         )
@@ -848,7 +848,7 @@ fun ChatBubble(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Icon(
                                     Icons.Default.PushPin,
-                                    contentDescription = "Pinned",
+                                    contentDescription = stringResource(R.string.ui_pinned),
                                     tint = if (isMe) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(14.dp)
                                 )
@@ -870,7 +870,7 @@ fun ChatBubble(
                     }
                 }
                 DropdownMenuItem(
-                    text = { Text("Reply") },
+                    text = { Text(stringResource(R.string.ui_reply)) },
                     leadingIcon = { Icon(Icons.Default.Reply, contentDescription = null) },
                     onClick = {
                         menuOpen = false
@@ -887,7 +887,7 @@ fun ChatBubble(
                 )
                 if (message.text.isNotBlank()) {
                     DropdownMenuItem(
-                        text = { Text("Copy text") },
+                        text = { Text(stringResource(R.string.ui_copy_text)) },
                         leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
                         onClick = {
                             menuOpen = false
@@ -897,7 +897,7 @@ fun ChatBubble(
                 }
                 if (onReport != null) {
                     DropdownMenuItem(
-                        text = { Text("Report message") },
+                        text = { Text(stringResource(R.string.ui_report_message)) },
                         onClick = {
                             menuOpen = false
                             onReport()
@@ -923,10 +923,10 @@ fun LikesYouScreen(viewModel: SnugViewModel, navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Liked You") },
+                title = { Text(stringResource(R.string.ui_liked_you)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.ui_back))
                     }
                 }
             )
@@ -934,7 +934,7 @@ fun LikesYouScreen(viewModel: SnugViewModel, navController: NavController) {
     ) { padding ->
         if (likes.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("No new likes right now.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                Text(stringResource(R.string.ui_no_new_likes_right_now), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
             }
         } else {
             androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
@@ -982,7 +982,7 @@ fun LikesYouScreen(viewModel: SnugViewModel, navController: NavController) {
                                 onClick = { viewModel.likeProfile(user.id) },
                                 modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(40.dp)
                             ) {
-                                Icon(Icons.Default.Favorite, contentDescription = "Like back", tint = Color.White)
+                                Icon(Icons.Default.Favorite, contentDescription = stringResource(R.string.ui_like_back), tint = Color.White)
                             }
                         }
                     }

@@ -40,6 +40,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import androidx.compose.ui.res.stringResource
 
 /**
  * Full-screen selfie camera: front camera, an oval to center the face in, and tips
@@ -166,7 +167,7 @@ fun SelfieCaptureDialog(
                 onClick = onDismiss,
                 modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(4.dp)
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.ui_close), tint = Color.White)
             }
 
             problem?.let {

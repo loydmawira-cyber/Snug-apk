@@ -30,6 +30,7 @@ import com.example.data.model.UserProfile
 import com.example.data.security.EmailVerifier
 import com.example.ui.viewmodel.SnugViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
 
 /** Photo (selfie) verification, plus email verification. Selfies are reviewed by an admin. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,7 +68,7 @@ fun PhotoVerificationSheet(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Verify it's really you", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.ui_verify_it_s_really_you), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 "Verified profiles get a blue check and are trusted more. Fake accounts are the biggest risk on dating apps, so we check selfies against profile photos.",
@@ -89,7 +90,7 @@ fun PhotoVerificationSheet(
                         profile?.photoVerified == true -> {
                             Icon(Icons.Default.Verified, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Photo verified", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.ui_photo_verified), fontWeight = FontWeight.Bold)
                             Text(
                                 "Your selfie matched your photos.",
                                 style = MaterialTheme.typography.bodySmall,
@@ -99,7 +100,7 @@ fun PhotoVerificationSheet(
                         status == "pending" -> {
                             Icon(Icons.Default.HourglassTop, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Selfie under review", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.ui_selfie_under_review), fontWeight = FontWeight.Bold)
                             Text(
                                 "We will add your badge once it is approved. This can take a day or two.",
                                 style = MaterialTheme.typography.bodySmall,
@@ -108,7 +109,7 @@ fun PhotoVerificationSheet(
                             )
                         }
                         else -> {
-                            Text("Photo verification", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.ui_photo_verification), fontWeight = FontWeight.Bold)
                             if (status == "rejected") {
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
@@ -136,7 +137,7 @@ fun PhotoVerificationSheet(
                             if (shot != null) {
                                 Image(
                                     bitmap = shot.asImageBitmap(),
-                                    contentDescription = "Your selfie",
+                                    contentDescription = stringResource(R.string.ui_your_selfie),
                                     modifier = Modifier.size(160.dp).clip(CircleShape),
                                     contentScale = ContentScale.Crop
                                 )
@@ -167,7 +168,7 @@ fun PhotoVerificationSheet(
                                     },
                                     enabled = hasPhoto,
                                     modifier = Modifier.fillMaxWidth()
-                                ) { Text("Submit for review") }
+                                ) { Text(stringResource(R.string.ui_submit_for_review)) }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -198,7 +199,7 @@ fun PhotoVerificationSheet(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
-                            Text("Email", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.ui_email), fontWeight = FontWeight.Bold)
                             Text(
                                 if (emailVerified) "${EmailVerifier.email()} is verified"
                                 else "Confirm ${EmailVerifier.email().ifBlank { "your email" }}",
@@ -220,7 +221,7 @@ fun PhotoVerificationSheet(
                                         emailBusy = false
                                     }
                                 }
-                            ) { Text("Send email") }
+                            ) { Text(stringResource(R.string.ui_send_email)) }
                             Button(
                                 enabled = !emailBusy,
                                 onClick = {
@@ -232,7 +233,7 @@ fun PhotoVerificationSheet(
                                         emailBusy = false
                                     }
                                 }
-                            ) { Text("I verified") }
+                            ) { Text(stringResource(R.string.ui_i_verified)) }
                         }
                     }
                     emailNote?.let {
@@ -260,7 +261,7 @@ fun SafetyCenterSheet(onDismiss: () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 8.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("Safety Center", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.ui_safety_center), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(12.dp))
 
             SafetyBlock(
@@ -337,7 +338,7 @@ fun SuspendedScreen(onLogout: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Account suspended", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.ui_account_suspended), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             "This account was suspended because it broke our community guidelines. If you think this is a mistake, please contact support.",
@@ -345,7 +346,7 @@ fun SuspendedScreen(onLogout: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onLogout) { Text("Log out") }
+        Button(onClick = onLogout) { Text(stringResource(R.string.ui_log_out)) }
     }
 }
 
@@ -358,7 +359,7 @@ fun EmailGateDialog(onDismiss: () -> Unit, onVerified: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Verify your email to chat") },
+        title = { Text(stringResource(R.string.ui_verify_your_email_to_chat)) },
         text = {
             Column {
                 Text(
@@ -380,7 +381,7 @@ fun EmailGateDialog(onDismiss: () -> Unit, onVerified: () -> Unit) {
                             busy = false
                         }
                     }
-                ) { Text("Send email") }
+                ) { Text(stringResource(R.string.ui_send_email)) }
             }
         },
         confirmButton = {
@@ -393,8 +394,8 @@ fun EmailGateDialog(onDismiss: () -> Unit, onVerified: () -> Unit) {
                         busy = false
                     }
                 }
-            ) { Text("I verified") }
+            ) { Text(stringResource(R.string.ui_i_verified)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Not now") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.ui_not_now)) } }
     )
 }

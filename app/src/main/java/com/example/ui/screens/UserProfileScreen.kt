@@ -33,6 +33,7 @@ import com.example.data.util.calculateAge
 import com.example.data.util.formatDistance
 import com.example.ui.Screen
 import com.example.ui.viewmodel.SnugViewModel
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -51,15 +52,15 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
         AlertDialog(
             onDismissRequest = { showBlock = false },
             title = { Text("Block ${user?.displayName ?: "user"}?") },
-            text = { Text("You will no longer see each other, and any chat will be removed.") },
+            text = { Text(stringResource(R.string.ui_you_will_no_longer_see_each_other_and_any_chat_will_be)) },
             confirmButton = {
                 TextButton(onClick = {
                     showBlock = false
                     viewModel.blockUser(userId)
                     navController.popBackStack()
-                }) { Text("Block") }
+                }) { Text(stringResource(R.string.ui_block)) }
             },
-            dismissButton = { TextButton(onClick = { showBlock = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showBlock = false }) { Text(stringResource(R.string.ui_cancel)) } }
         )
     }
     if (showReport) {
@@ -80,7 +81,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { showReport = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showReport = false }) { Text(stringResource(R.string.ui_cancel)) } }
         )
     }
 
@@ -90,17 +91,17 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 title = { Text(user?.displayName?.ifBlank { "SNUG member" } ?: "Profile") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.ui_back))
                     }
                 },
                 actions = {
                     if (me?.id != null && me?.id != userId) {
                         IconButton(onClick = { menuOpen = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.ui_more))
                         }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            DropdownMenuItem(text = { Text("Report") }, onClick = { menuOpen = false; showReport = true })
-                            DropdownMenuItem(text = { Text("Block") }, onClick = { menuOpen = false; showBlock = true })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.ui_report)) }, onClick = { menuOpen = false; showReport = true })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.ui_block)) }, onClick = { menuOpen = false; showBlock = true })
                         }
                     }
                 }
@@ -126,7 +127,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 if (avatar != null) {
                     SnugImage(
                         model = avatar,
-                        contentDescription = "Profile picture",
+                        contentDescription = stringResource(R.string.ui_profile_picture),
                         modifier = Modifier.size(160.dp).clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
@@ -157,7 +158,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(
                             Icons.Default.Verified,
-                            contentDescription = "Verified",
+                            contentDescription = stringResource(R.string.ui_verified),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp)
                         )
@@ -321,7 +322,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         shape = CircleShape
                     ) {
-                        Text("Message")
+                        Text(stringResource(R.string.ui_message))
                     }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
