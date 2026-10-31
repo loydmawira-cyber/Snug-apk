@@ -554,7 +554,7 @@
     <string name="visibility_verified_badge">Badge de vérification</string>
     <string name="visibility_verified_desc">Afficher votre badge de vérification téléphonique</string>
     <string name="zodiac_sign">Signe astrologique</string>
-    <string name="profile_age_range_years">%d - %d ans</string>
+    <string name="profile_age_range_years">%1$d - %1$d ans</string>
     <string name="profile_all_vip">Tous les avantages VIP</string>
     <string name="profile_basic">De base</string>
     <string name="profile_blurred">Flouté</string>
