@@ -203,7 +203,63 @@ fun DiscoverScreen(
     
     android.util.Log.d("DiscoverScreen", "Recomposing with profile: ${profile?.displayName}")
     
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier.fillMaxSize().background(Color(0xFF100D17)).padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("For You", "Liked You", "New", "Matches").forEachIndexed { index, label ->
+                Surface(
+                    modifier = Modifier.weight(1f).height(40.dp).clickable { if (index == 1) showFilters = true },
+                    shape = RoundedCornerShape(24.dp),
+                    color = if (index == 0) Color(0xFFF02B6B) else Color(0xFF241D2B),
+                    border = if (index == 0) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A3042))
+                ) { Box(contentAlignment = Alignment.Center) { Text(label, color = Color.White, fontSize = 13.sp) } }
+            }
+        }
+        Surface(Modifier.fillMaxWidth().height(78.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFF261526), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF403047))) {
+            Row(Modifier.padding(horizontal = 15.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Your kind of people", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Meet someone who gets your vibe  ♫", color = Color(0xFFD8CADD), fontSize = 12.sp)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy((-10).dp)) {
+                    profiles.take(3).forEach { person ->
+                        val image = person.avatarUrl()
+                        if (image != null) SnugImage(image, person.displayName, Modifier.size(42.dp).clip(CircleShape).background(Color.DarkGray), contentScale = ContentScale.Crop)
+                        else Box(Modifier.size(42.dp).clip(CircleShape).background(Color(0xFF514358)))
+                    }
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Today's picks", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text("Curated for you  —  ♥", color = Color(0xFFE8DCEB), fontSize = 11.sp)
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.height(104.dp)) {
+            items(profiles.take(8), key = { "pick_${it.id}" }) { person ->
+                val image = person.avatarUrl()
+                Card(Modifier.width(105.dp).fillMaxHeight().clickable { onOpenProfile(person.id) }, shape = RoundedCornerShape(13.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2230))) {
+                    Box(Modifier.fillMaxSize()) {
+                        if (image != null) SnugImage(image, person.displayName, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .9f)))))
+                        Column(Modifier.align(Alignment.BottomStart).padding(7.dp)) {
+                            Text("${calculateCompatibility(me, person)}% match", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text(person.displayName.ifBlank { "SNUG member" }, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            listOf("Nearby", "Recently active", "Shared interests").forEachIndexed { index, label ->
+                Surface(Modifier.weight(1f).height(34.dp).clickable { if (index == 0) showFilters = true }, shape = RoundedCornerShape(20.dp), color = if (index == 0) Color(0xFFF02B6B) else Color(0xFF241D2B), border = if (index == 0) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A3042))) {
+                    Box(contentAlignment = Alignment.Center) { Text(label, color = Color.White, fontSize = 10.sp, maxLines = 1) }
+                }
+            }
+        }
+        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth().padding(bottom = 8.dp)) {
+
         val maxWidthPx = constraints.maxWidth
         
         if (me?.isPaused == true) {
@@ -293,6 +349,7 @@ fun DiscoverScreen(
                 }
             }
         }
+    }
     }
 }
 
