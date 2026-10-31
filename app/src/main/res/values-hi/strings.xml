@@ -594,7 +594,7 @@
     <string name="visibility_verified_badge">सत्यापित बैज</string>
     <string name="visibility_verified_desc">अपना फ़ोन-सत्यापन बैज दिखाएँ</string>
     <string name="zodiac_sign">राशि</string>
-    <string name="profile_age_range_years">%d - %d वर्ष</string>
+    <string name="profile_age_range_years">%1$d - %1$d वर्ष</string>
     <string name="profile_all_vip">सभी VIP</string>
     <string name="profile_basic">बुनियादी</string>
     <string name="profile_blurred">धुंधली</string>
