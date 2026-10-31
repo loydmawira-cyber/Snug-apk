@@ -1,6 +1,7 @@
 package com.example
 
 import android.Manifest
+import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -26,7 +27,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +50,7 @@ import com.example.ui.theme.SNUGTheme
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,22 +67,44 @@ class MainActivity : ComponentActivity() {
                     preferences.getBoolean("dark_theme", systemDark)
                 )
             }
+            var appLanguage by remember {
+                mutableStateOf(preferences.getString("app_language", "en") ?: "en")
+            }
+            val languageConfiguration = remember(context, appLanguage) {
+                Configuration(context.resources.configuration).apply {
+                    setLocale(Locale.forLanguageTag(appLanguage))
+                }
+            }
+            val languageContext = remember(context, languageConfiguration) {
+                context.createConfigurationContext(languageConfiguration)
+            }
             
             SNUGTheme(darkTheme = darkTheme) {
-                AppContent(
-                    isDarkTheme = darkTheme,
-                    onToggleTheme = {
-                        darkTheme = !darkTheme
-                        preferences.edit().putBoolean("dark_theme", darkTheme).apply()
-                    }
-                )
+                CompositionLocalProvider(
+                    LocalConfiguration provides languageConfiguration,
+                    LocalContext provides languageContext,
+                    LocalResources provides languageContext.resources
+                ) {
+                    AppContent(
+                        isDarkTheme = darkTheme,
+                        appLanguage = appLanguage,
+                        onLanguageChanged = { language ->
+                            appLanguage = language
+                            preferences.edit().putString("app_language", language).apply()
+                        },
+                        onToggleTheme = {
+                            darkTheme = !darkTheme
+                            preferences.edit().putBoolean("dark_theme", darkTheme).apply()
+                        }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun AppContent(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
+fun AppContent(isDarkTheme: Boolean, appLanguage: String, onLanguageChanged: (String) -> Unit, onToggleTheme: () -> Unit) {
     val context = LocalContext.current
     LaunchedEffect(Unit) {
         com.example.data.security.DemoAuthManager.init(context)
@@ -116,7 +143,7 @@ fun AppContent(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
             }
         )
     } else {
-        MainNavigation(isDarkTheme, onToggleTheme)
+        MainNavigation(isDarkTheme, appLanguage, onLanguageChanged, onToggleTheme)
     }
 }
 
@@ -170,7 +197,7 @@ fun SignInScreen() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
+fun MainNavigation(isDarkTheme: Boolean, appLanguage: String, onLanguageChanged: (String) -> Unit, onToggleTheme: () -> Unit) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -354,7 +381,16 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
                     items.forEach { screen ->
                         NavigationBarItem(
                             icon = { Icon(screen.icon, contentDescription = null) },
-                            label = { Text(screen.title) },
+                            label = {
+                                Text(when (screen.route) {
+                                    Screen.Discover.route -> stringResource(R.string.nav_discover)
+                                    Screen.Radar.route -> stringResource(R.string.nav_radar)
+                                    Screen.Matches.route -> stringResource(R.string.nav_matches)
+                                    Screen.Messages.route -> stringResource(R.string.nav_messages)
+                                    Screen.Profile.route -> stringResource(R.string.nav_profile)
+                                    else -> screen.title
+                                })
+                            },
                             selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                             onClick = {
                                 navController.navigate(screen.route) {
@@ -407,7 +443,12 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
             composable(Screen.Likes.route) { com.example.ui.screens.LikesYouScreen(viewModel, navController) }
             composable(Screen.Messages.route) { com.example.ui.screens.MessagesScreen(viewModel, navController) }
             composable(Screen.Profile.route) {
-                com.example.ui.screens.ProfileScreen(viewModel, onOpenAdmin = { navController.navigate(Screen.Admin.route) })
+                com.example.ui.screens.ProfileScreen(
+                    viewModel,
+                    appLanguage = appLanguage,
+                    onLanguageChanged = onLanguageChanged,
+                    onOpenAdmin = { navController.navigate(Screen.Admin.route) }
+                )
             }
             composable(Screen.Admin.route) { com.example.ui.screens.AdminDashboardScreen(viewModel, navController) }
             composable(Screen.Chat.route) { backStackEntry ->
