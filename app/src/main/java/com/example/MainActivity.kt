@@ -400,6 +400,9 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
             composable(Screen.Radar.route) {
                 com.example.ui.screens.RadarScreen(viewModel, onOpenProfile = { navController.navigate(Screen.UserDetail.createRoute(it)) })
             }
+            composable(Screen.Online.route) {
+                com.example.ui.screens.OnlineScreen(viewModel, onOpenProfile = { navController.navigate(Screen.UserDetail.createRoute(it)) })
+            }
             composable(Screen.Matches.route) { com.example.ui.screens.MatchesScreen(viewModel, navController) }
             composable(Screen.Likes.route) { com.example.ui.screens.LikesYouScreen(viewModel, navController) }
             composable(Screen.Messages.route) { com.example.ui.screens.MessagesScreen(viewModel, navController) }
