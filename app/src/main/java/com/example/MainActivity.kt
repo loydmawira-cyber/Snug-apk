@@ -28,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -82,8 +81,7 @@ class MainActivity : ComponentActivity() {
             SNUGTheme(darkTheme = darkTheme) {
                 CompositionLocalProvider(
                     LocalConfiguration provides languageConfiguration,
-                    LocalContext provides languageContext,
-                    LocalResources provides languageContext.resources
+                    LocalContext provides languageContext
                 ) {
                     AppContent(
                         isDarkTheme = darkTheme,
