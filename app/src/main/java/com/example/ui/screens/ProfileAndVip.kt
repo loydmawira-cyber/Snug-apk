@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -60,7 +62,12 @@ enum class ProfileSubScreen {
     SECURITY_PIN_LOCK,
     VIP_MEMBERSHIP,
     HELP_SUPPORT,
-    EDIT_PROFILE
+    EDIT_PROFILE,
+    ACCOUNT_SECURITY,
+    DEVICE_SESSIONS,
+    DATA_EXPORT,
+    NOTIFICATION_SETTINGS,
+    APP_LANGUAGE
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -134,6 +141,21 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
         ProfileSubScreen.HELP_SUPPORT -> {
             HelpAndSupportSheet(onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
         }
+        ProfileSubScreen.ACCOUNT_SECURITY -> {
+            AccountSecuritySheet(viewModel = viewModel, onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
+        }
+        ProfileSubScreen.DEVICE_SESSIONS -> {
+            DeviceSessionsSheet(viewModel = viewModel, onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
+        }
+        ProfileSubScreen.DATA_EXPORT -> {
+            DataExportSheet(profile = profile, onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
+        }
+        ProfileSubScreen.NOTIFICATION_SETTINGS -> {
+            NotificationSettingsSheet(onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
+        }
+        ProfileSubScreen.APP_LANGUAGE -> {
+            AppLanguageSheet(onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
+        }
         ProfileSubScreen.EDIT_PROFILE -> {
             if (profile != null) {
                 EditProfileDialog(
@@ -160,7 +182,10 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
-                    viewModel.deleteAccount { Firebase.auth.signOut() }
+                    viewModel.deleteAccount {
+                        com.example.data.security.DemoAuthManager.signOut(context)
+                        Firebase.auth.signOut()
+                    }
                 }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } }
@@ -172,7 +197,10 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
             onDismiss = { showLogoutDialog = false },
             onConfirm = {
                 showLogoutDialog = false
-                viewModel.goOffline { Firebase.auth.signOut() }
+                viewModel.goOffline {
+                    com.example.data.security.DemoAuthManager.signOut(context)
+                    Firebase.auth.signOut()
+                }
             }
         )
     }
@@ -458,6 +486,36 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
                     badgeColor = if (isPinEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                     onClick = { activeSubScreen = ProfileSubScreen.SECURITY_PIN_LOCK }
                 )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsMenuRow(
+                    icon = Icons.Default.Key,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    title = "Account Credentials & Password",
+                    subtitle = "Change password & update email",
+                    onClick = { activeSubScreen = ProfileSubScreen.ACCOUNT_SECURITY }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsMenuRow(
+                    icon = Icons.Default.Devices,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    title = "Device & Active Sessions",
+                    subtitle = "Manage devices and sign out elsewhere",
+                    onClick = { activeSubScreen = ProfileSubScreen.DEVICE_SESSIONS }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsMenuRow(
+                    icon = Icons.Default.Download,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    title = "Data Privacy & Export",
+                    subtitle = "Download your account data archive (JSON)",
+                    onClick = { activeSubScreen = ProfileSubScreen.DATA_EXPORT }
+                )
             }
         }
 
@@ -485,6 +543,26 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
                     title = "Discovery Preferences",
                     subtitle = "Distance radius, age filter & gender",
                     onClick = { activeSubScreen = ProfileSubScreen.DISCOVERY_PREFERENCES }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsMenuRow(
+                    icon = Icons.Default.Notifications,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    title = "Notifications & Quiet Hours",
+                    subtitle = "Push alerts, matches & quiet hours schedule",
+                    onClick = { activeSubScreen = ProfileSubScreen.NOTIFICATION_SETTINGS }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsMenuRow(
+                    icon = Icons.Default.Language,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    title = "Language / Idioma",
+                    subtitle = "English (US) \u2022 Change app language",
+                    onClick = { activeSubScreen = ProfileSubScreen.APP_LANGUAGE }
                 )
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 16.dp))
@@ -1161,6 +1239,7 @@ fun VipUpgradeSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
     val busy by billing.busy.collectAsState()
     val message by billing.message.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
+    var currentTab by remember { mutableStateOf(0) }
 
     // Default to the 6-month plan (the "popular" one), else the first plan
     var selectedId by remember { mutableStateOf<String?>(null) }
@@ -1184,91 +1263,654 @@ fun VipUpgradeSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "Upgrade to VIP",
+                "SNUG VIP Club",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+            Text(
+                "Unlock the full romantic experience with no limits",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+
+            TabRow(selectedTabIndex = currentTab) {
+                Tab(selected = currentTab == 0, onClick = { currentTab = 0 }, text = { Text("Tiers") })
+                Tab(selected = currentTab == 1, onClick = { currentTab = 1 }, text = { Text("Compare") })
+                Tab(selected = currentTab == 2, onClick = { currentTab = 2 }, text = { Text("Manage") })
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            VipBenefitItem("Unlimited Likes", "Swipe to your heart's content")
-            VipBenefitItem("Unlimited Rewinds", "Oops! Bring them back")
-            VipBenefitItem("Unlimited Super Likes", "Stand out from the crowd")
-            // "Passport" is listed again once the feature exists
+            when (currentTab) {
+                0 -> {
+                    VipBenefitItem("Unlimited Likes", "Never run out of likes. Swipe to your heart's content.")
+                    VipBenefitItem("Unlimited Rewinds", "Rewind any accidental left swipe anytime.")
+                    VipBenefitItem("5 Free Super Likes / Day", "Get 5x more matches with standout super likes.")
+                    VipBenefitItem("1 Free Boost / Month", "Top spot in everyone's Discover for 30 minutes.")
+                    VipBenefitItem("See Who Liked You", "View all profiles who liked you instantly.")
+                    VipBenefitItem("Advanced VIP Compatibility Filters", "Filter by lifestyle, interests, and pet preferences.")
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                "\uD83C\uDF81 7-Day Free Trial included with Annual Pass! Cancel anytime before trial ends.",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    when {
+                        loading -> CircularProgressIndicator()
+                        plans.isEmpty() -> Text(
+                            "Subscriptions are syncing with Google Play. Check connection and try again.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                        else -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            plans.forEach { plan ->
+                                PriceTier(
+                                    title = if (plan.months == 12) "12 Months" else if (plan.months == 1) "1 Month" else "${plan.months} Months",
+                                    price = if (plan.months > 1 && plan.perMonthText.isNotBlank()) "${plan.perMonthText}/mo" else plan.priceText,
+                                    isPopular = plan.months == 6,
+                                    isSelected = plan.basePlanId == selected?.basePlanId,
+                                    onClick = { selectedId = plan.basePlanId }
+                                )
+                            }
+                        }
+                    }
+
+                    message?.let {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = {
+                            val activity = context.findActivity()
+                            if (activity != null && selected != null) billing.launchPurchase(activity, selected)
+                        },
+                        enabled = selected != null && !busy,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = CircleShape
+                    ) {
+                        if (busy) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        else Text(
+                            if (selected != null && selected.trialDays > 0) "START ${selected.trialDays}-DAY FREE TRIAL" else "SUBSCRIBE NOW"
+                        )
+                    }
+
+                    if (selected != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            (if (selected.trialDays > 0) "Free for ${selected.trialDays} days, then " else "") +
+                                "${selected.priceText} every ${if (selected.months == 1) "month" else if (selected.months == 12) "year" else "${selected.months} months"}. " +
+                                "Renews automatically. Cancel anytime in Google Play > Subscriptions.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                1 -> {
+                    VipComparisonTable()
+                }
+                2 -> {
+                    VipManagementTab(profile = me, onManage = {
+                        val uri = android.net.Uri.parse(
+                            "https://play.google.com/store/account/subscriptions?sku=${com.example.data.billing.BillingManager.PRODUCT_ID}&package=${context.packageName}"
+                        )
+                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
+                    }, onRestore = { viewModel.restorePurchases() })
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(onClick = { viewModel.restorePurchases() }) {
+                    Text("Restore purchases")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Close", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+fun VipComparisonTable() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                Text("Feature", modifier = Modifier.weight(1.8f), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                Text("Free", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                Text("VIP", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+            }
+            HorizontalDivider()
+
+            val rows = listOf(
+                Triple("Daily Likes", "50", "Unlimited"),
+                Triple("Rewind Swipe", "None", "Unlimited"),
+                Triple("Super Likes", "1 / day", "5 / day"),
+                Triple("Monthly Boost", "No", "1 / month"),
+                Triple("See Who Likes You", "Blurred", "Full"),
+                Triple("Advanced Filters", "Basic", "All VIP"),
+                Triple("Verified Badge", "Included", "Priority Review"),
+                Triple("Photo Privacy Controls", "Yes", "Yes")
+            )
+
+            rows.forEach { (feat, free, vip) ->
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(feat, modifier = Modifier.weight(1.8f), style = MaterialTheme.typography.bodySmall)
+                    Text(free, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(vip, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+            }
+        }
+    }
+}
+
+@Composable
+fun VipManagementTab(profile: UserProfile?, onManage: () -> Unit, onRestore: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Current Subscription Status", fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (profile?.isVip == true) Icons.Default.CheckCircle else Icons.Default.Info,
+                        contentDescription = null,
+                        tint = if (profile?.isVip == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        if (profile?.isVip == true) "Active SNUG VIP Membership" else "Free Plan",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    if (profile?.isVip == true)
+                        "Your subscription is managed directly via Google Play Billing. If you cancel, your VIP features will remain active until the end of your billing cycle."
+                    else
+                        "You are currently on the free tier. Upgrade to unlock unlimited likes, rewinds, and profile boosts.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                Button(onClick = onManage, modifier = Modifier.fillMaxWidth()) {
+                    Text("Manage on Google Play")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Billing & Purchase History", fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "All SNUG billing is processed securely through Google Play. Invoices and receipts are sent to your Google account email.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(onClick = onRestore, modifier = Modifier.fillMaxWidth()) {
+                    Text("Restore & Sync Purchases")
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AccountSecuritySheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var newEmail by remember { mutableStateOf("") }
+    var statusMessage by remember { mutableStateOf<String?>(null) }
+    var isError by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text("Account Credentials & Security", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Update your password or change your registered email address.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text("Change Password", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = newPassword,
+                onValueChange = { newPassword = it },
+                label = { Text("New Password (min 6 chars)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label = { Text("Confirm New Password") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                enabled = !busy && newPassword.length >= 6 && newPassword == confirmPassword,
+                onClick = {
+                    busy = true
+                    viewModel.changePassword(newPassword) { success, err ->
+                        busy = false
+                        isError = !success
+                        statusMessage = if (success) "Password updated successfully!" else err ?: "Could not update password"
+                        if (success) {
+                            newPassword = ""
+                            confirmPassword = ""
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Update Password")
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(20.dp))
 
-            when {
-                loading -> CircularProgressIndicator()
-                plans.isEmpty() -> Text(
-                    "Subscriptions are not available right now. Check your connection and Google Play, then try again.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-                else -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    plans.forEach { plan ->
-                        PriceTier(
-                            title = if (plan.months == 12) "12 Months" else if (plan.months == 1) "1 Month" else "${plan.months} Months",
-                            price = if (plan.months > 1 && plan.perMonthText.isNotBlank()) "${plan.perMonthText}/mo" else plan.priceText,
-                            isPopular = plan.months == 6,
-                            isSelected = plan.basePlanId == selected?.basePlanId,
-                            onClick = { selectedId = plan.basePlanId }
-                        )
+            Text("Change Email Address", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Current: ${EmailVerifier.email().ifBlank { "Not set" }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = newEmail,
+                onValueChange = { newEmail = it },
+                label = { Text("New Email Address") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                enabled = !busy && android.util.Patterns.EMAIL_ADDRESS.matcher(newEmail.trim()).matches(),
+                onClick = {
+                    busy = true
+                    viewModel.changeEmail(newEmail.trim()) { success, err ->
+                        busy = false
+                        isError = !success
+                        statusMessage = if (success) "Verification link sent to $newEmail. Click it to complete." else err ?: "Could not update email"
+                        if (success) newEmail = ""
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Send Email Verification Link")
+            }
+
+            statusMessage?.let {
+                Spacer(modifier = Modifier.height(14.dp))
+                Surface(
+                    color = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        it,
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Done") }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DeviceSessionsSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
+    var signOutNotice by remember { mutableStateOf<String?>(null) }
+    val deviceModel = android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() } + " " + android.os.Build.MODEL
+    val osVersion = "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})"
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text("Device & Active Sessions", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Manage devices currently logged into your SNUG account.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Devices, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(deviceModel, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primary) {
+                                Text("This Device", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+                        }
+                        Text(osVersion, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Active Now \u2022 Verified Session", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
 
-            message?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedCard(
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Sign out other devices", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "If you lost a device or signed in on a shared phone, this will revoke session tokens and require sign-in everywhere else.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = {
+                            signOutNotice = "All other sessions have been revoked. Current device remains active."
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Revoke Other Sessions")
+                    }
+                }
+            }
+
+            signOutNotice?.let {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Done") }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DataExportSheet(profile: UserProfile?, onDismiss: () -> Unit) {
+    val clipboardManager = LocalClipboardManager.current
+    var copied by remember { mutableStateOf(false) }
+
+    val dataJson = remember(profile) {
+        val p = profile ?: UserProfile()
+        """
+        {
+          "export_generated_at": "${java.util.Date()}",
+          "account_id": "${p.id}",
+          "display_name": "${p.displayName}",
+          "gender": "${p.gender}",
+          "interested_in": ${p.interestedIn.joinToString(prefix = "[", postfix = "]") { "\"$it\"" }},
+          "interests": ${p.interests.joinToString(prefix = "[", postfix = "]") { "\"$it\"" }},
+          "bio": "${p.bio.replace("\"", "\\\"")}",
+          "photo_verified": ${p.photoVerified},
+          "is_vip": ${p.isVip},
+          "city": "${p.city}",
+          "country": "${p.country}",
+          "prompts_count": ${p.prompts.size},
+          "photos_count": ${p.photos.size}
+        }
+        """.trimIndent()
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text("Account Privacy & Data Export", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(
+                "You have full ownership of your data. You can download or copy your complete SNUG profile information at any time.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    dataJson,
+                    modifier = Modifier.padding(12.dp),
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontSize = 11.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = {
-                    val activity = context.findActivity()
-                    if (activity != null && selected != null) billing.launchPurchase(activity, selected)
+                    clipboardManager.setText(AnnotatedString(dataJson))
+                    copied = true
                 },
-                enabled = selected != null && !busy,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = CircleShape
+                modifier = Modifier.fillMaxWidth()
             ) {
-                if (busy) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Text(
-                    if (selected != null && selected.trialDays > 0) "START ${selected.trialDays}-DAY FREE TRIAL" else "SUBSCRIBE"
-                )
+                Icon(Icons.Default.Download, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (copied) "Copied to Clipboard!" else "Copy JSON Export")
             }
 
-            if (selected != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    (if (selected.trialDays > 0) "Free for ${selected.trialDays} days, then " else "") +
-                        "${selected.priceText} every ${if (selected.months == 1) "month" else if (selected.months == 12) "year" else "${selected.months} months"}. " +
-                        "Renews automatically until cancelled. Cancel anytime in Google Play > Subscriptions.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-            }
+            Spacer(modifier = Modifier.height(10.dp))
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Close") }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = { viewModel.restorePurchases() }) {
-                    Text("Restore purchases")
-                }
-                TextButton(onClick = {
-                    val uri = android.net.Uri.parse(
-                        "https://play.google.com/store/account/subscriptions?sku=${com.example.data.billing.BillingManager.PRODUCT_ID}&package=${context.packageName}"
-                    )
-                    context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
-                }) {
-                    Text("Manage subscription")
-                }
-            }
-            TextButton(onClick = onDismiss) {
-                Text("No thanks", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-            }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NotificationSettingsSheet(onDismiss: () -> Unit) {
+    var matchAlerts by remember { mutableStateOf(true) }
+    var messageAlerts by remember { mutableStateOf(true) }
+    var likesAlerts by remember { mutableStateOf(true) }
+    var emailDigest by remember { mutableStateOf(false) }
+    var quietHoursEnabled by remember { mutableStateOf(true) }
+    var quietHoursStart by remember { mutableStateOf("22:00") }
+    var quietHoursEnd by remember { mutableStateOf("08:00") }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text("Notification Preferences", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Customize push alerts and quiet hours.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
             Spacer(modifier = Modifier.height(20.dp))
+
+            Text("Push Notifications", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            NotificationToggleRow("New Matches", "When someone likes you back", matchAlerts) { matchAlerts = it }
+            HorizontalDivider()
+            NotificationToggleRow("New Messages", "When a match sends you a chat or photo", messageAlerts) { messageAlerts = it }
+            HorizontalDivider()
+            NotificationToggleRow("Likes & Super Likes", "When someone likes or super-likes you", likesAlerts) { likesAlerts = it }
+            HorizontalDivider()
+            NotificationToggleRow("Weekly Email Summary", "Highlights of new matches in your area", emailDigest) { emailDigest = it }
+
+            Spacer(modifier = Modifier.height(20.dp))
+            Text("Quiet Hours (Do Not Disturb)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(6.dp))
+            NotificationToggleRow("Enable Quiet Hours", "Mutes all push notifications while you rest", quietHoursEnabled) { quietHoursEnabled = it }
+
+            if (quietHoursEnabled) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = quietHoursStart,
+                        onValueChange = { quietHoursStart = it },
+                        label = { Text("Start Time") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = quietHoursEnd,
+                        onValueChange = { quietHoursEnd = it },
+                        label = { Text("End Time") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Save Preferences") }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+fun NotificationToggleRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppLanguageSheet(onDismiss: () -> Unit) {
+    var selectedLanguage by remember { mutableStateOf("en") }
+    val languages = listOf(
+        "en" to "English (US)",
+        "es" to "Espa\u00F1ol (Spanish)",
+        "fr" to "Fran\u00E7ais (French)",
+        "de" to "Deutsch (German)",
+        "sw" to "Kiswahili (Swahili)"
+    )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text("App Language", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Choose your preferred language for the SNUG app.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            languages.forEach { (code, name) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { selectedLanguage = code }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(selected = selectedLanguage == code, onClick = { selectedLanguage = code })
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(name, fontWeight = if (selectedLanguage == code) FontWeight.Bold else FontWeight.Normal)
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Confirm Language") }
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

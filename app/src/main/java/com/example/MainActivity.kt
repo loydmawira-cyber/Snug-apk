@@ -79,14 +79,18 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppContent(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
     val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        com.example.data.security.DemoAuthManager.init(context)
+    }
     val pinManager = remember { PinManager(context) }
     var currentUser by remember { mutableStateOf(Firebase.auth.currentUser) }
+    val demoUid by com.example.data.security.DemoAuthManager.authStateFlow.collectAsState()
     var isUnlocked by remember { mutableStateOf(!pinManager.isPinEnabled()) }
 
     DisposableEffect(Unit) {
         val listener = FirebaseAuth.AuthStateListener { auth ->
             currentUser = auth.currentUser
-            if (auth.currentUser == null) {
+            if (auth.currentUser == null && !com.example.data.security.DemoAuthManager.isDemoActive()) {
                 isUnlocked = false
             } else if (!pinManager.isPinEnabled()) {
                 isUnlocked = true
@@ -98,12 +102,18 @@ fun AppContent(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
         }
     }
 
-    if (currentUser == null) {
+    val isAuthenticated = currentUser != null || demoUid != null
+
+    if (!isAuthenticated) {
         SignInScreen()
     } else if (pinManager.isPinEnabled() && !isUnlocked) {
         PinUnlockScreen(
             onUnlocked = { isUnlocked = true },
-            onSignOut = { isUnlocked = false }
+            onSignOut = {
+                com.example.data.security.DemoAuthManager.signOut(context)
+                Firebase.auth.signOut()
+                isUnlocked = false
+            }
         )
     } else {
         MainNavigation(isDarkTheme, onToggleTheme)
@@ -166,7 +176,7 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
     val currentDestination = navBackStackEntry?.destination
     // Keyed by user id so each account gets its own fresh ViewModel (no leftover data from the previous user)
     val viewModel: com.example.ui.viewmodel.SnugViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
-        key = Firebase.auth.currentUser?.uid ?: "signed_out"
+        key = Firebase.auth.currentUser?.uid ?: com.example.data.security.DemoAuthManager.getUid() ?: "signed_out"
     )
     val snackbarHostState = remember { SnackbarHostState() }
     val appContext = LocalContext.current
@@ -184,7 +194,7 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
 
     // Admin suspended this account: show only the suspension screen
     if (myProfile?.banned == true) {
-        com.example.ui.screens.SuspendedScreen(onLogout = { viewModel.goOffline { Firebase.auth.signOut() } })
+        com.example.ui.screens.SuspendedScreen(onLogout = { viewModel.goOffline { com.example.ui.components.signOut(appContext) {} } })
         return
     }
 
@@ -199,7 +209,7 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
                 missing = missingFields,
                 emailVerified = emailOk,
                 onEmailVerified = { emailOk = true },
-                onLogout = { viewModel.goOffline { Firebase.auth.signOut() } }
+                onLogout = { viewModel.goOffline { com.example.ui.components.signOut(appContext) {} } }
             )
             return
         }

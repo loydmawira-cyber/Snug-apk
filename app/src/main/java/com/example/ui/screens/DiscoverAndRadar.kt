@@ -5,6 +5,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -28,9 +30,11 @@ import androidx.compose.material.icons.filled.Star
 import kotlinx.coroutines.delay
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.automirrored.filled.Undo
 import com.example.data.model.DiscoverFilters
+import com.example.data.model.calculateCompatibility
 import com.example.data.model.completeness
 import com.example.data.model.superLikesLeft
 import com.example.data.model.ProfileOptions
@@ -120,9 +124,9 @@ fun DiscoverScreen(
     if (showFilters) {
         AlertDialog(
             onDismissRequest = { showFilters = false },
-            title = { Text("Filters") },
+            title = { Text("Filters & Preferences", fontWeight = FontWeight.Bold) },
             text = {
-                Column {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text("Looking for", fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
@@ -141,12 +145,51 @@ fun DiscoverScreen(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text("Filter by Interest", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        ProfileOptions.interests.take(10).forEach { interest ->
+                            FilterChip(
+                                selected = filters.selectedInterest == interest,
+                                onClick = {
+                                    viewModel.setFilters(
+                                        filters.copy(selectedInterest = if (filters.selectedInterest == interest) "" else interest)
+                                    )
+                                },
+                                label = { Text(interest) }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text("Minimum Compatibility", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0 to "Any", 70 to "70%+", 80 to "80%+", 90 to "90%+").forEach { (score, label) ->
+                            FilterChip(
+                                selected = filters.minCompatibility == score,
+                                onClick = { viewModel.setFilters(filters.copy(minCompatibility = score)) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Verified only", modifier = Modifier.weight(1f))
+                        Text("Verified photos only", modifier = Modifier.weight(1f))
                         Switch(
                             checked = filters.verifiedOnly,
                             onCheckedChange = { viewModel.setFilters(filters.copy(verifiedOnly = it)) }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Online now only", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = filters.onlineOnly,
+                            onCheckedChange = { viewModel.setFilters(filters.copy(onlineOnly = it)) }
                         )
                     }
                 }
@@ -198,6 +241,7 @@ fun DiscoverScreen(
             ProfileCard(
                 profile = profile!!,
                 liked = profile!!.id in likedIds,
+                compatibility = calculateCompatibility(me, profile!!),
                 distanceText = placeAndDistance(profile!!, formatDistance(viewModel.distanceTo(me, profile!!))),
                 onOpenProfile = { onOpenProfile(profile!!.id) },
                 onLike = {
@@ -240,6 +284,13 @@ fun DiscoverScreen(
                 FilledTonalIconButton(onClick = { viewModel.undoPass() }, enabled = canUndo) {
                     Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo last pass")
                 }
+                FilledTonalIconButton(onClick = { viewModel.boostProfile() }) {
+                    Icon(
+                        Icons.Default.Bolt,
+                        contentDescription = "Boost Profile",
+                        tint = if (me?.isBoosted == true) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                    )
+                }
             }
         }
     }
@@ -253,6 +304,7 @@ fun ProfileCard(
     onLike: () -> Unit,
     onPass: () -> Unit,
     swipeThreshold: Float,
+    compatibility: Int = 0,
     onSuperLike: () -> Unit = {},
     onNudge: () -> Unit = {},
     superLikesLeft: Int = 0,
@@ -365,6 +417,43 @@ fun ProfileCard(
                         style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                     )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp)
+                    .zIndex(2f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (compatibility > 0) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = Color.Black.copy(alpha = 0.65f)
+                    ) {
+                        Text(
+                            "✨ $compatibility% Match",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+                if (profile.isBoosted || profile.isFeatured) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.primary
+                    ) {
+                        Text(
+                            "⚡ Boosted",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
             

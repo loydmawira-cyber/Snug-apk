@@ -26,6 +26,12 @@ import com.example.data.model.VerificationRequest
 import com.example.ui.components.SnugImage
 import com.example.ui.viewmodel.SnugViewModel
 
+import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Star
+
 /** Admin-only: compare each live selfie with the user's reference photo, then approve or reject. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -39,6 +45,16 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
     var statsRefresh by remember { mutableStateOf(0) }
     var signups by remember { mutableStateOf<List<SignupDay>>(emptyList()) }
     var reported by remember { mutableStateOf<List<ReportedUser>>(emptyList()) }
+    var sortOldestFirst by remember { mutableStateOf(false) }
+
+    val sortedPending = remember(pending, sortOldestFirst) {
+        if (sortOldestFirst) {
+            pending.sortedBy { it.createdAt?.toDate()?.time ?: 0L }
+        } else {
+            pending.sortedByDescending { it.createdAt?.toDate()?.time ?: 0L }
+        }
+    }
+
     LaunchedEffect(tab, statsRefresh, isAdmin) {
         if (tab == 2 && isAdmin) {
             stats = null
@@ -87,7 +103,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Verification review") },
+                title = { Text("Admin Dashboard") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -106,7 +122,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
             TabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Pending (${pending.size})") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("History") })
-                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Stats") })
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Users & Stats") })
             }
             if (tab == 2) {
                 StatsTab(
@@ -114,6 +130,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
                     signups = signups,
                     reported = reported,
                     onSuspend = { user, banned -> viewModel.setSuspended(user, banned) { statsRefresh++ } },
+                    onToggleVip = { uid, vip -> viewModel.setVipStatus(uid, vip) { statsRefresh++ } },
                     onRefresh = { statsRefresh++ }
                 )
             } else if (tab == 0) {
@@ -122,16 +139,37 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
                         Text("No selfies waiting. All caught up!", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(pending, key = { it.uid }) { req ->
-                            RequestCard(
-                                req = req,
-                                onApprove = { viewModel.decideVerification(req, approve = true) },
-                                onReject = { rejecting = req }
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AssistChip(
+                                onClick = { sortOldestFirst = !sortOldestFirst },
+                                label = { Text(if (sortOldestFirst) "Oldest first" else "Newest first") },
+                                leadingIcon = { Icon(Icons.Default.Sort, contentDescription = null, modifier = Modifier.size(16.dp)) }
                             )
+                            Spacer(modifier = Modifier.weight(1f))
+                            Button(
+                                onClick = { viewModel.bulkApprovePending() },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Icon(Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Approve All (${pending.size})")
+                            }
+                        }
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(sortedPending, key = { it.uid }) { req ->
+                                RequestCard(
+                                    req = req,
+                                    onApprove = { viewModel.decideVerification(req, approve = true) },
+                                    onReject = { rejecting = req }
+                                )
+                            }
                         }
                     }
                 }
@@ -249,9 +287,27 @@ private fun StatsTab(
     signups: List<SignupDay>,
     reported: List<ReportedUser>,
     onSuspend: (ReportedUser, Boolean) -> Unit,
+    onToggleVip: (String, Boolean) -> Unit = { _, _ -> },
     onRefresh: () -> Unit
 ) {
     var confirm by remember { mutableStateOf<ReportedUser?>(null) }
+    var userSearch by remember { mutableStateOf("") }
+    var statusFilter by remember { mutableStateOf("All") } // "All", "Active", "Suspended"
+
+    val filteredReported = remember(reported, userSearch, statusFilter) {
+        reported.filter { user ->
+            val matchesSearch = userSearch.isBlank() ||
+                user.name.contains(userSearch, ignoreCase = true) ||
+                user.reasons.any { it.contains(userSearch, ignoreCase = true) }
+            val matchesStatus = when (statusFilter) {
+                "Active" -> !user.banned
+                "Suspended" -> user.banned
+                else -> true
+            }
+            matchesSearch && matchesStatus
+        }
+    }
+
     confirm?.let { user ->
         AlertDialog(
             onDismissRequest = { confirm = null },
@@ -355,36 +411,86 @@ private fun StatsTab(
                 }
             }
         }
-        item { Text("Most reported users", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium) }
-        if (reported.isEmpty()) {
-            item { Text("No reports yet.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        } else {
-            items(reported, key = { it.userId }) { user ->
-                Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        SnugImage(
-                            model = user.photo,
-                            contentDescription = null,
-                            modifier = Modifier.size(52.dp).clip(androidx.compose.foundation.shape.CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "${user.name.ifBlank { "Unknown" }} \u2022 ${user.reports} report${if (user.reports == 1) "" else "s"}",
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                user.reasons.joinToString(", "),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+        item {
+            Column {
+                Text("User Management & Reports", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = userSearch,
+                    onValueChange = { userSearch = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Search users by name or report reason...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (userSearch.isNotEmpty()) {
+                            IconButton(onClick = { userSearch = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear")
+                            }
                         }
-                        TextButton(onClick = { confirm = user }) {
-                            Text(
-                                if (user.banned) "Reinstate" else "Suspend",
-                                color = if (user.banned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("All", "Active", "Suspended").forEach { filter ->
+                        FilterChip(
+                            selected = statusFilter == filter,
+                            onClick = { statusFilter = filter },
+                            label = { Text(filter) }
+                        )
+                    }
+                }
+            }
+        }
+        if (filteredReported.isEmpty()) {
+            item {
+                Text(
+                    if (userSearch.isNotEmpty() || statusFilter != "All") "No users match your filter." else "No reports yet.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            items(filteredReported, key = { it.userId }) { user ->
+                Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            SnugImage(
+                                model = user.photo,
+                                contentDescription = null,
+                                modifier = Modifier.size(52.dp).clip(androidx.compose.foundation.shape.CircleShape),
+                                contentScale = ContentScale.Crop
                             )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "${user.name.ifBlank { "Unknown" }} \u2022 ${user.reports} report${if (user.reports == 1) "" else "s"}",
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    user.reasons.joinToString(", "),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = { onToggleVip(user.userId, true) }) {
+                                Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Grant VIP")
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            TextButton(onClick = { confirm = user }) {
+                                Text(
+                                    if (user.banned) "Reinstate" else "Suspend",
+                                    color = if (user.banned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
                 }

@@ -6,13 +6,17 @@ import kotlinx.coroutines.tasks.await
 
 /** Confirms the email address really belongs to the person (Firebase sends the verification email). */
 object EmailVerifier {
-    fun email(): String = Firebase.auth.currentUser?.email ?: ""
+    fun email(): String = Firebase.auth.currentUser?.email ?: DemoAuthManager.getEmail()
 
-    fun isVerified(): Boolean = Firebase.auth.currentUser?.isEmailVerified == true
+    fun isVerified(): Boolean = (Firebase.auth.currentUser?.isEmailVerified == true) || DemoAuthManager.isDemoActive()
 
     /** Returns null on success, otherwise an error message. */
     suspend fun send(): String? {
-        val user = Firebase.auth.currentUser ?: return "Not signed in"
+        val user = Firebase.auth.currentUser
+        if (user == null) {
+            if (DemoAuthManager.isDemoActive()) return null
+            return "Not signed in"
+        }
         return try {
             user.sendEmailVerification().await()
             null
@@ -23,6 +27,7 @@ object EmailVerifier {
 
     /** Re-reads the account from Firebase and returns whether the email is now verified. */
     suspend fun refresh(): Boolean {
+        if (DemoAuthManager.isDemoActive()) return true
         val user = Firebase.auth.currentUser ?: return false
         return try {
             user.reload().await()

@@ -71,6 +71,9 @@ data class UserProfile(
     val lastActive: Timestamp? = null,
     val superLikesUsed: Int = 0,
     val lastSuperLikeDay: String = "",
+    val isBoosted: Boolean = false,
+    val boostExpiresAt: Timestamp? = null,
+    val isFeatured: Boolean = false,
     val createdAt: Timestamp? = null,
     val updatedAt: Timestamp? = null
 )
@@ -81,6 +84,7 @@ data class Match(
     val createdAt: Timestamp? = null,
     val lastMessage: String = "",
     val lastMessageAt: Timestamp? = null,
+    val isArchived: Boolean = false,
     val otherUser: UserProfile? = null // Helper for UI
 )
 
@@ -92,7 +96,10 @@ data class ChatMessage(
     val imageUrl: String? = null,
     val createdAt: Timestamp? = null,
     val readAt: Timestamp? = null,
-    val reaction: String = ""
+    val reaction: String = "",
+    val replyToText: String = "",
+    val replyToSender: String = "",
+    val isPinned: Boolean = false
 )
 
 /** Best picture to show for a user: their profile picture, else the first gallery photo. */
@@ -219,9 +226,28 @@ fun UserProfile.basics(): List<String> = listOf(
 /** In-memory Discover filters. Empty / false means "no filter". */
 data class DiscoverFilters(
     val lookingFor: String = "",
-    val verifiedOnly: Boolean = false
+    val verifiedOnly: Boolean = false,
+    val onlineOnly: Boolean = false,
+    val minCompatibility: Int = 0,
+    val selectedInterest: String = ""
 ) {
-    val isActive: Boolean get() = lookingFor.isNotBlank() || verifiedOnly
+    val isActive: Boolean get() = lookingFor.isNotBlank() || verifiedOnly || onlineOnly || minCompatibility > 0 || selectedInterest.isNotBlank()
+}
+
+/** Calculates a compatibility percentage between two profiles (60% - 99%). */
+fun calculateCompatibility(me: UserProfile?, other: UserProfile): Int {
+    if (me == null) return 75
+    var score = 55
+    val shared = me.sharedInterestsWith(other).size
+    score += (shared * 5).coerceAtMost(20)
+    if (me.lookingFor.isNotBlank() && me.lookingFor == other.lookingFor) score += 10
+    if (me.exercise.isNotBlank() && me.exercise == other.exercise) score += 4
+    if (me.smoking.isNotBlank() && me.smoking == other.smoking) score += 3
+    if (me.drinking.isNotBlank() && me.drinking == other.drinking) score += 3
+    if (me.wantKids.isNotBlank() && me.wantKids == other.wantKids) score += 5
+    if (me.pets.isNotBlank() && me.pets == other.pets) score += 5
+    if (me.photoVerified && other.photoVerified) score += 4
+    return score.coerceIn(60, 99)
 }
 
 object ReportReasons {
@@ -304,6 +330,10 @@ object ScamGuard {
     )
     private val linkPattern = Regex("https?://|www\\.", RegexOption.IGNORE_CASE)
 
+    private val abusiveWords = listOf(
+        "idiot", "stupid", "ugly", "fat", "hate you", "kill yourself", "die", "whore", "slut", "bitch", "loser", "shut up"
+    )
+
     fun warningFor(text: String): String? {
         val t = text.lowercase()
         if (moneyWords.any { it in t }) {
@@ -311,6 +341,9 @@ object ScamGuard {
         }
         if (linkPattern.containsMatchIn(t)) {
             return "This message contains a link. Only share links you trust. Scammers use links to steal passwords and money."
+        }
+        if (abusiveWords.any { it in t }) {
+            return "This message may contain disrespectful or hurtful words. SNUG is a cozy, respectful community. Please keep it friendly!"
         }
         return null
     }

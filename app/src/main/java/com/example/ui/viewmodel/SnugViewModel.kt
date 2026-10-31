@@ -16,6 +16,8 @@ import com.example.data.model.UserPhoto
 import com.example.data.model.UserProfile
 import com.example.data.security.EmailVerifier
 import com.example.data.model.hasVerifiedBadge
+import com.example.data.model.calculateCompatibility
+import com.example.data.model.isOnlineNow
 import com.example.data.model.publicViewForOthers
 import com.example.data.util.calculateAge
 import com.example.data.util.distanceKm
@@ -297,6 +299,23 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun bulkApprovePending() {
+        viewModelScope.launch {
+            val list = _pendingVerifications.value
+            if (list.isEmpty()) {
+                _uiMessage.value = "No pending verifications to approve"
+                return@launch
+            }
+            var approved = 0
+            for (req in list) {
+                if (adminRepo.decide(req, approve = true, reason = "") == null) {
+                    approved++
+                }
+            }
+            _uiMessage.value = "Approved $approved pending verifications in bulk"
+        }
+    }
+
     fun submitSelfie(pose: String, selfie: android.graphics.Bitmap) {
         viewModelScope.launch {
             val dataUri = withContext(Dispatchers.Default) {
@@ -471,15 +490,18 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             combine(_nearbyProfiles, _likedIds, _passedIds, _filters) { list, liked, passed, f ->
-                // The deck never runs out: new people first, then people liked in the past,
-                // then everyone I already swiped on this session (oldest first), and it starts over.
+                val me = _currentUserProfile.value
                 list.filter { !f.verifiedOnly || it.hasVerifiedBadge() }
                     .filter { f.lookingFor.isBlank() || it.lookingFor == f.lookingFor }
+                    .filter { !f.onlineOnly || it.isOnlineNow() }
+                    .filter { f.selectedInterest.isBlank() || f.selectedInterest in it.interests }
+                    .filter { f.minCompatibility <= 0 || calculateCompatibility(me, it) >= f.minCompatibility }
                     .sortedBy { u ->
                         val i = passed.indexOf(u.id)
                         when {
                             i >= 0 -> 1000 + i
                             u.id in liked -> 500
+                            u.isBoosted || u.isFeatured -> -100
                             else -> 0
                         }
                     }
@@ -648,16 +670,87 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     val emailGate: StateFlow<Boolean> = _emailGate.asStateFlow()
     fun dismissEmailGate() { _emailGate.value = false }
 
+    fun setArchived(matchId: String, archived: Boolean) {
+        viewModelScope.launch {
+            matchRepo.setArchived(matchId, archived)
+            _matches.value = _matches.value.map { if (it.id == matchId) it.copy(isArchived = archived) else it }
+            _uiMessage.value = if (archived) "Conversation archived" else "Conversation unarchived"
+        }
+    }
+
+    fun togglePinMessage(messageId: String, pinned: Boolean) {
+        viewModelScope.launch {
+            chatRepo.togglePin(messageId, pinned)
+            _uiMessage.value = if (pinned) "Message pinned" else "Message unpinned"
+        }
+    }
+
     /** Returns true if the message was sent, false if the email must be verified first. */
-    fun sendMessage(matchId: String, text: String): Boolean {
+    fun sendMessage(
+        matchId: String,
+        text: String,
+        replyToText: String = "",
+        replyToSender: String = ""
+    ): Boolean {
         if (!EmailVerifier.isVerified()) {
             _emailGate.value = true
             return false
         }
         viewModelScope.launch {
-            chatRepo.sendMessage(matchId, text)
+            chatRepo.sendMessage(matchId, text, null, replyToText, replyToSender)
         }
         return true
+    }
+
+    fun boostProfile() {
+        val me = _currentUserProfile.value ?: return
+        viewModelScope.launch {
+            val expires = com.google.firebase.Timestamp(java.util.Date(System.currentTimeMillis() + 30 * 60 * 1000L))
+            val updated = me.copy(isBoosted = true, boostExpiresAt = expires)
+            val result = profileRepo.updateProfile(updated)
+            if (result.isSuccess) {
+                _currentUserProfile.value = updated
+                _uiMessage.value = "🚀 Profile boosted for 30 minutes! You are now at the top of Discovery."
+            } else {
+                _uiMessage.value = "Could not boost profile: ${result.exceptionOrNull()?.message}"
+            }
+        }
+    }
+
+    fun changePassword(newPassword: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                com.google.firebase.Firebase.auth.currentUser?.updatePassword(newPassword)?.await()
+                onResult(true, null)
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Failed to update password")
+            }
+        }
+    }
+
+    fun changeEmail(newEmail: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                com.google.firebase.Firebase.auth.currentUser?.verifyBeforeUpdateEmail(newEmail)?.await()
+                onResult(true, null)
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Failed to update email")
+            }
+        }
+    }
+
+    fun setVipStatus(userId: String, isVip: Boolean, onDone: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("users").document(userId)
+                    .update("isVip", isVip).await()
+                _uiMessage.value = if (isVip) "VIP granted to user" else "VIP revoked"
+                onDone()
+            } catch (e: Exception) {
+                _uiMessage.value = "Could not update VIP status: ${e.message}"
+            }
+        }
     }
 
     fun updateUserProfile(profile: UserProfile) {

@@ -161,6 +161,7 @@ fun PinUnlockScreen(
                 Spacer(modifier = Modifier.height(20.dp))
                 TextButton(
                     onClick = {
+                        com.example.data.security.DemoAuthManager.signOut(context)
                         Firebase.auth.signOut()
                         onSignOut()
                     },

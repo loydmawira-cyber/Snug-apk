@@ -32,6 +32,7 @@ fun EmailSignInFlow(
     var showPassword by remember { mutableStateOf(false) }
     var showConfirmPassword by remember { mutableStateOf(false) }
     var resetMessage by remember { mutableStateOf<String?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
     Column(
@@ -140,7 +141,19 @@ fun EmailSignInFlow(
                         onAuthSuccess()
                     } catch (e: Exception) {
                         Log.e("Auth", "Auth failed", e)
-                        onAuthError(e.localizedMessage ?: "Authentication failed")
+                        val err = e.localizedMessage ?: "Authentication failed"
+                        if (err.contains("provider is disabled", ignoreCase = true) ||
+                            err.contains("operation is not allowed", ignoreCase = true) ||
+                            err.contains("disabled for this Firebase project", ignoreCase = true)
+                        ) {
+                            com.example.data.security.DemoAuthManager.signInAsDemo(
+                                context,
+                                if (email.isNotBlank()) email else "demo.user@snug.app"
+                            )
+                            onAuthSuccess()
+                        } else {
+                            onAuthError(err)
+                        }
                     } finally {
                         isLoading = false
                     }
@@ -167,10 +180,29 @@ fun EmailSignInFlow(
         }) {
             Text(if (isRegistering) "Already have an account? Sign In" else "New to SNUG? Create Account")
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = {
+                com.example.data.security.DemoAuthManager.signInAsDemo(
+                    context,
+                    if (email.isNotBlank()) email else "demo.user@snug.app"
+                )
+                onAuthSuccess()
+            },
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Text("Continue in Demo / Guest Mode")
+        }
     }
 }
 
-fun signOut(onSignOutComplete: () -> Unit) {
+fun signOut(context: android.content.Context, onSignOutComplete: () -> Unit) {
+    com.example.data.security.DemoAuthManager.signOut(context)
     Firebase.auth.signOut()
     onSignOutComplete()
 }

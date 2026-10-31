@@ -52,7 +52,7 @@ class ProfileRepository(private val db: FirebaseFirestore) {
 
     private val auth = Firebase.auth
 
-    fun getCurrentUserId(): String? = auth.currentUser?.uid
+    fun getCurrentUserId(): String? = auth.currentUser?.uid ?: com.example.data.security.DemoAuthManager.getUid()
 
     /**
      * [withPhotos] also loads the person's public gallery (extra reads), so only the full
@@ -61,7 +61,7 @@ class ProfileRepository(private val db: FirebaseFirestore) {
     suspend fun getProfile(userId: String, withPhotos: Boolean = false): UserProfile? {
         return try {
             val profile = getProfileOrThrow(userId)
-            if (userId == auth.currentUser?.uid) {
+            if (userId == getCurrentUserId()) {
                 profile
             } else {
                 val full = if (withPhotos && profile != null && profile.showPhotosToOthers) {
@@ -82,7 +82,7 @@ class ProfileRepository(private val db: FirebaseFirestore) {
         if (!snapshot.exists()) return null
         val base = snapshot.toUserProfile()?.copy(id = userId)
             ?: throw IllegalStateException("Profile document exists but could not be decoded")
-        return if (userId == auth.currentUser?.uid) {
+        return if (userId == getCurrentUserId()) {
             // Remove legacy phone fields from this account's profile and private contact record.
             db.collection("users").document(userId).set(
                 mapOf("phoneNumber" to FieldValue.delete(), "isPhoneVerified" to FieldValue.delete()),
@@ -398,6 +398,16 @@ class MatchRepository(private val db: FirebaseFirestore) {
         }
     }
 
+    suspend fun setArchived(matchId: String, archived: Boolean): Boolean {
+        return try {
+            db.collection("matches").document(matchId).update("isArchived", archived).await()
+            true
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, "matches/$matchId")
+            false
+        }
+    }
+
     suspend fun createMatch(otherUserId: String) {
         findOrCreateMatch(otherUserId)
     }
@@ -425,7 +435,7 @@ class ChatRepository(private val db: FirebaseFirestore) {
 
     /** Tells the other person I am (or stopped) typing in this chat. */
     suspend fun setTyping(matchId: String, typing: Boolean) {
-        val uid = Firebase.auth.currentUser?.uid ?: return
+        val uid = Firebase.auth.currentUser?.uid ?: com.example.data.security.DemoAuthManager.getUid() ?: return
         try {
             db.collection("typing").document("${matchId}_$uid").set(
                 mapOf(
@@ -475,15 +485,31 @@ class ChatRepository(private val db: FirebaseFirestore) {
         }
     }
 
-    suspend fun sendMessage(matchId: String, text: String, imageUrl: String? = null) {
+    suspend fun togglePin(messageId: String, pinned: Boolean) {
+        try {
+            db.collection("chats").document(messageId).update("isPinned", pinned).await()
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, "chats/$messageId")
+        }
+    }
+
+    suspend fun sendMessage(
+        matchId: String,
+        text: String,
+        imageUrl: String? = null,
+        replyToText: String = "",
+        replyToSender: String = ""
+    ) {
         val preview = if (imageUrl != null && text.isBlank()) "\uD83D\uDCF7 Photo" else text
-        val uid = Firebase.auth.currentUser?.uid ?: return
+        val uid = Firebase.auth.currentUser?.uid ?: com.example.data.security.DemoAuthManager.getUid() ?: return
         try {
             val message = ChatMessage(
                 matchId = matchId,
                 senderId = uid,
                 text = text,
                 imageUrl = imageUrl,
+                replyToText = replyToText,
+                replyToSender = replyToSender,
                 createdAt = com.google.firebase.Timestamp.now()
             )
             db.collection("chats").add(message).await()
@@ -524,7 +550,7 @@ suspend fun writeNotification(
     matchId: String,
     fromName: String
 ) {
-    val uid = Firebase.auth.currentUser?.uid ?: return
+    val uid = Firebase.auth.currentUser?.uid ?: com.example.data.security.DemoAuthManager.getUid() ?: return
     db.collection("notifications").add(
         mapOf(
             "toUserId" to toUserId,
