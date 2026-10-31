@@ -633,7 +633,7 @@
     <string name="profile_required_optional_note">Required. Prompts, job title and height are optional.</string>
     <string name="profile_email_verification_instructions">We will email a link to %s. Open it, then come back and tap I verified.</string>
     <string name="profile_your_address">your address</string>
-    <string name="profile_age_range_years">%1d - %2d yrs</string>
+    <string name="profile_age_range_years">%1$d - %2$d yrs</string>
     <string name="chat_title_fallback">Chat</string>
     <string name="distance_unknown">Distance unknown</string>
     <string name="distance_under_100m">Less than 100 m away</string>
