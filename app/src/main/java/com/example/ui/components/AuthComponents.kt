@@ -59,7 +59,7 @@ fun EmailSignInFlow(
             visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
                 IconButton(onClick = { showPassword = !showPassword }) {
-                    Icon(if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = if (showPassword) "Hide password" else "Show password")
+                    Icon(if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = stringResource(if (showPassword) R.string.ui_hide_password else R.string.ui_show_password))
                 }
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -76,7 +76,7 @@ fun EmailSignInFlow(
                 visualTransformation = if (showConfirmPassword) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) {
-                        Icon(if (showConfirmPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = if (showConfirmPassword) "Hide confirmation password" else "Show confirmation password")
+                        Icon(if (showConfirmPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = stringResource(if (showConfirmPassword) R.string.ui_hide_confirmation_password else R.string.ui_show_confirmation_password))
                     }
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -92,7 +92,7 @@ fun EmailSignInFlow(
             TextButton(
                 onClick = {
                     if (email.isBlank()) {
-                        onAuthError("Enter your email address first")
+                        onAuthError(context.getString(R.string.ui_enter_email_first))
                         return@TextButton
                     }
                     isLoading = true
@@ -100,11 +100,11 @@ fun EmailSignInFlow(
                     coroutineScope.launch {
                         try {
                             Firebase.auth.sendPasswordResetEmail(email).await()
-                            resetMessage = "Password reset email sent. Open the link to choose a new password."
+                            resetMessage = context.getString(R.string.ui_password_reset_email_sent)
                             onAuthError("")
                         } catch (e: Exception) {
                             Log.e("Auth", "Could not send password reset email", e)
-                            onAuthError(e.localizedMessage ?: "Could not send password reset email")
+                            onAuthError(e.localizedMessage ?: context.getString(R.string.ui_password_reset_error))
                         } finally {
                             isLoading = false
                         }
@@ -119,11 +119,11 @@ fun EmailSignInFlow(
         Button(
             onClick = {
                 if (email.isBlank() || password.isEmpty() || (isRegistering && confirmPassword.isEmpty())) {
-                    onAuthError("Please fill all fields")
+                    onAuthError(context.getString(R.string.ui_fill_all_fields))
                     return@Button
                 }
                 if (isRegistering && password != confirmPassword) {
-                    onAuthError("Passwords do not match")
+                    onAuthError(context.getString(R.string.ui_passwords_do_not_match))
                     return@Button
                 }
                 isLoading = true
@@ -143,7 +143,7 @@ fun EmailSignInFlow(
                         onAuthSuccess()
                     } catch (e: Exception) {
                         Log.e("Auth", "Auth failed", e)
-                        val err = e.localizedMessage ?: "Authentication failed"
+                        val err = e.localizedMessage ?: context.getString(R.string.ui_authentication_failed)
                         if (err.contains("provider is disabled", ignoreCase = true) ||
                             err.contains("operation is not allowed", ignoreCase = true) ||
                             err.contains("disabled for this Firebase project", ignoreCase = true)
@@ -168,7 +168,7 @@ fun EmailSignInFlow(
             if (isLoading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
             } else {
-                Text(if (isRegistering) "Create Account" else "Sign In")
+                Text(stringResource(if (isRegistering) R.string.ui_create_account else R.string.ui_sign_in))
             }
         }
         
@@ -180,7 +180,7 @@ fun EmailSignInFlow(
             resetMessage = null
             onAuthError("")
         }) {
-            Text(if (isRegistering) "Already have an account? Sign In" else "New to SNUG? Create Account")
+            Text(stringResource(if (isRegistering) R.string.ui_already_have_account_sign_in else R.string.ui_new_to_snug_create_account))
         }
 
         Spacer(modifier = Modifier.height(12.dp))

@@ -61,7 +61,7 @@ fun PinUnlockScreen(
                     onUnlocked()
                 } else {
                     isError = true
-                    errorMessage = "Incorrect PIN. Try again."
+                    errorMessage = context.getString(R.string.ui_incorrect_pin)
                     coroutineScope.launch {
                         shakeOffset.animateTo(
                             targetValue = 0f,
@@ -117,14 +117,14 @@ fun PinUnlockScreen(
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    text = "Welcome Back",
+                    stringResource(R.string.ui_welcome_back),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Enter your 4-digit PIN to unlock",
+                    stringResource(R.string.ui_enter_pin_to_unlock),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                 )
@@ -169,7 +169,7 @@ fun PinUnlockScreen(
                     modifier = Modifier.testTag("forgot_pin_button")
                 ) {
                     Text(
-                        text = "Forgot PIN? Sign In Again",
+                        stringResource(R.string.ui_forgot_pin_sign_in_again),
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -320,7 +320,7 @@ fun PinSetupDialog(
                         pinManager.setPin(newConfirm)
                         onPinSet()
                     } else {
-                        errorMessage = "PINs did not match. Please try again."
+                        errorMessage = context.getString(R.string.ui_pins_not_match)
                         coroutineScope.launch {
                             delay(400)
                             step = 1
@@ -362,14 +362,14 @@ fun PinSetupDialog(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = if (step == 1) "Set 4-Digit PIN" else "Confirm Your PIN",
+                    stringResource(if (step == 1) R.string.ui_set_pin_title else R.string.ui_confirm_pin_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = if (step == 1) "Choose a 4-digit PIN for quick app access" else "Re-enter your 4-digit PIN to confirm",
+                    stringResource(if (step == 1) R.string.ui_choose_pin_description else R.string.ui_reenter_pin_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
