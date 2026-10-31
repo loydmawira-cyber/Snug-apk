@@ -27,6 +27,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
@@ -88,6 +90,7 @@ fun ProfileScreen(
     var activeSubScreen by remember { mutableStateOf(ProfileSubScreen.NONE) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var activeLegalDocument by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
     val pinManager = remember { PinManager(context) }
@@ -200,6 +203,21 @@ fun ProfileScreen(
                 }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.cancel)) } }
+        )
+    }
+
+    activeLegalDocument?.let { assetName ->
+        val legalLocale = when (appLanguage) {
+            "es", "fr", "de", "sw", "ja", "zh", "hi", "tl" -> appLanguage
+            else -> "en"
+        }
+        LegalDocumentDialog(
+            title = stringResource(
+                if (assetName == "privacy_policy.html") R.string.legal_privacy_policy
+                else R.string.legal_terms_conditions
+            ),
+            assetName = "legal/$legalLocale/$assetName",
+            onDismiss = { activeLegalDocument = null }
         )
     }
 
@@ -672,6 +690,20 @@ fun ProfileScreen(
             }
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = { activeLegalDocument = "privacy_policy.html" }) {
+                Text(stringResource(R.string.legal_privacy_policy))
+            }
+            Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = { activeLegalDocument = "terms_and_conditions.html" }) {
+                Text(stringResource(R.string.legal_terms_conditions))
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.profile_footer_tagline),
@@ -680,6 +712,50 @@ fun ProfileScreen(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
+    }
+}
+
+@Composable
+private fun LegalDocumentDialog(
+    title: String,
+    assetName: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.9f),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.legal_close))
+                    }
+                }
+                HorizontalDivider()
+                key(assetName) {
+                    AndroidView(
+                        modifier = Modifier.weight(1f),
+                        factory = { context ->
+                            android.webkit.WebView(context).apply {
+                                settings.javaScriptEnabled = false
+                                settings.allowFileAccess = false
+                                settings.allowContentAccess = false
+                                webViewClient = android.webkit.WebViewClient()
+                                val html = context.assets.open(assetName).bufferedReader().use { it.readText() }
+                                loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+                            }
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
