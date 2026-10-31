@@ -1016,7 +1016,15 @@ class AdminRepository(private val db: FirebaseFirestore) {
         if (userId == admin.uid) return "You cannot suspend yourself."
         return try {
             val batch = db.batch()
-            batch.update(db.collection("users").document(userId), "banned", banned)
+            // A plain suspend / reinstate from the stats list has no end date, so any timed-suspension fields are cleared
+            batch.update(
+                db.collection("users").document(userId),
+                mapOf(
+                    "banned" to banned,
+                    "suspendedUntil" to FieldValue.delete(),
+                    "suspensionReason" to FieldValue.delete()
+                )
+            )
             batch.set(
                 db.collection("verificationAudit").document(),
                 mapOf(
