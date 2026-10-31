@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -68,6 +69,7 @@ import com.example.data.util.calculateAge
 import com.example.data.util.formatDistance
 import com.example.ui.viewmodel.SnugViewModel
 import com.example.ui.Screen
+import com.example.R
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -217,10 +219,10 @@ fun DiscoverScreen(
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(
-                "For You" to Screen.Discover.route,
-                "Liked You" to Screen.Likes.route,
-                "New" to Screen.Radar.route,
-                "Online" to Screen.Online.route
+                stringResource(R.string.tab_for_you) to Screen.Discover.route,
+                stringResource(R.string.tab_liked_you) to Screen.Likes.route,
+                stringResource(R.string.tab_new) to Screen.Radar.route,
+                stringResource(R.string.tab_online) to Screen.Online.route
             ).forEachIndexed { index, (label, route) ->
                 Surface(
                     modifier = Modifier.weight(1f).height(40.dp).clickable { onNavigateTab(route) },
@@ -234,8 +236,8 @@ fun DiscoverScreen(
         Surface(Modifier.fillMaxWidth().height(78.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFF261526), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF403047))) {
             Row(Modifier.padding(horizontal = 15.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Your kind of people", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("You both enjoy ${sharedInterest ?: "live music"}  ♫", color = Color(0xFFD8CADD), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(stringResource(R.string.banner_title), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.banner_subtitle, sharedInterest ?: stringResource(R.string.live_music)), color = Color(0xFFD8CADD), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy((-10).dp)) {
                     curatedPicks.take(3).forEach { person ->
@@ -247,8 +249,8 @@ fun DiscoverScreen(
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Today's picks", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Text("Curated for you  —  ♥", color = Color(0xFFE8DCEB), fontSize = 11.sp)
+            Text(stringResource(R.string.todays_picks), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.curated_for_you) + "  —  ♥", color = Color(0xFFE8DCEB), fontSize = 11.sp)
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.height(146.dp)) {
             items(curatedPicks, key = { "pick_${it.id}" }) { person ->
@@ -258,7 +260,7 @@ fun DiscoverScreen(
                         if (image != null) SnugImage(image, person.displayName, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .9f)))))
                         Surface(Modifier.align(Alignment.TopStart).padding(start = 6.dp, top = 7.dp), shape = RoundedCornerShape(16.dp), color = Color(0xFFF02B6B)) {
-                            Text("${calculateCompatibility(me, person)}% match", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                            Text(stringResource(R.string.match_percent, calculateCompatibility(me, person)), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                         }
                         IconButton(onClick = { viewModel.likeProfile(person.id) }, modifier = Modifier.align(Alignment.TopEnd).size(34.dp).padding(4.dp)) {
                             Icon(Icons.Default.FavoriteBorder, contentDescription = "Like ${person.displayName}", tint = Color.White, modifier = Modifier.size(22.dp))
@@ -282,7 +284,7 @@ fun DiscoverScreen(
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            listOf("Nearby", "Recently active", "Shared interests").forEachIndexed { index, label ->
+            listOf(stringResource(R.string.filter_nearby), stringResource(R.string.filter_recently_active), stringResource(R.string.filter_shared_interests)).forEachIndexed { index, label ->
                 val selected = when (index) {
                     0 -> true
                     1 -> filters.onlineOnly
@@ -484,11 +486,11 @@ fun ProfileCard(
                     modifier = Modifier.size(48.dp),
                     colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = Color(0xFF303A46).copy(alpha = .94f), contentColor = Color.White)
                 ) {
-                    Icon(Icons.Default.MoreHoriz, contentDescription = "More profile options", modifier = Modifier.size(26.dp))
+                    Icon(Icons.Default.MoreHoriz, contentDescription = stringResource(R.string.more_profile_options), modifier = Modifier.size(26.dp))
                 }
                 DropdownMenu(expanded = showMore, onDismissRequest = { showMore = false }) {
-                    DropdownMenuItem(text = { Text("View profile") }, onClick = { showMore = false; onOpenProfile() })
-                    DropdownMenuItem(text = { Text("Boost profile") }, onClick = { showMore = false; onBoost() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.view_profile)) }, onClick = { showMore = false; onOpenProfile() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.boost_profile)) }, onClick = { showMore = false; onBoost() })
                 }
             }
             Row(
@@ -504,7 +506,7 @@ fun ProfileCard(
                         color = Color(0xFFF02B6B)
                     ) {
                         Text(
-                            "$compatibility% match",
+                            stringResource(R.string.match_percent, compatibility),
                             color = Color.White,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
@@ -582,7 +584,7 @@ fun ProfileCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            if (isOnline) "Online" else "Offline",
+                            if (isOnline) stringResource(R.string.online) else stringResource(R.string.offline),
                             color = Color.White.copy(alpha = 0.9f),
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -598,7 +600,7 @@ fun ProfileCard(
                             contentColor = Color.White
                         )
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Pass", modifier = Modifier.size(26.dp))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.pass), modifier = Modifier.size(26.dp))
                     }
                     
                     OutlinedIconButton(
@@ -609,7 +611,7 @@ fun ProfileCard(
                             contentColor = Color.White
                         )
                     ) {
-                        Icon(Icons.Default.Info, contentDescription = "View full profile", modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.Info, contentDescription = stringResource(R.string.view_full_profile), modifier = Modifier.size(24.dp))
                     }
                     
                     BadgedBox(badge = { Badge { Text(if (superLikesLeft < 0) "\u221E" else superLikesLeft.toString()) } }) {
@@ -621,7 +623,7 @@ fun ProfileCard(
                                 contentColor = Color.White
                             )
                         ) {
-                            Icon(Icons.Default.Star, contentDescription = "Super Like", modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Star, contentDescription = stringResource(R.string.super_like), modifier = Modifier.size(24.dp))
                         }
                     }
 
@@ -644,7 +646,7 @@ fun ProfileCard(
                             contentColor = Color(0xFFFFC14D)
                         )
                     ) {
-                        Icon(Icons.Default.Bolt, contentDescription = "Boost Profile", modifier = Modifier.size(25.dp))
+                        Icon(Icons.Default.Bolt, contentDescription = stringResource(R.string.boost_profile), modifier = Modifier.size(25.dp))
                     }
 
                     FilledIconButton(
@@ -655,7 +657,7 @@ fun ProfileCard(
                             contentColor = Color.White
                         )
                     ) {
-                        Icon(Icons.Default.Favorite, contentDescription = "Like", modifier = Modifier.size(26.dp))
+                        Icon(Icons.Default.Favorite, contentDescription = stringResource(R.string.like), modifier = Modifier.size(26.dp))
                     }
                 }
             }
@@ -669,22 +671,22 @@ fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) 
     val worldwide by viewModel.worldwideProfiles.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
     Column(modifier = Modifier.fillMaxSize().background(Color(0xFF100D17)).verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("New near you", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
-        Text("Fresh profiles within your discovery range", color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.new_near_you), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(stringResource(R.string.new_near_you_description), color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(12.dp))
-        if (nearby.isEmpty()) Text("No new profiles nearby right now.", color = Color(0xFFD8CADD))
+        if (nearby.isEmpty()) Text(stringResource(R.string.no_new_nearby), color = Color(0xFFD8CADD))
         else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(nearby, key = { "near_${it.id}" }) { person ->
                 RadarItem(person, placeAndDistance(person, formatDistance(viewModel.distanceTo(me, person))), Modifier.width(150.dp).height(205.dp)) { onOpenProfile(person.id) }
             }
         }
         Spacer(Modifier.height(24.dp))
-        Text("Close matches worldwide", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
-        Text("People beyond your radius, ranked by compatibility", color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.close_matches_worldwide), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(stringResource(R.string.worldwide_description), color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(12.dp))
         val nearbyIds = nearby.map { it.id }.toSet()
         val farMatches = worldwide.filter { it.id !in nearbyIds }.take(20)
-        if (farMatches.isEmpty()) Text("More worldwide matches will appear as new profiles load.", color = Color(0xFFD8CADD))
+        if (farMatches.isEmpty()) Text(stringResource(R.string.worldwide_empty), color = Color(0xFFD8CADD))
         else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(farMatches, key = { "world_${it.id}" }) { person ->
                 Box {
@@ -712,11 +714,11 @@ fun OnlineScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {})
         .sortedBy { viewModel.distanceTo(me, it) ?: Double.MAX_VALUE }
     val onlineNew = newProfiles.filter { it.showPresenceToOthers && it.isOnlineNow(now) }
     Column(Modifier.fillMaxSize().background(Color(0xFF100D17)).verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("Online now", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
-        Text("See who's here and ready to connect", color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
-        OnlineSection("Who liked you", onlineLiked, "No one who liked you is online right now.", onOpenProfile)
-        OnlineSection("Online near you", onlineNearby, "No one nearby is online right now.", onOpenProfile)
-        OnlineSection("New and online", onlineNew, "No new profiles are online right now.", onOpenProfile)
+        Text(stringResource(R.string.online_now), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(stringResource(R.string.online_subtitle), color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
+        OnlineSection(stringResource(R.string.who_liked_you), onlineLiked, stringResource(R.string.no_liked_online), onOpenProfile)
+        OnlineSection(stringResource(R.string.online_near_you), onlineNearby, stringResource(R.string.no_one_nearby_online), onOpenProfile)
+        OnlineSection(stringResource(R.string.new_and_online), onlineNew, stringResource(R.string.no_new_online), onOpenProfile)
     }
 }
 

@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
@@ -33,6 +34,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.R
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.SnugImage
 import com.example.data.model.UserPhoto
@@ -72,7 +74,12 @@ enum class ProfileSubScreen {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
+fun ProfileScreen(
+    viewModel: SnugViewModel,
+    appLanguage: String = "en",
+    onLanguageChanged: (String) -> Unit = {},
+    onOpenAdmin: () -> Unit = {}
+) {
     val profile by viewModel.currentUserProfile.collectAsState()
     val verifyStatus by viewModel.photoVerificationStatus.collectAsState()
     var emailVerified by remember { mutableStateOf(EmailVerifier.isVerified()) }
@@ -154,7 +161,11 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
             NotificationSettingsSheet(onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
         }
         ProfileSubScreen.APP_LANGUAGE -> {
-            AppLanguageSheet(onDismiss = { activeSubScreen = ProfileSubScreen.NONE })
+            AppLanguageSheet(
+                currentLanguage = appLanguage,
+                onApply = onLanguageChanged,
+                onDismiss = { activeSubScreen = ProfileSubScreen.NONE }
+            )
         }
         ProfileSubScreen.EDIT_PROFILE -> {
             if (profile != null) {
@@ -560,8 +571,17 @@ fun ProfileScreen(viewModel: SnugViewModel, onOpenAdmin: () -> Unit = {}) {
                 SettingsMenuRow(
                     icon = Icons.Default.Language,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Language / Idioma",
-                    subtitle = "English (US) \u2022 Change app language",
+                    title = stringResource(R.string.language_settings_title),
+                    subtitle = stringResource(
+                        R.string.language_settings_subtitle,
+                        when (appLanguage) {
+                            "es" -> stringResource(R.string.language_name_es)
+                            "fr" -> stringResource(R.string.language_name_fr)
+                            "de" -> stringResource(R.string.language_name_de)
+                            "sw" -> stringResource(R.string.language_name_sw)
+                            else -> stringResource(R.string.language_name_en)
+                        }
+                    ),
                     onClick = { activeSubScreen = ProfileSubScreen.APP_LANGUAGE }
                 )
 
@@ -1867,14 +1887,14 @@ fun NotificationToggleRow(title: String, subtitle: String, checked: Boolean, onC
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppLanguageSheet(onDismiss: () -> Unit) {
-    var selectedLanguage by remember { mutableStateOf("en") }
+fun AppLanguageSheet(currentLanguage: String = "en", onApply: (String) -> Unit = {}, onDismiss: () -> Unit) {
+    var selectedLanguage by remember(currentLanguage) { mutableStateOf(currentLanguage) }
     val languages = listOf(
-        "en" to "English (US)",
-        "es" to "Espa\u00F1ol (Spanish)",
-        "fr" to "Fran\u00E7ais (French)",
-        "de" to "Deutsch (German)",
-        "sw" to "Kiswahili (Swahili)"
+        "en" to R.string.language_name_en,
+        "es" to R.string.language_name_es,
+        "fr" to R.string.language_name_fr,
+        "de" to R.string.language_name_de,
+        "sw" to R.string.language_name_sw
     )
 
     ModalBottomSheet(
@@ -1888,12 +1908,12 @@ fun AppLanguageSheet(onDismiss: () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("App Language", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Choose your preferred language for the SNUG app.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.language_sheet_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.language_sheet_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            languages.forEach { (code, name) ->
+            languages.forEach { (code, nameRes) ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1903,13 +1923,15 @@ fun AppLanguageSheet(onDismiss: () -> Unit) {
                 ) {
                     RadioButton(selected = selectedLanguage == code, onClick = { selectedLanguage = code })
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(name, fontWeight = if (selectedLanguage == code) FontWeight.Bold else FontWeight.Normal)
+                    Text(stringResource(nameRes), fontWeight = if (selectedLanguage == code) FontWeight.Bold else FontWeight.Normal)
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Confirm Language") }
+            Button(onClick = { onApply(selectedLanguage); onDismiss() }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.confirm_language))
+            }
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
