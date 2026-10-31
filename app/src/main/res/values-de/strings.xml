@@ -554,7 +554,7 @@
     <string name="visibility_verified_badge">Verifiziert-Abzeichen</string>
     <string name="visibility_verified_desc">Zeige dein Telefonverifizierungs-Abzeichen</string>
     <string name="zodiac_sign">Sternzeichen</string>
-    <string name="profile_age_range_years">%d - %d Jahre</string>
+    <string name="profile_age_range_years">%1$d - %1$d Jahre</string>
     <string name="profile_all_vip">Alle VIP-Funktionen</string>
     <string name="profile_basic">Standard</string>
     <string name="profile_blurred">Verschwommen</string>
