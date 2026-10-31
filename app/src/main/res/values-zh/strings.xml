@@ -635,4 +635,8 @@
     <string name="distance_under_100m">距离不足 100 米</string>
     <string name="distance_unknown">距离未知</string>
     <string name="location_unknown">位置未知</string>
+
+    <string name="legal_privacy_policy">隐私政策</string>
+    <string name="legal_terms_conditions">条款与条件</string>
+    <string name="legal_close">关闭</string>
 </resources>
