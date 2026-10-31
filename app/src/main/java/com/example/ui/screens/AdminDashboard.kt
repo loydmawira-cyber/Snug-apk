@@ -48,6 +48,13 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
     var signups by remember { mutableStateOf<List<SignupDay>>(emptyList()) }
     var reported by remember { mutableStateOf<List<ReportedUser>>(emptyList()) }
     var sortOldestFirst by remember { mutableStateOf(false) }
+    val modVm: com.example.ui.viewmodel.ModerationViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val reportCases by modVm.cases.collectAsState()
+    val openAppeals by modVm.openAppeals.collectAsState()
+
+    LaunchedEffect(isAdmin) {
+        if (isAdmin) modVm.refreshCases()
+    }
 
     val sortedPending = remember(pending, sortOldestFirst) {
         if (sortOldestFirst) {
@@ -121,12 +128,18 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
             return@Scaffold
         }
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = tab) {
+            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 0.dp) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(com.example.R.string.admin_pending_count, pending.size)) })
+                Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Reports (${reportCases.size})") })
+                Tab(selected = tab == 4, onClick = { tab = 4 }, text = { Text("Appeals (${openAppeals.size})") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.ui_history)) })
                 Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text(stringResource(R.string.ui_users_stats)) })
             }
-            if (tab == 2) {
+            if (tab == 3) {
+                ReportsTab(modVm)
+            } else if (tab == 4) {
+                AppealsTab(modVm)
+            } else if (tab == 2) {
                 StatsTab(
                     stats = stats,
                     signups = signups,
@@ -248,7 +261,8 @@ private fun PhotoColumn(label: String, image: String, modifier: Modifier) {
 
 @Composable
 private fun AuditRow(e: VerificationAuditEntry) {
-    val approved = e.decision == "approved" || e.decision == "unsuspended"
+    val approved = e.decision == "approved" || e.decision == "unsuspended" ||
+        e.decision == "report_dismissed" || e.decision == "appeal_accepted"
     Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -257,6 +271,10 @@ private fun AuditRow(e: VerificationAuditEntry) {
                         "approved" -> "Approved"
                         "suspended" -> "Suspended"
                         "unsuspended" -> "Reinstated"
+                        "warned" -> "Warning sent"
+                        "report_dismissed" -> "Reports closed"
+                        "appeal_accepted" -> "Appeal accepted"
+                        "appeal_denied" -> "Appeal denied"
                         else -> "Rejected"
                     },
                     fontWeight = FontWeight.Bold,
