@@ -594,7 +594,7 @@
     <string name="visibility_verified_badge">Verified badge</string>
     <string name="visibility_verified_desc">Ipakita ang badge ng beripikasyon ng telepono mo</string>
     <string name="zodiac_sign">Zodiac sign</string>
-    <string name="profile_age_range_years">%d - %d taong gulang</string>
+    <string name="profile_age_range_years">%1$d - %1$d taong gulang</string>
     <string name="profile_all_vip">Lahat ng VIP</string>
     <string name="profile_basic">Basic</string>
     <string name="profile_blurred">Malabo</string>
