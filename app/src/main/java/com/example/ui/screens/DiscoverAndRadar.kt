@@ -25,8 +25,10 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.MoreHoriz
 import kotlinx.coroutines.delay
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -228,11 +230,12 @@ fun DiscoverScreen(
                 ) { Box(contentAlignment = Alignment.Center) { Text(label, color = Color.White, fontSize = 13.sp) } }
             }
         }
+        val sharedInterest = me?.interests?.firstOrNull { it in curatedPicks.firstOrNull()?.interests.orEmpty() }
         Surface(Modifier.fillMaxWidth().height(78.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFF261526), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF403047))) {
             Row(Modifier.padding(horizontal = 15.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Your kind of people", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("Meet someone who gets your vibe  ♫", color = Color(0xFFD8CADD), fontSize = 12.sp)
+                    Text("You both enjoy ${sharedInterest ?: "live music"}  ♫", color = Color(0xFFD8CADD), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy((-10).dp)) {
                     curatedPicks.take(3).forEach { person ->
@@ -247,16 +250,32 @@ fun DiscoverScreen(
             Text("Today's picks", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text("Curated for you  —  ♥", color = Color(0xFFE8DCEB), fontSize = 11.sp)
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.height(104.dp)) {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.height(146.dp)) {
             items(curatedPicks, key = { "pick_${it.id}" }) { person ->
                 val image = person.avatarUrl()
-                Card(Modifier.width(105.dp).fillMaxHeight().clickable { onOpenProfile(person.id) }, shape = RoundedCornerShape(13.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2230))) {
+                Card(Modifier.width(120.dp).fillMaxHeight().clickable { onOpenProfile(person.id) }, shape = RoundedCornerShape(13.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2230))) {
                     Box(Modifier.fillMaxSize()) {
                         if (image != null) SnugImage(image, person.displayName, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .9f)))))
-                        Column(Modifier.align(Alignment.BottomStart).padding(7.dp)) {
-                            Text("${calculateCompatibility(me, person)}% match", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                            Text(person.displayName.ifBlank { "SNUG member" }, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Surface(Modifier.align(Alignment.TopStart).padding(start = 6.dp, top = 7.dp), shape = RoundedCornerShape(16.dp), color = Color(0xFFF02B6B)) {
+                            Text("${calculateCompatibility(me, person)}% match", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                        }
+                        IconButton(onClick = { viewModel.likeProfile(person.id) }, modifier = Modifier.align(Alignment.TopEnd).size(34.dp).padding(4.dp)) {
+                            Icon(Icons.Default.FavoriteBorder, contentDescription = "Like ${person.displayName}", tint = Color.White, modifier = Modifier.size(22.dp))
+                        }
+                        Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 7.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            val age = if (person.showAgeToOthers && person.birthDate != null) ", ${calculateAge(person.birthDate)}" else ""
+                            Text("${person.displayName.ifBlank { "SNUG member" }}$age", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (person.showLocationToOthers) {
+                                Text("⌖ ${formatDistance(viewModel.distanceTo(me, person))}", color = Color.White.copy(alpha = .9f), fontSize = 9.sp, maxLines = 1)
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                person.interests.take(2).forEach { interest ->
+                                    Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF59285B).copy(alpha = .95f)) {
+                                        Text(interest, color = Color.White, fontSize = 8.sp, maxLines = 1, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -264,7 +283,22 @@ fun DiscoverScreen(
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             listOf("Nearby", "Recently active", "Shared interests").forEachIndexed { index, label ->
-                Surface(Modifier.weight(1f).height(34.dp).clickable { if (index == 0) showFilters = true }, shape = RoundedCornerShape(20.dp), color = if (index == 0) Color(0xFFF02B6B) else Color(0xFF241D2B), border = if (index == 0) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A3042))) {
+                val selected = when (index) {
+                    0 -> true
+                    1 -> filters.onlineOnly
+                    else -> filters.selectedInterest.isNotBlank()
+                }
+                Surface(Modifier.weight(1f).height(34.dp).clickable {
+                    when (index) {
+                        0 -> showFilters = true
+                        1 -> viewModel.setFilters(filters.copy(onlineOnly = !filters.onlineOnly))
+                        else -> {
+                            val interest = me?.interests?.firstOrNull().orEmpty()
+                            if (interest.isNotBlank()) viewModel.setFilters(filters.copy(selectedInterest = if (filters.selectedInterest == interest) "" else interest))
+                            else showFilters = true
+                        }
+                    }
+                }, shape = RoundedCornerShape(20.dp), color = if (selected) Color(0xFFF02B6B) else Color(0xFF241D2B), border = if (selected) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A3042))) {
                     Box(contentAlignment = Alignment.Center) { Text(label, color = Color.White, fontSize = 10.sp, maxLines = 1) }
                 }
             }
@@ -361,6 +395,7 @@ fun ProfileCard(
     val offsetX = remember { Animatable(0f) }
     val offsetY = remember { Animatable(0f) }
     var isDragging by remember { mutableStateOf(false) }
+    var showMore by remember(profile.id) { mutableStateOf(false) }
 
     // Key to reset animation when profile changes
     LaunchedEffect(profile.id) {
@@ -439,14 +474,31 @@ fun ProfileCard(
                     Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(96.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            IconButton(
-                onClick = onOpenProfile,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .zIndex(2f)
+            Row(
+                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).zIndex(2f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Info, contentDescription = "View profile", tint = Color.White)
+                if (profile.showPresenceToOthers) {
+                    val online = profile.isOnlineNow()
+                    Surface(shape = RoundedCornerShape(22.dp), color = Color(0xFF303A46).copy(alpha = .94f)) {
+                        Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Box(Modifier.size(8.dp).clip(CircleShape).background(if (online) Color(0xFF36D98A) else Color.LightGray))
+                            Text(if (online) "Online" else "Offline", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+                FilledTonalIconButton(
+                    onClick = { showMore = true },
+                    modifier = Modifier.size(48.dp),
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = Color(0xFF303A46).copy(alpha = .94f), contentColor = Color.White)
+                ) {
+                    Icon(Icons.Default.MoreHoriz, contentDescription = "More profile options", modifier = Modifier.size(26.dp))
+                }
+                DropdownMenu(expanded = showMore, onDismissRequest = { showMore = false }) {
+                    DropdownMenuItem(text = { Text("View profile") }, onClick = { showMore = false; onOpenProfile() })
+                    DropdownMenuItem(text = { Text("Boost profile") }, onClick = { showMore = false; onBoost() })
+                }
             }
             if (liked) {
                 Surface(
@@ -476,14 +528,14 @@ fun ProfileCard(
                 if (compatibility > 0) {
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = Color.Black.copy(alpha = 0.65f)
+                        color = Color(0xFFF02B6B)
                     ) {
                         Text(
-                            "✨ $compatibility% Match",
+                            "$compatibility% match",
                             color = Color.White,
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp)
                         )
                     }
                 }
@@ -517,7 +569,7 @@ fun ProfileCard(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(24.dp)
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
                     .zIndex(1f)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onOpenProfile() }) {
@@ -563,11 +615,11 @@ fun ProfileCard(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     FilledTonalIconButton(
                         onClick = onPass,
-                        modifier = Modifier.size(50.dp).testTag("pass_button"),
+                        modifier = Modifier.size(44.dp).testTag("pass_button"),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = Color.White.copy(alpha = 0.2f),
                             contentColor = Color.White
@@ -578,7 +630,7 @@ fun ProfileCard(
                     
                     OutlinedIconButton(
                         onClick = onOpenProfile,
-                        modifier = Modifier.size(50.dp).testTag("view_profile_button"),
+                        modifier = Modifier.size(44.dp).testTag("view_profile_button"),
                         colors = IconButtonDefaults.outlinedIconButtonColors(
                             containerColor = Color.White.copy(alpha = 0.12f),
                             contentColor = Color.White
@@ -590,7 +642,7 @@ fun ProfileCard(
                     BadgedBox(badge = { Badge { Text(if (superLikesLeft < 0) "\u221E" else superLikesLeft.toString()) } }) {
                         FilledTonalIconButton(
                             onClick = onSuperLike,
-                            modifier = Modifier.size(50.dp).testTag("super_like_button"),
+                            modifier = Modifier.size(44.dp).testTag("super_like_button"),
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = Color(0xFF1E88E5),
                                 contentColor = Color.White
@@ -602,7 +654,7 @@ fun ProfileCard(
 
                     OutlinedIconButton(
                         onClick = onNudge,
-                        modifier = Modifier.size(50.dp).testTag("nudge_button"),
+                        modifier = Modifier.size(44.dp).testTag("nudge_button"),
                         colors = IconButtonDefaults.outlinedIconButtonColors(
                             containerColor = Color.White.copy(alpha = 0.12f),
                             contentColor = Color.White
@@ -613,10 +665,10 @@ fun ProfileCard(
 
                     FilledTonalIconButton(
                         onClick = onBoost,
-                        modifier = Modifier.size(50.dp).testTag("boost_button"),
+                        modifier = Modifier.size(44.dp).testTag("boost_button"),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = if (profile.isBoosted) Color(0xFFFFC14D) else Color.White.copy(alpha = 0.18f),
-                            contentColor = Color.White
+                            containerColor = Color(0xFF303A46).copy(alpha = .94f),
+                            contentColor = Color(0xFFFFC14D)
                         )
                     ) {
                         Icon(Icons.Default.Bolt, contentDescription = "Boost Profile", modifier = Modifier.size(25.dp))
@@ -624,7 +676,7 @@ fun ProfileCard(
 
                     FilledIconButton(
                         onClick = onLike,
-                        modifier = Modifier.size(50.dp).testTag("like_button"),
+                        modifier = Modifier.size(44.dp).testTag("like_button"),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = Color.White
