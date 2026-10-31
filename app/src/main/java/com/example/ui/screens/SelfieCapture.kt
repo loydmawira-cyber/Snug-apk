@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import com.example.R
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
