@@ -218,7 +218,7 @@ fun DiscoverScreen(
                 "For You" to Screen.Discover.route,
                 "Liked You" to Screen.Likes.route,
                 "New" to Screen.Radar.route,
-                "Matches" to Screen.Matches.route
+                "Online" to Screen.Online.route
             ).forEachIndexed { index, (label, route) ->
                 Surface(
                     modifier = Modifier.weight(1f).height(40.dp).clickable { onNavigateTab(route) },
@@ -640,49 +640,69 @@ fun ProfileCard(
 
 @Composable
 fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) {
-    val profiles by viewModel.nearbyProfiles.collectAsState()
+    val nearby by viewModel.discoveryProfiles.collectAsState()
+    val worldwide by viewModel.worldwideProfiles.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
-
-    // Re-check every 30 seconds so people who left the app drop off the Online row
-    val now by produceState(initialValue = System.currentTimeMillis()) {
-        while (true) {
-            delay(30_000)
-            value = System.currentTimeMillis()
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF100D17)).verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text("New near you", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+        Text("Fresh profiles within your discovery range", color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(12.dp))
+        if (nearby.isEmpty()) Text("No new profiles nearby right now.", color = Color(0xFFD8CADD))
+        else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(nearby, key = { "near_${it.id}" }) { person ->
+                RadarItem(person, placeAndDistance(person, formatDistance(viewModel.distanceTo(me, person))), Modifier.width(150.dp).height(205.dp)) { onOpenProfile(person.id) }
+            }
         }
-    }
-    val onlineNearby = profiles
-        .filter { it.showLocationToOthers && it.showPresenceToOthers && it.isOnlineNow(now) }
-        .sortedBy { viewModel.distanceTo(me, it) ?: Double.MAX_VALUE } // closest first
-    val locationVisibleProfiles = profiles.filter { it.showLocationToOthers }
-
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Online now", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(10.dp))
-        if (onlineNearby.isEmpty()) {
-            Text(
-                "No one nearby is online right now.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                items(onlineNearby, key = { it.id }) { person ->
-                    OnlineAvatar(person) { onOpenProfile(person.id) }
+        Spacer(Modifier.height(24.dp))
+        Text("Close matches worldwide", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+        Text("People beyond your radius, ranked by compatibility", color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(12.dp))
+        val nearbyIds = nearby.map { it.id }.toSet()
+        val farMatches = worldwide.filter { it.id !in nearbyIds }.take(20)
+        if (farMatches.isEmpty()) Text("More worldwide matches will appear as new profiles load.", color = Color(0xFFD8CADD))
+        else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(farMatches, key = { "world_${it.id}" }) { person ->
+                Box {
+                    RadarItem(person, placeAndDistance(person, formatDistance(viewModel.distanceTo(me, person))), Modifier.width(150.dp).height(205.dp)) { onOpenProfile(person.id) }
+                    Surface(Modifier.align(Alignment.TopStart).padding(7.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFFF02B6B)) {
+                        Text("${calculateCompatibility(me, person)}% match", color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                    }
                 }
             }
         }
-        Spacer(modifier = Modifier.height(20.dp))
-        Text("Nearby", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(16.dp))
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(locationVisibleProfiles) { profile ->
-                RadarItem(profile, placeAndDistance(profile, formatDistance(viewModel.distanceTo(me, profile)))) { onOpenProfile(profile.id) }
-            }
-        }
+    }
+}
+
+@Composable
+fun OnlineScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) {
+    val likedYou by viewModel.likesYou.collectAsState()
+    val nearby by viewModel.nearbyProfiles.collectAsState()
+    val newProfiles by viewModel.discoveryProfiles.collectAsState()
+    val me by viewModel.currentUserProfile.collectAsState()
+    val now by produceState(initialValue = System.currentTimeMillis()) {
+        while (true) { delay(30_000); value = System.currentTimeMillis() }
+    }
+    val onlineLiked = likedYou.filter { it.showPresenceToOthers && it.isOnlineNow(now) }
+    val onlineNearby = nearby.filter { it.showLocationToOthers && it.showPresenceToOthers && it.isOnlineNow(now) }
+        .sortedBy { viewModel.distanceTo(me, it) ?: Double.MAX_VALUE }
+    val onlineNew = newProfiles.filter { it.showPresenceToOthers && it.isOnlineNow(now) }
+    Column(Modifier.fillMaxSize().background(Color(0xFF100D17)).verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text("Online now", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+        Text("See who's here and ready to connect", color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
+        OnlineSection("Who liked you", onlineLiked, "No one who liked you is online right now.", onOpenProfile)
+        OnlineSection("Online near you", onlineNearby, "No one nearby is online right now.", onOpenProfile)
+        OnlineSection("New and online", onlineNew, "No new profiles are online right now.", onOpenProfile)
+    }
+}
+
+@Composable
+private fun OnlineSection(title: String, people: List<UserProfile>, emptyText: String, onOpenProfile: (String) -> Unit) {
+    Spacer(Modifier.height(22.dp))
+    Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(10.dp))
+    if (people.isEmpty()) Text(emptyText, color = Color(0xFFD8CADD), fontSize = 13.sp)
+    else LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        items(people, key = { "online_${title}_${it.id}" }) { person -> OnlineAvatar(person) { onOpenProfile(person.id) } }
     }
 }
 
@@ -729,9 +749,9 @@ private fun OnlineAvatar(profile: UserProfile, onClick: () -> Unit) {
 }
 
 @Composable
-fun RadarItem(profile: UserProfile, distanceText: String, onClick: () -> Unit = {}) {
+fun RadarItem(profile: UserProfile, distanceText: String, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier.height(200.dp).clickable { onClick() },
+        modifier = modifier.clickable { onClick() },
         shape = RoundedCornerShape(16.dp)
     ) {
         Box {
