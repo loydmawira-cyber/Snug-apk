@@ -635,4 +635,8 @@
     <string name="distance_under_100m">100 मीटर से कम दूर</string>
     <string name="distance_unknown">दूरी अज्ञात</string>
     <string name="location_unknown">स्थान अज्ञात</string>
+
+    <string name="legal_privacy_policy">गोपनीयता नीति</string>
+    <string name="legal_terms_conditions">नियम और शर्तें</string>
+    <string name="legal_close">बंद करें</string>
 </resources>
