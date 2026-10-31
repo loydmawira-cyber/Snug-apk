@@ -448,7 +448,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
     if (showReport) {
         AlertDialog(
             onDismissRequest = { showReport = false },
-            title = { Text("Report ${other?.displayName ?: "user"}") },
+            title = { Text(stringResource(com.example.R.string.report_user_title, other?.displayName ?: "user")) },
             text = {
                 Column {
                     ReportReasons.all.forEach { reason ->
@@ -506,7 +506,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
-                                Text(other?.displayName ?: "Chat", style = MaterialTheme.typography.titleMedium)
+                                Text(other?.displayName ?: stringResource(R.string.chat_title_fallback), style = MaterialTheme.typography.titleMedium)
                                 if (disappearingMode) {
                                     Text(stringResource(R.string.ui_disappearing_messages_on), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                 }
@@ -529,7 +529,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                         }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             DropdownMenuItem(
-                                text = { Text(if (disappearingMode) "Disappearing messages: On" else "Disappearing messages: Off") },
+                                text = { Text(if (disappearingMode) stringResource(com.example.R.string.ui_disappearing_messages_on) else stringResource(com.example.R.string.ui_disappearing_messages_off)) },
                                 leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null) },
                                 onClick = {
                                     disappearingMode = !disappearingMode
@@ -543,11 +543,10 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                         confirm?.let { action ->
                             AlertDialog(
                                 onDismissRequest = { confirm = null },
-                                title = { Text(if (action == "block") "Block ${other?.displayName ?: "user"}?" else "Unmatch?") },
+                                title = { Text(if (action == "block") stringResource(com.example.R.string.ui_block_named_user, other?.displayName ?: stringResource(com.example.R.string.ui_user)) else stringResource(com.example.R.string.ui_unmatch_question)) },
                                 text = {
                                     Text(
-                                        if (action == "block") "You will no longer see each other and this chat will be removed."
-                                        else "This removes the match and the chat."
+                                        if (action == "block") stringResource(com.example.R.string.ui_block_chat_explanation) else stringResource(com.example.R.string.ui_unmatch_chat_explanation)
                                     )
                                 },
                                 confirmButton = {
@@ -559,7 +558,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                                             viewModel.unmatch(matchId)
                                         }
                                         onBack()
-                                    }) { Text(if (action == "block") "Block" else "Unmatch") }
+                                    }) { Text(if (action == "block") stringResource(R.string.ui_block) else stringResource(R.string.ui_unmatch)) }
                                 },
                                 dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.ui_cancel)) } }
                             )
@@ -596,7 +595,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                             Icon(Icons.Default.PushPin, contentDescription = stringResource(R.string.ui_pinned), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Pinned: ${pinnedMessage.text.ifEmpty { "Photo" }}",
+                                stringResource(com.example.R.string.ui_pinned_message, pinnedMessage.text.ifEmpty { stringResource(R.string.ui_photo) }),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -615,7 +614,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
               Column {
                 if (messages.size < 5) {
                     Text(
-                        "Stay safe: never send money or share bank details.",
+                        stringResource(com.example.R.string.ui_stay_safe_never_send_money),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -641,7 +640,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    if (replyingTo!!.senderId == viewModel.currentUserId) "Replying to yourself" else "Replying to ${other?.displayName ?: "Them"}",
+                                    if (replyingTo!!.senderId == viewModel.currentUserId) stringResource(com.example.R.string.ui_replying_to_yourself) else stringResource(com.example.R.string.ui_replying_to, other?.displayName ?: stringResource(com.example.R.string.ui_them)),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -686,7 +685,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                         value = text,
                         onValueChange = { text = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text(if (replyingTo != null) "Type your reply..." else "Type a message...") },
+                        placeholder = { Text(if (replyingTo != null) stringResource(com.example.R.string.ui_type_your_reply) else stringResource(com.example.R.string.ui_type_a_message)) },
                         colors = TextFieldDefaults.colors(
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
@@ -741,7 +740,7 @@ fun ChatScreen(matchId: String, viewModel: SnugViewModel, onBack: () -> Unit, on
                     )
                     if (message.id == lastSeenId) {
                         Text(
-                            "Seen",
+                            stringResource(com.example.R.string.ui_seen),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                             modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
@@ -878,7 +877,7 @@ fun ChatBubble(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(if (message.isPinned) "Unpin message" else "Pin message") },
+                    text = { Text(if (message.isPinned) stringResource(com.example.R.string.ui_unpin_message) else stringResource(com.example.R.string.ui_pin_message)) },
                     leadingIcon = { Icon(Icons.Default.PushPin, contentDescription = null) },
                     onClick = {
                         menuOpen = false

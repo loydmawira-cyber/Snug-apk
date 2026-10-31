@@ -70,7 +70,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
         var reason by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { rejecting = null },
-            title = { Text("Reject ${req.name.ifBlank { "this selfie" }}?") },
+            title = { Text(stringResource(com.example.R.string.admin_reject_title, req.name.ifBlank { "this selfie" })) },
             text = {
                 Column {
                     Text(stringResource(R.string.ui_pick_a_reason_the_user_sees_it_and_can_try_again), style = MaterialTheme.typography.bodySmall)
@@ -122,7 +122,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
         }
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Pending (${pending.size})") })
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(com.example.R.string.admin_pending_count, pending.size)) })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.ui_history)) })
                 Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text(stringResource(R.string.ui_users_stats)) })
             }
@@ -148,7 +148,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
                         ) {
                             AssistChip(
                                 onClick = { sortOldestFirst = !sortOldestFirst },
-                                label = { Text(if (sortOldestFirst) "Oldest first" else "Newest first") },
+                                label = { Text(if (sortOldestFirst) stringResource(com.example.R.string.ui_oldest_first) else stringResource(com.example.R.string.ui_newest_first)) },
                                 leadingIcon = { Icon(Icons.Default.Sort, contentDescription = null, modifier = Modifier.size(16.dp)) }
                             )
                             Spacer(modifier = Modifier.weight(1f))
@@ -158,7 +158,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
                             ) {
                                 Icon(Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Approve All (${pending.size})")
+                                Text(stringResource(com.example.R.string.admin_approve_all, pending.size))
                             }
                         }
                         LazyColumn(
@@ -194,18 +194,18 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
 private fun RequestCard(req: VerificationRequest, onApprove: () -> Unit, onReject: () -> Unit) {
     Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(req.name.ifBlank { "Unknown user" }, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(req.name.ifBlank { stringResource(com.example.R.string.ui_unknown_user) }, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Text(
-                "Submitted " + relativeTime(req.createdAt).let { if (it.isBlank() || it == "now") "just now" else "$it ago" },
+                stringResource(com.example.R.string.ui_submitted_time, relativeTime(req.createdAt).let { if (it.isBlank() || it == "now") stringResource(com.example.R.string.ui_just_now) else stringResource(com.example.R.string.ui_time_ago, it) }),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Required pose: ${req.pose}", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(com.example.R.string.admin_required_pose, req.pose), style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PhotoColumn("Reference photo", req.reference, Modifier.weight(1f))
-                PhotoColumn("Live selfie", req.selfie, Modifier.weight(1f))
+                PhotoColumn(stringResource(com.example.R.string.ui_reference_photo), req.reference, Modifier.weight(1f))
+                PhotoColumn(stringResource(com.example.R.string.ui_live_selfie), req.selfie, Modifier.weight(1f))
             }
             Spacer(modifier = Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -276,7 +276,7 @@ private fun AuditRow(e: VerificationAuditEntry) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (e.reason.isNotBlank()) {
-                Text("Reason: ${e.reason}", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(com.example.R.string.admin_reason, e.reason), style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -313,16 +313,16 @@ private fun StatsTab(
     confirm?.let { user ->
         AlertDialog(
             onDismissRequest = { confirm = null },
-            title = { Text(if (user.banned) "Reinstate ${user.name}?" else "Suspend ${user.name}?") },
+            title = { Text(if (user.banned) stringResource(com.example.R.string.ui_reinstate_user, user.name) else stringResource(com.example.R.string.ui_suspend_user, user.name)) },
             text = {
                 Text(
-                    if (user.banned) "They will be able to use the app again."
+                    if (user.banned) stringResource(com.example.R.string.ui_user_can_use_app_again)
                     else "They will see \"Account suspended\", disappear from Discover and Radar, and cannot like, match or message."
                 )
             },
             confirmButton = {
                 TextButton(onClick = { onSuspend(user, !user.banned); confirm = null }) {
-                    Text(if (user.banned) "Reinstate" else "Suspend", color = MaterialTheme.colorScheme.error)
+                    Text(if (user.banned) stringResource(com.example.R.string.ui_reinstate) else stringResource(com.example.R.string.ui_suspend), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.ui_cancel)) } }
@@ -336,20 +336,20 @@ private fun StatsTab(
     }
     fun n(v: Long) = if (v < 0) "-" else v.toString()
     val cards = listOf(
-        "Total users" to n(stats.totalUsers),
-        "Online now" to n(stats.activeNow),
-        "Active 24 hours" to n(stats.active24h),
-        "Active 7 days" to n(stats.active7d),
-        "New today" to n(stats.newToday),
-        "New this week" to n(stats.new7d),
-        "Photo verified" to n(stats.photoVerified),
-        "VIP members" to n(stats.vip),
-        "Men" to n(stats.men),
-        "Women" to n(stats.women),
-        "Paused (snooze)" to n(stats.paused),
-        "Suspended" to n(stats.banned),
-        "Reports received" to n(stats.reports),
-        "Reviews waiting" to n(stats.pendingReviews)
+        stringResource(com.example.R.string.ui_total_users) to n(stats.totalUsers),
+        stringResource(com.example.R.string.ui_online_now) to n(stats.activeNow),
+        stringResource(com.example.R.string.ui_active_24_hours) to n(stats.active24h),
+        stringResource(com.example.R.string.ui_active_7_days) to n(stats.active7d),
+        stringResource(com.example.R.string.ui_new_today) to n(stats.newToday),
+        stringResource(com.example.R.string.ui_new_this_week) to n(stats.new7d),
+        stringResource(com.example.R.string.ui_photo_verified) to n(stats.photoVerified),
+        stringResource(com.example.R.string.ui_vip_members) to n(stats.vip),
+        stringResource(com.example.R.string.ui_men) to n(stats.men),
+        stringResource(com.example.R.string.ui_women) to n(stats.women),
+        stringResource(com.example.R.string.ui_paused_snooze) to n(stats.paused),
+        stringResource(com.example.R.string.ui_suspended) to n(stats.banned),
+        stringResource(com.example.R.string.ui_reports_received) to n(stats.reports),
+        stringResource(com.example.R.string.ui_reviews_waiting) to n(stats.pendingReviews)
     )
     androidx.compose.foundation.lazy.LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -435,7 +435,7 @@ private fun StatsTab(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("All", "Active", "Suspended").forEach { filter ->
+                    listOf(stringResource(com.example.R.string.ui_all), stringResource(com.example.R.string.ui_active), stringResource(com.example.R.string.ui_suspended)).forEach { filter ->
                         FilterChip(
                             selected = statusFilter == filter,
                             onClick = { statusFilter = filter },
@@ -448,7 +448,7 @@ private fun StatsTab(
         if (filteredReported.isEmpty()) {
             item {
                 Text(
-                    if (userSearch.isNotEmpty() || statusFilter != "All") "No users match your filter." else "No reports yet.",
+                    if (userSearch.isNotEmpty() || statusFilter != "All") stringResource(com.example.R.string.ui_no_users_match_filter) else stringResource(com.example.R.string.ui_no_reports_yet),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -489,7 +489,7 @@ private fun StatsTab(
                             Spacer(modifier = Modifier.width(8.dp))
                             TextButton(onClick = { confirm = user }) {
                                 Text(
-                                    if (user.banned) "Reinstate" else "Suspend",
+                                    if (user.banned) stringResource(com.example.R.string.ui_reinstate) else stringResource(com.example.R.string.ui_suspend),
                                     color = if (user.banned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                                 )
                             }
@@ -502,7 +502,7 @@ private fun StatsTab(
             OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.ui_refresh)) }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Online now = active in the last 5 minutes. A dash means the number could not be loaded.",
+                stringResource(com.example.R.string.ui_online_stats_explanation),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

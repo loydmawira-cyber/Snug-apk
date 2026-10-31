@@ -120,7 +120,7 @@ fun DiscoverScreen(
     if (myProfile != null && !myProfile.onboarded && myProfile.completeness().first < 60) {
         AlertDialog(
             onDismissRequest = { viewModel.completeOnboarding() },
-            title = { Text("Welcome to SNUG! \uD83D\uDC4B") },
+            title = { Text(stringResource(com.example.R.string.welcome_title) + " \uD83D\uDC4B") },
             text = { Text(stringResource(R.string.ui_profiles_with_a_photo_a_bio_and_a_few_interests_get_far)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.completeOnboarding(); onSetupProfile() }) { Text(stringResource(R.string.ui_set_up_profile)) }
@@ -178,7 +178,7 @@ fun DiscoverScreen(
                     Text(stringResource(R.string.ui_minimum_compatibility), fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(0 to "Any", 70 to "70%+", 80 to "80%+", 90 to "90%+").forEach { (score, label) ->
+                        listOf(0 to stringResource(com.example.R.string.ui_any), 70 to stringResource(com.example.R.string.ui_70_percent_plus), 80 to stringResource(com.example.R.string.ui_80_percent_plus), 90 to stringResource(com.example.R.string.ui_90_percent_plus)).forEach { (score, label) ->
                             FilterChip(
                                 selected = filters.minCompatibility == score,
                                 onClick = { viewModel.setFilters(filters.copy(minCompatibility = score)) },
@@ -263,11 +263,11 @@ fun DiscoverScreen(
                             Text(stringResource(R.string.match_percent, calculateCompatibility(me, person)), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                         }
                         IconButton(onClick = { viewModel.likeProfile(person.id) }, modifier = Modifier.align(Alignment.TopEnd).size(34.dp).padding(4.dp)) {
-                            Icon(Icons.Default.FavoriteBorder, contentDescription = "Like ${person.displayName}", tint = Color.White, modifier = Modifier.size(22.dp))
+                            Icon(Icons.Default.FavoriteBorder, contentDescription = stringResource(com.example.R.string.action_like_person, person.displayName), tint = Color.White, modifier = Modifier.size(22.dp))
                         }
                         Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 7.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             val age = if (person.showAgeToOthers && person.birthDate != null) ", ${calculateAge(person.birthDate)}" else ""
-                            Text("${person.displayName.ifBlank { "SNUG member" }}$age", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("${person.displayName.ifBlank { stringResource(com.example.R.string.member_fallback) }}$age", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (person.showLocationToOthers) {
                                 Text("⌖ ${formatDistance(viewModel.distanceTo(me, person))}", color = Color.White.copy(alpha = .9f), fontSize = 9.sp, maxLines = 1)
                             }
@@ -320,7 +320,7 @@ fun DiscoverScreen(
         } else if (profile == null && discoveryError != null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
                 Text(
-                    "Couldn't load profiles. Check your connection or Firebase access.",
+                    stringResource(com.example.R.string.ui_could_not_load_profiles),
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -331,7 +331,7 @@ fun DiscoverScreen(
         } else if (profile == null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
                 Text(
-                    if (filters.isActive) "No one matches your filters." else "No one new nearby. Try expanding your search!",
+                    if (filters.isActive) stringResource(com.example.R.string.ui_no_one_matches_filters) else stringResource(com.example.R.string.ui_no_one_nearby_expand_search),
                     textAlign = TextAlign.Center
                 )
                 if (filters.isActive) {
@@ -345,7 +345,7 @@ fun DiscoverScreen(
                 profile = profile!!,
                 liked = profile!!.id in likedIds,
                 compatibility = calculateCompatibility(me, profile!!),
-                distanceText = placeAndDistance(profile!!, formatDistance(viewModel.distanceTo(me, profile!!))),
+                distanceText = placeAndDistance(profile!!, formatDistance(viewModel.distanceTo(me, profile!!)), stringResource(R.string.distance_unknown), stringResource(R.string.location_unknown)),
                 onOpenProfile = { onOpenProfile(profile!!.id) },
                 onLike = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -677,7 +677,7 @@ fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) 
         if (nearby.isEmpty()) Text(stringResource(R.string.no_new_nearby), color = Color(0xFFD8CADD))
         else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(nearby, key = { "near_${it.id}" }) { person ->
-                RadarItem(person, placeAndDistance(person, formatDistance(viewModel.distanceTo(me, person))), Modifier.width(150.dp).height(205.dp)) { onOpenProfile(person.id) }
+                RadarItem(person, placeAndDistance(person, formatDistance(viewModel.distanceTo(me, person)), stringResource(R.string.distance_unknown), stringResource(R.string.location_unknown)), Modifier.width(150.dp).height(205.dp)) { onOpenProfile(person.id) }
             }
         }
         Spacer(Modifier.height(24.dp))
@@ -690,9 +690,9 @@ fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) 
         else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(farMatches, key = { "world_${it.id}" }) { person ->
                 Box {
-                    RadarItem(person, placeAndDistance(person, formatDistance(viewModel.distanceTo(me, person))), Modifier.width(150.dp).height(205.dp)) { onOpenProfile(person.id) }
+                    RadarItem(person, placeAndDistance(person, formatDistance(viewModel.distanceTo(me, person)), stringResource(R.string.distance_unknown), stringResource(R.string.location_unknown)), Modifier.width(150.dp).height(205.dp)) { onOpenProfile(person.id) }
                     Surface(Modifier.align(Alignment.TopStart).padding(7.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFFF02B6B)) {
-                        Text("${calculateCompatibility(me, person)}% match", color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                        Text(stringResource(com.example.R.string.compat_match, calculateCompatibility(me, person)), color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                     }
                 }
             }
@@ -837,7 +837,7 @@ fun MatchCelebrationDialog(other: UserProfile?, onDismiss: () -> Unit, onSayHi: 
     if (other == null) return
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("It's a match! \uD83C\uDF89", fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(com.example.R.string.match_celebration) + " \uD83C\uDF89", fontWeight = FontWeight.Bold) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 SnugImage(
@@ -847,7 +847,7 @@ fun MatchCelebrationDialog(other: UserProfile?, onDismiss: () -> Unit, onSayHi: 
                     contentScale = ContentScale.Crop
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("You and ${other.displayName} liked each other.", textAlign = TextAlign.Center)
+                Text(stringResource(com.example.R.string.match_mutual_likes, other.displayName), textAlign = TextAlign.Center)
             }
         },
         confirmButton = {

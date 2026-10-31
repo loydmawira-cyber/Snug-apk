@@ -92,7 +92,7 @@ fun SelfieCaptureDialog(
                     provider.unbindAll()
                     provider.bindToLifecycle(owner, CameraSelector.DEFAULT_FRONT_CAMERA, preview, imageCapture)
                 } catch (e: Exception) {
-                    problem = "Could not start the camera"
+                    problem = context.getString(R.string.ui_camera_start_error)
                 }
             }, ContextCompat.getMainExecutor(context))
         }
@@ -133,8 +133,7 @@ fun SelfieCaptureDialog(
                 }
             } else {
                 Text(
-                    if (denied) "Camera permission is needed to take your selfie. Allow it in Settings, then try again."
-                    else "Waiting for camera permission...",
+                    if (denied) stringResource(R.string.ui_camera_permission_guidance) else stringResource(R.string.ui_waiting_camera_permission),
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.align(Alignment.Center).padding(32.dp)
@@ -150,14 +149,14 @@ fun SelfieCaptureDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    "Face the camera in a well-lit place.\nRemove hats, sunglasses and face coverings.",
+                    stringResource(R.string.ui_selfie_camera_tips),
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "Center your face in the oval. Then: $pose",
+                    stringResource(R.string.ui_center_face_and_pose, pose),
                     color = Color.White.copy(alpha = 0.85f),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodySmall
@@ -212,12 +211,12 @@ fun SelfieCaptureDialog(
                                             image.close()
                                         }
                                         capturing = false
-                                        if (bmp != null) onCaptured(bmp) else problem = "Could not take the photo"
+                                        if (bmp != null) onCaptured(bmp) else problem = problem = context.getString(R.string.ui_take_photo_error)
                                     }
 
                                     override fun onError(exception: ImageCaptureException) {
                                         capturing = false
-                                        problem = "Could not take the photo"
+                                        problem = context.getString(R.string.ui_take_photo_error)
                                     }
                                 }
                             )

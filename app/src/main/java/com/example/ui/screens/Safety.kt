@@ -49,6 +49,7 @@ fun PhotoVerificationSheet(
     var emailBusy by remember { mutableStateOf(false) }
     var emailNote by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val rejectionReason by viewModel.photoRejectionReason.collectAsState()
     var showCamera by remember { mutableStateOf(false) }
@@ -72,7 +73,7 @@ fun PhotoVerificationSheet(
             Text(stringResource(R.string.ui_verify_it_s_really_you), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                "Verified profiles get a blue check and are trusted more. Fake accounts are the biggest risk on dating apps, so we check selfies against profile photos.",
+                stringResource(R.string.ui_verified_profile_safety_explanation),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -93,7 +94,7 @@ fun PhotoVerificationSheet(
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(stringResource(R.string.ui_photo_verified), fontWeight = FontWeight.Bold)
                             Text(
-                                "Your selfie matched your photos.",
+                                stringResource(R.string.ui_selfie_match_confirmation),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -103,7 +104,7 @@ fun PhotoVerificationSheet(
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(stringResource(R.string.ui_selfie_under_review), fontWeight = FontWeight.Bold)
                             Text(
-                                "We will add your badge once it is approved. This can take a day or two.",
+                                stringResource(R.string.ui_badge_approval_wait),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -114,9 +115,7 @@ fun PhotoVerificationSheet(
                             if (status == "rejected") {
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    "Your last selfie was not accepted" +
-                                        (if (rejectionReason.isNotBlank()) " ($rejectionReason)" else "") +
-                                        ". Make sure your face is clear and in good light, then try again.",
+                                    stringResource(R.string.ui_selfie_rejected_guidance, rejectionReason),
                                     color = MaterialTheme.colorScheme.error,
                                     style = MaterialTheme.typography.bodySmall,
                                     textAlign = TextAlign.Center
@@ -125,7 +124,7 @@ fun PhotoVerificationSheet(
                             Spacer(modifier = Modifier.height(10.dp))
                             Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                                 Text(
-                                    "Your pose: $pose",
+                                    stringResource(R.string.ui_your_pose, pose),
                                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     fontWeight = FontWeight.SemiBold,
@@ -147,7 +146,7 @@ fun PhotoVerificationSheet(
 
                             if (!hasPhoto) {
                                 Text(
-                                    "Add a profile picture first so we have something to compare with.",
+                                    stringResource(R.string.ui_add_profile_picture_for_verification),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error,
                                     textAlign = TextAlign.Center
@@ -158,7 +157,7 @@ fun PhotoVerificationSheet(
                             OutlinedButton(onClick = { showCamera = true }, modifier = Modifier.fillMaxWidth()) {
                                 Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(if (shot == null) "Take selfie" else "Retake selfie")
+                                Text(stringResource(if (shot == null) R.string.ui_take_selfie else R.string.ui_retake_selfie))
                             }
                             if (shot != null) {
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -173,7 +172,7 @@ fun PhotoVerificationSheet(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                "Only you and our review team can see your selfie. It is never shown on your profile.",
+                                stringResource(R.string.ui_selfie_privacy_notice),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -202,8 +201,8 @@ fun PhotoVerificationSheet(
                         Column {
                             Text(stringResource(R.string.ui_email), fontWeight = FontWeight.Bold)
                             Text(
-                                if (emailVerified) "${EmailVerifier.email()} is verified"
-                                else "Confirm ${EmailVerifier.email().ifBlank { "your email" }}",
+                                if (emailVerified) stringResource(R.string.ui_email_is_verified, EmailVerifier.email())
+                                else stringResource(R.string.ui_confirm_email, EmailVerifier.email().ifBlank { stringResource(R.string.ui_your_email) }),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -218,7 +217,7 @@ fun PhotoVerificationSheet(
                                     emailBusy = true
                                     scope.launch {
                                         val problem = EmailVerifier.send()
-                                        emailNote = problem ?: "Email sent. Open the link, then tap \"I verified\"."
+                                        emailNote = problem ?: context.getString(R.string.ui_verification_email_sent)
                                         emailBusy = false
                                     }
                                 }
@@ -230,7 +229,7 @@ fun PhotoVerificationSheet(
                                     scope.launch {
                                         emailVerified = EmailVerifier.refresh()
                                         if (emailVerified) onEmailVerified()
-                                        emailNote = if (emailVerified) "Email verified" else "Not verified yet"
+                                        emailNote = context.getString(if (emailVerified) R.string.ui_email_verified else R.string.ui_not_verified_yet)
                                         emailBusy = false
                                     }
                                 }
@@ -266,44 +265,24 @@ fun SafetyCenterSheet(onDismiss: () -> Unit) {
             Spacer(modifier = Modifier.height(12.dp))
 
             SafetyBlock(
-                "Before you meet",
-                listOf(
-                    "Chat and video call first. Be careful if they always avoid a video call.",
-                    "Look for the blue check. It means a phone or selfie was verified.",
-                    "Tell a friend who you are meeting, where, and when."
-                )
+                stringResource(R.string.ui_safety_section_1),
+                listOf(stringResource(R.string.ui_safety_1_1), stringResource(R.string.ui_safety_1_2), stringResource(R.string.ui_safety_1_3))
             )
             SafetyBlock(
-                "On the first date",
-                listOf(
-                    "Meet in a public place and arrange your own transport.",
-                    "Keep your drink with you and stay sober enough to decide for yourself.",
-                    "Leave if anything feels wrong. You do not owe anyone an explanation."
-                )
+                stringResource(R.string.ui_safety_section_2),
+                listOf(stringResource(R.string.ui_safety_2_1), stringResource(R.string.ui_safety_2_2), stringResource(R.string.ui_safety_2_3))
             )
             SafetyBlock(
-                "Protect your money and information",
-                listOf(
-                    "Never send money, gift cards, crypto or airtime to someone you have not met, whatever the reason.",
-                    "Do not share your address, workplace, passwords, bank or ID details.",
-                    "Be careful with links and with anyone who quickly asks you to move to another app."
-                )
+                stringResource(R.string.ui_safety_section_3),
+                listOf(stringResource(R.string.ui_safety_3_1), stringResource(R.string.ui_safety_3_2), stringResource(R.string.ui_safety_3_3))
             )
             SafetyBlock(
-                "Red flags",
-                listOf(
-                    "They declare love very fast or have an emergency that needs money.",
-                    "Their photos look too perfect, or their story keeps changing.",
-                    "They pressure you, get angry when you say no, or threaten to share your photos."
-                )
+                stringResource(R.string.ui_safety_section_4),
+                listOf(stringResource(R.string.ui_safety_4_1), stringResource(R.string.ui_safety_4_2), stringResource(R.string.ui_safety_4_3))
             )
             SafetyBlock(
-                "If something goes wrong",
-                listOf(
-                    "Block and report them from their profile or the chat menu (the three dots).",
-                    "If you are in danger, call your local emergency number right away.",
-                    "If you sent money, contact your bank or mobile money provider straight away and report it to the police."
-                )
+                stringResource(R.string.ui_safety_section_5),
+                listOf(stringResource(R.string.ui_safety_5_1), stringResource(R.string.ui_safety_5_2), stringResource(R.string.ui_safety_5_3))
             )
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -342,7 +321,7 @@ fun SuspendedScreen(onLogout: () -> Unit) {
         Text(stringResource(R.string.ui_account_suspended), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            "This account was suspended because it broke our community guidelines. If you think this is a mistake, please contact support.",
+            stringResource(R.string.ui_suspended_account_notice),
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -357,6 +336,7 @@ fun EmailGateDialog(onDismiss: () -> Unit, onVerified: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -364,9 +344,7 @@ fun EmailGateDialog(onDismiss: () -> Unit, onVerified: () -> Unit) {
         text = {
             Column {
                 Text(
-                    "To keep SNUG safe from fake accounts, you need a verified email before you can send messages. " +
-                        "Tap \"Send email\", open the link we send to ${EmailVerifier.email().ifBlank { "your email" }}, " +
-                        "then come back and tap \"I verified\"."
+                    stringResource(R.string.ui_email_gate_instructions, EmailVerifier.email().ifBlank { stringResource(R.string.ui_your_email) })
                 )
                 note?.let {
                     Spacer(modifier = Modifier.height(10.dp))
@@ -378,7 +356,7 @@ fun EmailGateDialog(onDismiss: () -> Unit, onVerified: () -> Unit) {
                     onClick = {
                         busy = true
                         scope.launch {
-                            note = EmailVerifier.send() ?: "Email sent. Check your inbox (and spam)."
+                            note = EmailVerifier.send() ?: context.getString(R.string.ui_check_email_inbox)
                             busy = false
                         }
                     }
@@ -391,7 +369,7 @@ fun EmailGateDialog(onDismiss: () -> Unit, onVerified: () -> Unit) {
                 onClick = {
                     busy = true
                     scope.launch {
-                        if (EmailVerifier.refresh()) onVerified() else note = "Not verified yet. Open the link in the email first."
+                        if (EmailVerifier.refresh()) onVerified() else note = context.getString(R.string.ui_not_verified_open_email_link)
                         busy = false
                     }
                 }

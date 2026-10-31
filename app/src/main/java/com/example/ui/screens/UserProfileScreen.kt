@@ -52,7 +52,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
     if (showBlock) {
         AlertDialog(
             onDismissRequest = { showBlock = false },
-            title = { Text("Block ${user?.displayName ?: "user"}?") },
+            title = { Text(stringResource(com.example.R.string.block_user_title, user?.displayName ?: "user")) },
             text = { Text(stringResource(R.string.ui_you_will_no_longer_see_each_other_and_any_chat_will_be)) },
             confirmButton = {
                 TextButton(onClick = {
@@ -67,7 +67,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
     if (showReport) {
         AlertDialog(
             onDismissRequest = { showReport = false },
-            title = { Text("Report ${user?.displayName ?: "user"}") },
+            title = { Text(stringResource(com.example.R.string.report_user_title, user?.displayName ?: "user")) },
             text = {
                 Column {
                     ReportReasons.all.forEach { reason ->
@@ -89,7 +89,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
     Scaffold(
         topBar = {
                 TopAppBar(
-                title = { Text(user?.displayName?.ifBlank { "SNUG member" } ?: "Profile") },
+                title = { Text(user?.displayName?.ifBlank { stringResource(R.string.ui_snug_member) } ?: stringResource(R.string.ui_profile)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.ui_back))
@@ -115,7 +115,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 CircularProgressIndicator()
             }
         } else {
-            val publicName = u.displayName.ifBlank { "SNUG member" }
+            val publicName = u.displayName.ifBlank { stringResource(R.string.ui_snug_member) }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -167,7 +167,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 }
 
                 if (u.showLocationToOthers) {
-                    val location = placeAndDistance(u, formatDistance(viewModel.distanceTo(me, u)))
+                    val location = placeAndDistance(u, formatDistance(viewModel.distanceTo(me, u)), stringResource(R.string.distance_unknown), stringResource(R.string.location_unknown))
                     if (location != "Location unknown") {
                         Text(
                             location,
@@ -221,7 +221,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                         color = MaterialTheme.colorScheme.primaryContainer
                     ) {
                         Text(
-                            "Looking for: ${u.lookingFor}",
+                            stringResource(com.example.R.string.ui_looking_for_named, u.lookingFor),
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -233,7 +233,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 if (basics.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Text(
-                        "About",
+                        stringResource(R.string.ui_about),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.align(Alignment.Start)
@@ -251,7 +251,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 if (u.showInterestsToOthers && u.interests.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Text(
-                        "Interests",
+                        stringResource(R.string.ui_interests),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.align(Alignment.Start)
@@ -287,7 +287,7 @@ fun UserProfileScreen(userId: String, viewModel: SnugViewModel, navController: N
                 if (u.showPhotosToOthers && u.photos.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Text(
-                        "Photos",
+                        stringResource(R.string.ui_photos),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.align(Alignment.Start)

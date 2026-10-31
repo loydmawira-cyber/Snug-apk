@@ -310,7 +310,7 @@ fun ProfileScreen(
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "${profile?.displayName ?: "User"}, ${calculateAge(profile?.birthDate)}",
+                        text = "${profile?.displayName ?: stringResource(R.string.profile_default_user)}, ${calculateAge(profile?.birthDate)}",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -674,7 +674,7 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "SNUG v1.0 • Made with ❤️ for cozy connections",
+            text = stringResource(R.string.profile_footer_tagline),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,
@@ -797,7 +797,7 @@ fun PhotoItem(photo: UserPhoto, onDelete: () -> Unit, onToggleBlur: () -> Unit, 
                 IconButton(onClick = onTogglePublic) {
                     Icon(
                         if (photo.isPublic) Icons.Default.Public else Icons.Default.Lock,
-                        contentDescription = if (photo.isPublic) "Make photo private" else "Make photo public",
+                        contentDescription = if (photo.isPublic) stringResource(R.string.photo_make_private) else stringResource(R.string.photo_make_public),
                         tint = if (photo.isPublic) Color.White else MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(15.dp)
                     )
@@ -854,22 +854,22 @@ fun ProfileVisibilitySheet(
             Text(stringResource(R.string.profile_visibility), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                "Choose which profile details other members can see. Your Discover photo can also be hidden here.",
+                stringResource(R.string.visibility_intro),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            VisibilityPreferenceRow("Name", "Hide your name as “SNUG member”", showName) { showName = it }
-            VisibilityPreferenceRow("Age", "Show your age on profile cards and details", showAge) { showAge = it }
-            VisibilityPreferenceRow("Location", "Show your city, country, or distance", showLocation) { showLocation = it }
-            VisibilityPreferenceRow("Photos", "Show your profile photo and public gallery photos", showPhotos) { showPhotos = it }
-            VisibilityPreferenceRow("Bio", "Show your written bio", showBio) { showBio = it }
-            VisibilityPreferenceRow("Interests", "Show your selected interests", showInterests) { showInterests = it }
-            VisibilityPreferenceRow("Prompts", "Show your profile questions and answers", showPrompts) { showPrompts = it }
-            VisibilityPreferenceRow("About me", "Show gender, work, lifestyle, and what you’re looking for", showAboutMe) { showAboutMe = it }
-            VisibilityPreferenceRow("Online status", "Show whether you are online or when you were last active", showPresence) { showPresence = it }
-            VisibilityPreferenceRow("Verified badge", "Show your phone-verification badge", showVerifiedBadge) { showVerifiedBadge = it }
+            VisibilityPreferenceRow(stringResource(R.string.visibility_name), stringResource(R.string.visibility_name_desc), showName) { showName = it }
+            VisibilityPreferenceRow(stringResource(R.string.visibility_age), stringResource(R.string.visibility_age_desc), showAge) { showAge = it }
+            VisibilityPreferenceRow(stringResource(R.string.visibility_location), stringResource(R.string.visibility_location_desc), showLocation) { showLocation = it }
+            VisibilityPreferenceRow(stringResource(R.string.visibility_photos), stringResource(R.string.visibility_photos_desc), showPhotos) { showPhotos = it }
+            VisibilityPreferenceRow(stringResource(R.string.visibility_bio), stringResource(R.string.visibility_bio_desc), showBio) { showBio = it }
+            VisibilityPreferenceRow(stringResource(R.string.visibility_interests), stringResource(R.string.visibility_interests_desc), showInterests) { showInterests = it }
+            VisibilityPreferenceRow(stringResource(R.string.visibility_prompts), stringResource(R.string.visibility_prompts_desc), showPrompts) { showPrompts = it }
+            VisibilityPreferenceRow(stringResource(R.string.visibility_about_me), stringResource(R.string.visibility_about_me_desc), showAboutMe) { showAboutMe = it }
+            VisibilityPreferenceRow(stringResource(R.string.visibility_online_status), stringResource(R.string.visibility_online_desc), showPresence) { showPresence = it }
+            VisibilityPreferenceRow(stringResource(R.string.visibility_verified_badge), stringResource(R.string.visibility_verified_desc), showVerifiedBadge) { showVerifiedBadge = it }
 
             Spacer(modifier = Modifier.height(16.dp))
             Button(
@@ -1032,7 +1032,7 @@ fun DiscoveryPreferencesSheet(
     viewModel: SnugViewModel,
     onDismiss: () -> Unit
 ) {
-    // Distance steps in km. The last step means "Anywhere" (worldwide).
+    // Distance steps in km. The last step means stringResource(R.string.anywhere) (worldwide).
     val distanceStops = remember { listOf(5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 20000) }
     var distanceIndex by remember {
         mutableFloatStateOf(
@@ -1071,7 +1071,7 @@ fun DiscoveryPreferencesSheet(
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                 ) {
                     Text(
-                        if (distanceKm >= 20000) "Anywhere" else "$distanceKm km",
+                        if (distanceKm >= 20000) stringResource(R.string.anywhere) else "$distanceKm km",
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -1100,7 +1100,7 @@ fun DiscoveryPreferencesSheet(
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                 ) {
                     Text(
-                        "${ageRange.start.roundToInt()} - ${ageRange.endInclusive.roundToInt()} yrs",
+                        stringResource(R.string.profile_age_range_years, ageRange.start.roundToInt(), ageRange.endInclusive.roundToInt()),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -1191,7 +1191,7 @@ fun SecurityPinSheet(
             Text(stringResource(R.string.pin_lock_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                "Protect your account and unlock the app swiftly using a 4-digit PIN instead of entering your email & password every time.",
+                stringResource(R.string.pin_sheet_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -1211,7 +1211,7 @@ fun SecurityPinSheet(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.enable_pin_lock), fontWeight = FontWeight.Bold)
-                        Text(if (isPinEnabled) "PIN lock is enabled" else "PIN lock is disabled", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(if (isPinEnabled) stringResource(R.string.pin_lock_enabled) else stringResource(R.string.pin_lock_disabled), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = isPinEnabled,
@@ -1287,13 +1287,13 @@ fun VipUpgradeSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "SNUG VIP Club",
+                stringResource(R.string.vip_club_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                "Unlock the full romantic experience with no limits",
+                stringResource(R.string.vip_club_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1309,12 +1309,12 @@ fun VipUpgradeSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
 
             when (currentTab) {
                 0 -> {
-                    VipBenefitItem("Unlimited Likes", "Never run out of likes. Swipe to your heart's content.")
-                    VipBenefitItem("Unlimited Rewinds", "Rewind any accidental left swipe anytime.")
-                    VipBenefitItem("5 Free Super Likes / Day", "Get 5x more matches with standout super likes.")
-                    VipBenefitItem("1 Free Boost / Month", "Top spot in everyone's Discover for 30 minutes.")
-                    VipBenefitItem("See Who Liked You", "View all profiles who liked you instantly.")
-                    VipBenefitItem("Advanced VIP Compatibility Filters", "Filter by lifestyle, interests, and pet preferences.")
+                    VipBenefitItem(stringResource(R.string.vip_unlimited_likes), stringResource(R.string.vip_unlimited_likes_desc))
+                    VipBenefitItem(stringResource(R.string.vip_unlimited_rewinds), stringResource(R.string.vip_unlimited_rewinds_desc))
+                    VipBenefitItem(stringResource(R.string.vip_super_likes_title), stringResource(R.string.vip_super_likes_desc))
+                    VipBenefitItem(stringResource(R.string.vip_boost_title), stringResource(R.string.vip_boost_desc))
+                    VipBenefitItem(stringResource(R.string.vip_likes_title), stringResource(R.string.vip_likes_desc))
+                    VipBenefitItem(stringResource(R.string.vip_filters_title), stringResource(R.string.vip_filters_desc))
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -1327,7 +1327,7 @@ fun VipUpgradeSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                             Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                "\uD83C\uDF81 7-Day Free Trial included with Annual Pass! Cancel anytime before trial ends.",
+                                stringResource(R.string.profile_vip_trial_annual),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Medium
                             )
@@ -1339,15 +1339,15 @@ fun VipUpgradeSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                     when {
                         loading -> CircularProgressIndicator()
                         plans.isEmpty() -> Text(
-                            "Subscriptions are syncing with Google Play. Check connection and try again.",
+                            stringResource(R.string.vip_syncing_message),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                         else -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             plans.forEach { plan ->
                                 PriceTier(
-                                    title = if (plan.months == 12) "12 Months" else if (plan.months == 1) "1 Month" else "${plan.months} Months",
-                                    price = if (plan.months > 1 && plan.perMonthText.isNotBlank()) "${plan.perMonthText}/mo" else plan.priceText,
+                                    title = stringResource(R.string.profile_plan_months, plan.months),
+                                    price = if (plan.months > 1 && plan.perMonthText.isNotBlank()) stringResource(R.string.profile_price_per_month, plan.perMonthText) else plan.priceText,
                                     isPopular = plan.months == 6,
                                     isSelected = plan.basePlanId == selected?.basePlanId,
                                     onClick = { selectedId = plan.basePlanId }
@@ -1374,16 +1374,19 @@ fun VipUpgradeSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                     ) {
                         if (busy) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                         else Text(
-                            if (selected != null && selected.trialDays > 0) "START ${selected.trialDays}-DAY FREE TRIAL" else "SUBSCRIBE NOW"
+                            if (selected != null && selected.trialDays > 0) stringResource(R.string.profile_start_free_trial, selected.trialDays) else stringResource(R.string.profile_subscribe_now)
                         )
                     }
 
                     if (selected != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            (if (selected.trialDays > 0) "Free for ${selected.trialDays} days, then " else "") +
-                                "${selected.priceText} every ${if (selected.months == 1) "month" else if (selected.months == 12) "year" else "${selected.months} months"}. " +
-                                "Renews automatically. Cancel anytime in Google Play > Subscriptions.",
+                            stringResource(
+                                R.string.profile_purchase_terms,
+                                selected.trialDays,
+                                selected.priceText,
+                                when (selected.months) { 1 -> stringResource(R.string.profile_month); 12 -> stringResource(R.string.profile_year); else -> stringResource(R.string.profile_months, selected.months) }
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             textAlign = TextAlign.Center
@@ -1433,14 +1436,14 @@ fun VipComparisonTable() {
             HorizontalDivider()
 
             val rows = listOf(
-                Triple("Daily Likes", "50", "Unlimited"),
-                Triple("Rewind Swipe", "None", "Unlimited"),
-                Triple("Super Likes", "1 / day", "5 / day"),
-                Triple("Monthly Boost", "No", "1 / month"),
-                Triple("See Who Likes You", "Blurred", "Full"),
-                Triple("Advanced Filters", "Basic", "All VIP"),
-                Triple("Verified Badge", "Included", "Priority Review"),
-                Triple("Photo Privacy Controls", "Yes", "Yes")
+                Triple(stringResource(R.string.profile_compare_daily_likes), "50", stringResource(R.string.profile_unlimited)),
+                Triple(stringResource(R.string.profile_compare_rewind), stringResource(R.string.profile_none), stringResource(R.string.profile_unlimited)),
+                Triple(stringResource(R.string.profile_compare_super_likes), stringResource(R.string.profile_one_per_day), stringResource(R.string.profile_five_per_day)),
+                Triple(stringResource(R.string.profile_compare_monthly_boost), stringResource(R.string.profile_no), stringResource(R.string.profile_one_per_month)),
+                Triple(stringResource(R.string.profile_compare_likes), stringResource(R.string.profile_blurred), stringResource(R.string.profile_full)),
+                Triple(stringResource(R.string.profile_compare_filters), stringResource(R.string.profile_basic), stringResource(R.string.profile_all_vip)),
+                Triple(stringResource(R.string.profile_compare_verified_badge), stringResource(R.string.profile_included), stringResource(R.string.profile_priority_review)),
+                Triple(stringResource(R.string.profile_compare_photo_privacy), stringResource(R.string.profile_yes), stringResource(R.string.profile_yes))
             )
 
             rows.forEach { (feat, free, vip) ->
@@ -1474,16 +1477,16 @@ fun VipManagementTab(profile: UserProfile?, onManage: () -> Unit, onRestore: () 
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        if (profile?.isVip == true) "Active SNUG VIP Membership" else "Free Plan",
+                        if (profile?.isVip == true) stringResource(R.string.vip_active_membership) else stringResource(R.string.vip_free_plan),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     if (profile?.isVip == true)
-                        "Your subscription is managed directly via Google Play Billing. If you cancel, your VIP features will remain active until the end of your billing cycle."
+                        stringResource(R.string.vip_subscription_description)
                     else
-                        "You are currently on the free tier. Upgrade to unlock unlimited likes, rewinds, and profile boosts.",
+                        stringResource(R.string.vip_free_tier_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1505,7 +1508,7 @@ fun VipManagementTab(profile: UserProfile?, onManage: () -> Unit, onRestore: () 
                 Text(stringResource(R.string.billing_purchase_history), fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "All SNUG billing is processed securely through Google Play. Invoices and receipts are sent to your Google account email.",
+                    stringResource(R.string.vip_billing_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1571,7 +1574,7 @@ fun AccountSecuritySheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                     viewModel.changePassword(newPassword) { success, err ->
                         busy = false
                         isError = !success
-                        statusMessage = if (success) "Password updated successfully!" else err ?: "Could not update password"
+                        statusMessage = if (success) stringResource(R.string.password_updated_successfully) else err ?: stringResource(R.string.password_update_failed)
                         if (success) {
                             newPassword = ""
                             confirmPassword = ""
@@ -1606,7 +1609,7 @@ fun AccountSecuritySheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                     viewModel.changeEmail(newEmail.trim()) { success, err ->
                         busy = false
                         isError = !success
-                        statusMessage = if (success) "Verification link sent to $newEmail. Click it to complete." else err ?: "Could not update email"
+                        statusMessage = if (success) context.getString(R.string.profile_email_verification_sent, newEmail) else err ?: context.getString(R.string.profile_email_update_failed)
                         if (success) newEmail = ""
                     }
                 },
@@ -1693,14 +1696,14 @@ fun DeviceSessionsSheet(viewModel: SnugViewModel, onDismiss: () -> Unit) {
                     Text(stringResource(R.string.sign_out_other_devices), fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "If you lost a device or signed in on a shared phone, this will revoke session tokens and require sign-in everywhere else.",
+                        stringResource(R.string.revoke_sessions_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedButton(
                         onClick = {
-                            signOutNotice = "All other sessions have been revoked. Current device remains active."
+                            signOutNotice = stringResource(R.string.sessions_revoked_notice)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -1761,7 +1764,7 @@ fun DataExportSheet(profile: UserProfile?, onDismiss: () -> Unit) {
         ) {
             Text(stringResource(R.string.data_privacy_export), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text(
-                "You have full ownership of your data. You can download or copy your complete SNUG profile information at any time.",
+                stringResource(R.string.data_export_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1792,7 +1795,7 @@ fun DataExportSheet(profile: UserProfile?, onDismiss: () -> Unit) {
             ) {
                 Icon(Icons.Default.Download, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (copied) "Copied to Clipboard!" else "Copy JSON Export")
+                Text(if (copied) stringResource(R.string.copied_to_clipboard) else stringResource(R.string.copy_json_export))
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -1832,18 +1835,18 @@ fun NotificationSettingsSheet(onDismiss: () -> Unit) {
             Text(stringResource(R.string.push_notifications), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
 
-            NotificationToggleRow("New Matches", "When someone likes you back", matchAlerts) { matchAlerts = it }
+            NotificationToggleRow(stringResource(R.string.notification_new_matches), stringResource(R.string.notification_new_matches_desc), matchAlerts) { matchAlerts = it }
             HorizontalDivider()
-            NotificationToggleRow("New Messages", "When a match sends you a chat or photo", messageAlerts) { messageAlerts = it }
+            NotificationToggleRow(stringResource(R.string.notification_new_messages), stringResource(R.string.notification_new_messages_desc), messageAlerts) { messageAlerts = it }
             HorizontalDivider()
-            NotificationToggleRow("Likes & Super Likes", "When someone likes or super-likes you", likesAlerts) { likesAlerts = it }
+            NotificationToggleRow(stringResource(R.string.notification_likes), stringResource(R.string.notification_likes_desc), likesAlerts) { likesAlerts = it }
             HorizontalDivider()
-            NotificationToggleRow("Weekly Email Summary", "Highlights of new matches in your area", emailDigest) { emailDigest = it }
+            NotificationToggleRow(stringResource(R.string.notification_weekly_email), stringResource(R.string.notification_weekly_email_desc), emailDigest) { emailDigest = it }
 
             Spacer(modifier = Modifier.height(20.dp))
             Text(stringResource(R.string.quiet_hours), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(6.dp))
-            NotificationToggleRow("Enable Quiet Hours", "Mutes all push notifications while you rest", quietHoursEnabled) { quietHoursEnabled = it }
+            NotificationToggleRow(stringResource(R.string.notification_enable_quiet_hours), stringResource(R.string.notification_quiet_hours_desc), quietHoursEnabled) { quietHoursEnabled = it }
 
             if (quietHoursEnabled) {
                 Spacer(modifier = Modifier.height(10.dp))
@@ -1970,11 +1973,11 @@ fun HelpAndSupportSheet(onDismiss: () -> Unit) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            HelpCard("Community Guidelines", "Be kind, respectful, and authentic.", Icons.Default.HealthAndSafety)
+            HelpCard(stringResource(R.string.help_community_guidelines), stringResource(R.string.help_community_guidelines_desc), Icons.Default.HealthAndSafety)
             Spacer(modifier = Modifier.height(10.dp))
-            HelpCard("Safety & Privacy Tips", "Never share financial info with anyone you haven't met.", Icons.Default.Security)
+            HelpCard(stringResource(R.string.help_safety_tips), stringResource(R.string.help_safety_tips_desc), Icons.Default.Security)
             Spacer(modifier = Modifier.height(10.dp))
-            HelpCard("Contact Support", "Have questions? Email us at support@snug.dating", Icons.Default.Email)
+            HelpCard(stringResource(R.string.help_contact_support), stringResource(R.string.help_contact_support_desc), Icons.Default.Email)
 
             Spacer(modifier = Modifier.height(24.dp))
             Button(
@@ -2220,7 +2223,7 @@ fun EditProfileDialog(
                         withStyle(
                             androidx.compose.ui.text.SpanStyle(color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
                         ) { append("*") }
-                        append(" Required. Prompts, job title and height are optional.")
+                        append(stringResource(R.string.profile_required_optional_note))
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -2257,7 +2260,7 @@ fun EditProfileDialog(
                         }
                     }
                     TextButton(onClick = onChangePicture) {
-                        RequiredLabel(if (dialogAvatar != null) "Change picture" else "Add profile picture")
+                        RequiredLabel(if (dialogAvatar != null) stringResource(R.string.change_picture) else stringResource(R.string.add_profile_picture))
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -2265,7 +2268,7 @@ fun EditProfileDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { RequiredLabel("Display Name") },
+                    label = { RequiredLabel(stringResource(R.string.display_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -2275,7 +2278,7 @@ fun EditProfileDialog(
                 OutlinedTextField(
                     value = bio,
                     onValueChange = { bio = it },
-                    label = { RequiredLabel("Bio") },
+                    label = { RequiredLabel(stringResource(R.string.visibility_bio)) },
                     placeholder = { Text(stringResource(R.string.bio_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
@@ -2287,7 +2290,7 @@ fun EditProfileDialog(
                 OutlinedTextField(
                     value = birthYear,
                     onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) birthYear = it },
-                    label = { RequiredLabel("Birth Year (18+)") },
+                    label = { RequiredLabel(stringResource(R.string.birth_year_18_plus)) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                     shape = RoundedCornerShape(12.dp)
@@ -2296,7 +2299,7 @@ fun EditProfileDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Spacer(modifier = Modifier.height(20.dp))
-                RequiredTitle("I am")
+                RequiredTitle(stringResource(R.string.i_am))
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     genders.forEach { g ->
@@ -2309,7 +2312,7 @@ fun EditProfileDialog(
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
-                RequiredTitle("Interested In")
+                RequiredTitle(stringResource(R.string.interested_in))
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     genders.forEach { g ->
@@ -2324,7 +2327,7 @@ fun EditProfileDialog(
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
-                RequiredTitle("Interests / Hobbies (pick at least 3)")
+                RequiredTitle(stringResource(R.string.interests_hobbies_minimum))
                 Spacer(modifier = Modifier.height(8.dp))
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -2347,7 +2350,7 @@ fun EditProfileDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(stringResource(R.string.profile_prompts), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
-                    "Answer up to 3 to show your personality.",
+                    stringResource(R.string.profile_prompts_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -2361,7 +2364,7 @@ fun EditProfileDialog(
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
-                                promptQuestions[slot].ifBlank { "Pick a prompt" },
+                                promptQuestions[slot].ifBlank { stringResource(R.string.pick_a_prompt) },
                                 modifier = Modifier.weight(1f),
                                 maxLines = 1
                             )
@@ -2396,16 +2399,16 @@ fun EditProfileDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(stringResource(R.string.more_about_me), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
-                ChoiceSection("I'm looking for", ProfileOptions.lookingFor, lookingFor) { lookingFor = it }
-                ChoiceSection("Kids", ProfileOptions.haveKids, haveKids) { haveKids = it }
-                ChoiceSection("Future plans for kids", ProfileOptions.wantKids, wantKids) { wantKids = it }
-                ChoiceSection("Smoking", ProfileOptions.smoking, smoking) { smoking = it }
-                ChoiceSection("Drinking", ProfileOptions.drinking, drinking) { drinking = it }
-                ChoiceSection("Exercise", ProfileOptions.exercise, exercise) { exercise = it }
-                ChoiceSection("Religion", ProfileOptions.religion, religion) { religion = it }
-                ChoiceSection("Education", ProfileOptions.education, education) { education = it }
-                ChoiceSection("Pets", ProfileOptions.pets, pets) { pets = it }
-                ChoiceSection("Zodiac sign", ProfileOptions.zodiac, zodiac) { zodiac = it }
+                ChoiceSection(stringResource(R.string.looking_for), ProfileOptions.lookingFor, lookingFor) { lookingFor = it }
+                ChoiceSection(stringResource(R.string.kids), ProfileOptions.haveKids, haveKids) { haveKids = it }
+                ChoiceSection(stringResource(R.string.future_kids), ProfileOptions.wantKids, wantKids) { wantKids = it }
+                ChoiceSection(stringResource(R.string.smoking), ProfileOptions.smoking, smoking) { smoking = it }
+                ChoiceSection(stringResource(R.string.drinking), ProfileOptions.drinking, drinking) { drinking = it }
+                ChoiceSection(stringResource(R.string.exercise), ProfileOptions.exercise, exercise) { exercise = it }
+                ChoiceSection(stringResource(R.string.religion), ProfileOptions.religion, religion) { religion = it }
+                ChoiceSection(stringResource(R.string.education), ProfileOptions.education, education) { education = it }
+                ChoiceSection(stringResource(R.string.pets), ProfileOptions.pets, pets) { pets = it }
+                ChoiceSection(stringResource(R.string.zodiac_sign), ProfileOptions.zodiac, zodiac) { zodiac = it }
 
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
@@ -2432,7 +2435,7 @@ fun EditProfileDialog(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.hide_my_distance), fontWeight = FontWeight.SemiBold)
                         Text(
-                            "Others will see your city but not how far away you are.",
+                            stringResource(R.string.hide_distance_description),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -2486,7 +2489,7 @@ fun EditProfileDialog(
                                 saveError = null
                                 onSave(candidate)
                             } else {
-                                saveError = "Still needed: " + missing.joinToString(", ")
+                                saveError = stringResource(R.string.still_needed_prefix) + missing.joinToString(", ")
                             }
                         },
                         shape = CircleShape
@@ -2549,7 +2552,7 @@ fun SetupGateScreen(
         Text(stringResource(R.string.finish_setting_up), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            "Complete both steps to start using SNUG. This keeps the community real and safe.",
+            stringResource(R.string.setup_description),
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -2570,7 +2573,7 @@ fun SetupGateScreen(
                 if (!emailVerified) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "We will email a link to ${EmailVerifier.email().ifBlank { "your address" }}. Open it, then come back and tap I verified.",
+                        stringResource(R.string.profile_email_verification_instructions, EmailVerifier.email().ifBlank { stringResource(R.string.profile_your_address) }),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -2585,7 +2588,7 @@ fun SetupGateScreen(
                             onClick = {
                                 busy = true
                                 scope.launch {
-                                    note = EmailVerifier.send() ?: "Email sent. Check your inbox and spam."
+                                    note = EmailVerifier.send() ?: stringResource(R.string.email_sent_check_inbox)
                                     busy = false
                                 }
                             }
@@ -2595,7 +2598,7 @@ fun SetupGateScreen(
                             onClick = {
                                 busy = true
                                 scope.launch {
-                                    if (EmailVerifier.refresh()) onEmailVerified() else note = "Not verified yet. Open the link in the email first."
+                                    if (EmailVerifier.refresh()) onEmailVerified() else note = stringResource(R.string.email_not_verified_yet)
                                     busy = false
                                 }
                             }

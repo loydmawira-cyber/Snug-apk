@@ -1,4 +1,5 @@
 package com.example.ui.screens
+import androidx.compose.ui.res.stringResource
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,7 +45,7 @@ fun NotificationsSheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Text(
-                "Notifications",
+                stringResource(com.example.R.string.ui_notifications),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
@@ -55,7 +56,7 @@ fun NotificationsSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "Nothing yet. Likes, matches and messages will show up here.",
+                        stringResource(com.example.R.string.ui_nothing_yet_notifications),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
