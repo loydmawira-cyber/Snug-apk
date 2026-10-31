@@ -595,4 +595,8 @@
     <string name="distance_under_100m">Umbali wa chini ya mita 100</string>
     <string name="distance_unknown">Umbali haujulikani</string>
     <string name="location_unknown">Mahali hapajulikani</string>
+
+    <string name="legal_privacy_policy">Sera ya Faragha</string>
+    <string name="legal_terms_conditions">Sheria na Masharti</string>
+    <string name="legal_close">Funga</string>
 </resources>
