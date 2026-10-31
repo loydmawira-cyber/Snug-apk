@@ -33,6 +33,8 @@ service cloud.firestore {
     function adminFieldsUnchanged() {
       return request.resource.data.get('photoVerified', false) == resource.data.get('photoVerified', false)
         && request.resource.data.get('banned', false) == resource.data.get('banned', false)
+        && request.resource.data.get('suspendedUntil', null) == resource.data.get('suspendedUntil', null)
+        && request.resource.data.get('suspensionReason', null) == resource.data.get('suspensionReason', null)
         && vipFieldsUnchanged();
     }
 
@@ -48,7 +50,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isOwner(userId)
         && request.resource.data.isVip == false
-        && !request.resource.data.keys().hasAny(['vipExpiresAt', 'vipProductId', 'vipState'])
+        && !request.resource.data.keys().hasAny(['vipExpiresAt', 'vipProductId', 'vipState', 'suspendedUntil', 'suspensionReason'])
         && request.resource.data.get('photoVerified', false) == false
         && request.resource.data.get('banned', false) == false;
       allow update: if isOwner(userId)
@@ -56,8 +58,16 @@ service cloud.firestore {
         && adminFieldsUnchanged()
         && request.resource.data.isVip == resource.data.isVip;
       // An admin can only ever flip the photo-verified badge or suspend / unsuspend someone
+      // (suspendedUntil is the end of a timed suspension, suspensionReason is shown to the person)
       allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoVerified', 'banned']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoVerified', 'banned', 'suspendedUntil', 'suspensionReason']);
+      // A timed suspension that has run out is switched off by the person's own app. Nothing else can change.
+      allow update: if isOwner(userId)
+        && resource.data.get('banned', false) == true
+        && resource.data.get('suspendedUntil', null) != null
+        && resource.data.suspendedUntil <= request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['banned'])
+        && request.resource.data.banned == false;
       allow delete: if isOwner(userId);
 
       match /private/{docId} {
@@ -161,11 +171,24 @@ service cloud.firestore {
 
     // ---------- REPORTS (write-only for users) ----------
     // One report per person (the id is reporter_reported), so reports cannot be spammed.
+    // status is missing or 'open' until an admin closes the report ('actioned' or 'dismissed').
     match /reports/{reportId} {
       allow read: if isAdmin();
       allow create: if isSignedIn()
         && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.get('status', 'open') == 'open'
         && reportId == request.auth.uid + '_' + request.resource.data.reportedId;
+      // The reporter can report the same person again only after the first report was closed
+      allow update: if isSignedIn()
+        && resource.data.reporterId == request.auth.uid
+        && resource.data.get('status', 'open') in ['actioned', 'dismissed']
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.reportedId == resource.data.reportedId
+        && request.resource.data.get('status', 'open') == 'open';
+      // An admin closes a report
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'resolution', 'resolvedBy', 'resolvedAt'])
+        && request.resource.data.status in ['actioned', 'dismissed'];
     }
 
     // ---------- MESSAGE REPORTS (write-only for users) ----------
@@ -191,6 +214,30 @@ service cloud.firestore {
       allow update: if isAdmin()
         && request.resource.data.status in ['approved', 'rejected']
         && request.resource.data.uid == resource.data.uid;
+    }
+
+    // ---------- APPEALS (a suspended person disputes the suspension, an admin decides) ----------
+    // One appeal document per person (the id is their uid). They can write a new one after it was decided.
+    match /appeals/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId)
+        && get(/databases/$(database)/documents/users/$(userId)).data.get('banned', false) == true
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 10
+        && request.resource.data.message.size() <= 1000;
+      allow update: if isOwner(userId)
+        && resource.data.status != 'open'
+        && get(/databases/$(database)/documents/users/$(userId)).data.get('banned', false) == true
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 10
+        && request.resource.data.message.size() <= 1000;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'adminResponse', 'decidedBy', 'decidedAt'])
+        && request.resource.data.status in ['accepted', 'denied'];
     }
 
     // Who is an admin (each person can only check their own entry; entries are added in the Console)

@@ -18,14 +18,34 @@ Reopen the app and Profile shows **Admin: Verification review**.
 
 Console fallback: you can still edit `verificationRequests` and `users/<id>.photoVerified` by hand.
 
-## Suspend a user (ban)
-In `users/<id>` add a boolean field `banned` = true. The person sees "Account suspended", disappears from
-Discover and Radar for everyone, and the rules stop them from liking, matching or messaging.
-Set `banned` back to false (or delete it) to lift the suspension.
+## Reports, suspensions and appeals (in the app)
+Profile -> Admin dashboard has two tabs for this: **Reports** and **Appeals**.
 
-## Read reports
-Open the `reports` collection. Each document is `<reporterId>_<reportedId>` with the `reason`. Several reports
-about the same `reportedId` are a strong sign to review and suspend that account.
+**Reports tab.** Every person with open reports, most reported first. Tap one to see each report (reason and
+time), the reported messages (text and photos) and their account status. Then decide:
+- **Suspend** for 1, 3, 7 or 30 days, or permanently. Write the reason: the person sees it. The reports are closed,
+  the person and the reporters get an in-app notification, and the decision is saved in the History tab.
+- **Send a warning only**: the person gets your message as a notification, the reports are closed.
+- **No violation**: closes the reports. Reporters are thanked. (A reporter can report the same person again later.)
+- **Reinstate now**: lifts a suspension early.
+
+A suspended person disappears from Discover and Radar and cannot like, match or message. A timed suspension
+switches off by itself when it ends: the person's own app lifts it the next time it is opened (the rules allow
+only that one change). Until they open the app they stay hidden.
+
+**Appeals tab.** A suspended person sees the reason and end date, and can write an appeal. It shows up here.
+- **Accept and reinstate** lifts the suspension straight away.
+- **Deny** keeps it; add a note, the person sees it. They may send a new appeal afterwards.
+
+Publish `firestore.rules` after updating the app: these features need the new rules (reports can be closed,
+the `appeals` collection, `suspendedUntil` and `suspensionReason` on users).
+
+Console fallback: in `users/<id>` set `banned` = true (and optionally `suspendedUntil` as a timestamp and
+`suspensionReason` as text). Set `banned` to false to lift it.
+
+## Read reports in the Console
+Open the `reports` collection. Each document is `<reporterId>_<reportedId>` with the `reason`, a `status`
+(missing or `open`, `actioned`, `dismissed`) and, once closed, `resolution`, `resolvedBy` and `resolvedAt`.
 
 ## Read message reports
 When someone long-presses a message and taps **Report message**, a document is added to `messageReports`
