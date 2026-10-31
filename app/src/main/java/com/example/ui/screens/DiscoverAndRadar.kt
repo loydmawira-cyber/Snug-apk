@@ -65,6 +65,7 @@ import com.example.data.model.placeAndDistance
 import com.example.data.util.calculateAge
 import com.example.data.util.formatDistance
 import com.example.ui.viewmodel.SnugViewModel
+import com.example.ui.Screen
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -74,7 +75,8 @@ fun DiscoverScreen(
     viewModel: SnugViewModel,
     onOpenProfile: (String) -> Unit = {},
     onOpenChat: (String) -> Unit = {},
-    onSetupProfile: () -> Unit = {}
+    onSetupProfile: () -> Unit = {},
+    onNavigateTab: (String) -> Unit = {}
 ) {
     val profile by viewModel.currentProfile.collectAsState()
     val profiles by viewModel.discoveryProfiles.collectAsState()
@@ -87,6 +89,10 @@ fun DiscoverScreen(
     val discoveryError by viewModel.discoveryError.collectAsState()
     val canUndo by viewModel.canUndo.collectAsState()
     val likedIds by viewModel.likedIds.collectAsState()
+    var curatedPicks by remember { mutableStateOf(emptyList<UserProfile>()) }
+    LaunchedEffect(profiles) {
+        if (curatedPicks.isEmpty() && profiles.isNotEmpty()) curatedPicks = profiles.take(8)
+    }
     var swipeKey by remember { mutableStateOf(0) }
     var showFilters by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
@@ -208,9 +214,14 @@ fun DiscoverScreen(
         verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("For You", "Liked You", "New", "Matches").forEachIndexed { index, label ->
+            listOf(
+                "For You" to Screen.Discover.route,
+                "Liked You" to Screen.Likes.route,
+                "New" to Screen.Radar.route,
+                "Matches" to Screen.Matches.route
+            ).forEachIndexed { index, (label, route) ->
                 Surface(
-                    modifier = Modifier.weight(1f).height(40.dp).clickable { if (index == 1) showFilters = true },
+                    modifier = Modifier.weight(1f).height(40.dp).clickable { onNavigateTab(route) },
                     shape = RoundedCornerShape(24.dp),
                     color = if (index == 0) Color(0xFFF02B6B) else Color(0xFF241D2B),
                     border = if (index == 0) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A3042))
@@ -224,7 +235,7 @@ fun DiscoverScreen(
                     Text("Meet someone who gets your vibe  ♫", color = Color(0xFFD8CADD), fontSize = 12.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy((-10).dp)) {
-                    profiles.take(3).forEach { person ->
+                    curatedPicks.take(3).forEach { person ->
                         val image = person.avatarUrl()
                         if (image != null) SnugImage(image, person.displayName, Modifier.size(42.dp).clip(CircleShape).background(Color.DarkGray), contentScale = ContentScale.Crop)
                         else Box(Modifier.size(42.dp).clip(CircleShape).background(Color(0xFF514358)))
@@ -237,7 +248,7 @@ fun DiscoverScreen(
             Text("Curated for you  —  ♥", color = Color(0xFFE8DCEB), fontSize = 11.sp)
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.height(104.dp)) {
-            items(profiles.take(8), key = { "pick_${it.id}" }) { person ->
+            items(curatedPicks, key = { "pick_${it.id}" }) { person ->
                 val image = person.avatarUrl()
                 Card(Modifier.width(105.dp).fillMaxHeight().clickable { onOpenProfile(person.id) }, shape = RoundedCornerShape(13.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2230))) {
                     Box(Modifier.fillMaxSize()) {
@@ -314,6 +325,7 @@ fun DiscoverScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     viewModel.nudge(profile!!.id)
                 },
+                onBoost = { viewModel.boostProfile() },
                 superLikesLeft = if (isPremium) -1 else (me?.superLikesLeft() ?: 0),
                 autoAdvance = true,
                 onPass = {
@@ -325,30 +337,6 @@ fun DiscoverScreen(
             }
         }
 
-        if (me?.isPaused != true) {
-            Row(
-                modifier = Modifier.align(Alignment.TopStart).padding(8.dp).zIndex(3f),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilledTonalIconButton(onClick = { showFilters = true }) {
-                    Icon(
-                        Icons.Default.FilterList,
-                        contentDescription = "Filters",
-                        tint = if (filters.isActive) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                    )
-                }
-                FilledTonalIconButton(onClick = { viewModel.undoPass() }, enabled = canUndo) {
-                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo last pass")
-                }
-                FilledTonalIconButton(onClick = { viewModel.boostProfile() }) {
-                    Icon(
-                        Icons.Default.Bolt,
-                        contentDescription = "Boost Profile",
-                        tint = if (me?.isBoosted == true) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                    )
-                }
-            }
-        }
     }
     }
 }
@@ -364,6 +352,7 @@ fun ProfileCard(
     compatibility: Int = 0,
     onSuperLike: () -> Unit = {},
     onNudge: () -> Unit = {},
+    onBoost: () -> Unit = {},
     superLikesLeft: Int = 0,
     autoAdvance: Boolean = false,
     liked: Boolean = false
@@ -620,6 +609,17 @@ fun ProfileCard(
                         )
                     ) {
                         Text("\uD83D\uDC4B", fontSize = 22.sp)
+                    }
+
+                    FilledTonalIconButton(
+                        onClick = onBoost,
+                        modifier = Modifier.size(50.dp).testTag("boost_button"),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = if (profile.isBoosted) Color(0xFFFFC14D) else Color.White.copy(alpha = 0.18f),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(Icons.Default.Bolt, contentDescription = "Boost Profile", modifier = Modifier.size(25.dp))
                     }
 
                     FilledIconButton(
