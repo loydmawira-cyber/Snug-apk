@@ -381,6 +381,13 @@ fun MainNavigation(isDarkTheme: Boolean, onToggleTheme: () -> Unit) {
                     viewModel,
                     onOpenProfile = { navController.navigate(Screen.UserDetail.createRoute(it)) },
                     onOpenChat = { navController.navigate(Screen.Chat.createRoute(it)) },
+                    onNavigateTab = { route ->
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     onSetupProfile = {
                         navController.navigate(Screen.Profile.route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
