@@ -148,7 +148,7 @@ class BillingManager(
     fun launchPurchase(activity: Activity, plan: VipPlan) {
         val uid = Firebase.auth.currentUser?.uid
         if (uid == null) {
-            _message.value = "Please sign in again."
+            _message.value = appContext.getString(com.example.R.string.billing_sign_in_again)
             return
         }
         _busy.value = true
@@ -167,7 +167,7 @@ class BillingManager(
         val result = client.launchBillingFlow(activity, flow)
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
             _busy.value = false
-            _message.value = "Could not open Google Play. Please try again."
+            _message.value = appContext.getString(com.example.R.string.billing_open_play_failed)
         }
     }
 
@@ -181,7 +181,7 @@ class BillingManager(
             }
             else -> {
                 _busy.value = false
-                _message.value = "Purchase failed. You were not charged."
+                _message.value = appContext.getString(com.example.R.string.billing_purchase_failed)
             }
         }
     }
@@ -195,14 +195,14 @@ class BillingManager(
             val owned = result.purchasesList.filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
             if (owned.isEmpty()) {
                 _busy.value = false
-                if (!silent) _message.value = "No active subscription found on this Google account."
+                if (!silent) _message.value = appContext.getString(com.example.R.string.billing_no_active_subscription)
                 return
             }
             owned.forEach { handlePurchase(it, silent) }
         } catch (e: Exception) {
             Log.w(TAG, "restore failed", e)
             _busy.value = false
-            if (!silent) _message.value = "Could not check purchases. Try again."
+            if (!silent) _message.value = appContext.getString(com.example.R.string.billing_check_purchases_failed)
         }
     }
 
@@ -210,7 +210,7 @@ class BillingManager(
         when (purchase.purchaseState) {
             Purchase.PurchaseState.PENDING -> {
                 _busy.value = false
-                _message.value = "Your payment is pending. VIP turns on as soon as it completes."
+                _message.value = appContext.getString(com.example.R.string.billing_payment_pending)
             }
             Purchase.PurchaseState.PURCHASED -> verifyWithServer(purchase, silent)
             else -> _busy.value = false
@@ -228,14 +228,14 @@ class BillingManager(
             val active = (response.data as? Map<*, *>)?.get("active") == true
             if (active) {
                 onEntitlementChanged()
-                if (!silent) _message.value = "Welcome to SNUG VIP!"
+                if (!silent) _message.value = appContext.getString(com.example.R.string.billing_welcome_vip)
             } else if (!silent) {
-                _message.value = "This subscription is no longer active."
+                _message.value = appContext.getString(com.example.R.string.billing_subscription_inactive)
             }
         } catch (e: Exception) {
             Log.w(TAG, "verifyPurchase failed", e)
             // The purchase stays unacknowledged, so it is retried at the next app start
-            if (!silent) _message.value = "We could not confirm your purchase yet. Reopen the app and it will retry. You will not be charged twice."
+            if (!silent) _message.value = appContext.getString(com.example.R.string.billing_purchase_confirmation_pending)
         } finally {
             _busy.value = false
         }
