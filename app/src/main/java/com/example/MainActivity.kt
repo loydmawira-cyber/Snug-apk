@@ -199,7 +199,7 @@ fun SignInScreen(
             }
             Image(
                 painter = painterResource(id = R.drawable.img_app_icon_1791026447003),
-                contentDescription = "SNUG Logo",
+                contentDescription = stringResource(R.string.ui_snug_logo),
                 modifier = Modifier
                     .size(180.dp)
                     .clip(CircleShape),
@@ -213,7 +213,7 @@ fun SignInScreen(
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "Find your perfect cozy match.",
+                text = stringResource(R.string.ui_find_your_perfect_cozy_match),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
             )
@@ -357,7 +357,7 @@ fun MainNavigation(isDarkTheme: Boolean, appLanguage: String, onLanguageChanged:
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Image(
                                 painter = painterResource(id = R.drawable.img_app_icon_1791026447003),
-                                contentDescription = "SNUG Logo",
+                                contentDescription = stringResource(R.string.ui_snug_logo),
                                 modifier = Modifier
                                     .size(48.dp)
                                     .clip(CircleShape),
@@ -381,13 +381,13 @@ fun MainNavigation(isDarkTheme: Boolean, appLanguage: String, onLanguageChanged:
                                     }
                                 }
                             ) {
-                                Icon(Icons.Default.Notifications, contentDescription = "Notifications")
+                                Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.ui_notifications))
                             }
                         }
                         IconButton(onClick = onToggleTheme) {
                             Icon(
                                 imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                contentDescription = "Toggle Theme"
+                                contentDescription = stringResource(R.string.ui_toggle_theme)
                             )
                         }
                         IconButton(onClick = {
@@ -400,12 +400,12 @@ fun MainNavigation(isDarkTheme: Boolean, appLanguage: String, onLanguageChanged:
                             if (myAvatar != null) {
                                 SnugImage(
                                     model = myAvatar,
-                                    contentDescription = "My profile",
+                                    contentDescription = stringResource(R.string.ui_my_profile),
                                     modifier = Modifier.size(34.dp).clip(CircleShape),
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
                             } else {
-                                Icon(Icons.Default.Person, contentDescription = "My profile")
+                                Icon(Icons.Default.Person, contentDescription = stringResource(R.string.ui_my_profile))
                             }
                         }
                     }
