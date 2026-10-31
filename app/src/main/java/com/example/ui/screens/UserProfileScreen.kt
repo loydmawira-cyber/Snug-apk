@@ -20,6 +20,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.R
 import com.example.ui.components.PresenceBadge
 import com.example.ui.components.SnugImage
 import com.example.data.model.UserProfile
