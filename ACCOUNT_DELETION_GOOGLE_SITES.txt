@@ -1,0 +1,35 @@
+SNUG ACCOUNT AND DATA DELETION
+
+Smart Tech Labs provides both an in-app account deletion option and this web-based way to request deletion. If you need help, contact smarttechlab.apps@gmail.com.
+
+DELETE YOUR ACCOUNT IN THE SNUG APP
+
+1. Sign in to SNUG.
+2. Open your Profile.
+3. Scroll to the account actions near the bottom of the screen.
+4. Select “Delete Account” and confirm.
+
+For security, SNUG may require you to sign in again before the deletion can complete. If the app asks you to do this, sign out, sign back in, and try the deletion again. Uninstalling the app does not delete your account.
+
+REQUEST DELETION ON THE WEB
+
+If you cannot use the app, email smarttechlab.apps@gmail.com from the email address connected to your SNUG account.
+
+Subject: SNUG Account and Data Deletion Request
+
+Include your SNUG display name, if known, and state that you want your account and associated personal data deleted. Do not include your password. Smart Tech Labs may request reasonable information to verify that you control the account before processing the request. We will confirm by email when the request has been reviewed and processed, or explain if some information cannot be deleted.
+
+WHAT HAPPENS TO YOUR DATA
+
+When deletion is completed, the app removes your sign-in account and main profile, along with profile gallery/contact records, matches, and certain related activity handled by the current deletion process.
+
+Some chat-message records and reports are not automatically removed by the current in-app deletion flow. If you want those records reviewed for deletion, include that request in your email. We will remove eligible account-linked information. We may retain limited records when necessary for user safety, fraud prevention, resolving disputes, or legal obligations, and will explain if any information must be retained.
+
+Deleting your SNUG account does not cancel a VIP subscription managed by Google Play. If you have an active subscription, cancel it separately in Google Play: Play Store > profile icon > Payments & subscriptions > Subscriptions > SNUG.
+
+CONTACT
+
+Smart Tech Labs
+smarttechlab.apps@gmail.com
+
+PUBLISHING NOTE FOR THE ACCOUNT OWNER (do not paste this note into the public page): Publish this page in Google Sites and paste its public URL into Play Console’s App content > Data safety > Account deletion URL field. Check that the page is public and opens without requiring a Google sign-in. The page is an external email-based request route; monitor the contact inbox and fulfill verified deletion requests. The app currently leaves some chat and report records after in-app deletion, so this disclosure must remain until that implementation is changed and tested.

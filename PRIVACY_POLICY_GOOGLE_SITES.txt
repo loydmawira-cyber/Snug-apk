@@ -1,0 +1,58 @@
+SNUG PRIVACY POLICY
+
+Effective date: November 1, 2026
+
+Smart Tech Labs (“we,” “us,” or “our”) operates the SNUG dating app. This policy explains what information SNUG handles, how it is used and shared, and how you can request deletion. For privacy questions or requests, contact smarttechlab.apps@gmail.com.
+
+1. INFORMATION SNUG HANDLES
+
+Account information. When you register or sign in, Firebase Authentication processes account identifiers and sign-in information, such as your email address and authentication credentials. SNUG does not receive or store your account password in readable form.
+
+Profile information. SNUG may store the name you provide, age or birth date, gender, dating preferences, interests, biography, profile prompts and answers, and optional profile details such as education, work, height, pets, and lifestyle preferences.
+
+Photos and verification. SNUG may store profile and gallery photos you choose to add, and a selfie submitted for photo verification. Verification information may be reviewed by authorized SNUG moderators to check that a profile photo matches the submitted selfie.
+
+Location. If you grant location permission, SNUG uses your device location to help find nearby profiles and calculate distance. The app rounds latitude and longitude before saving them to the profile and may derive city and country. Your location and distance visibility depend on the app’s profile visibility settings. You can deny location permission or change it in Android settings; nearby discovery may then be limited.
+
+Messages and activity. SNUG handles chat messages and message photos, likes and passes, matches, blocks, notifications, and reports you submit. These records are used to provide messaging and matching features and to maintain safety.
+
+Subscriptions. If you buy SNUG VIP, Google Play processes the payment. SNUG receives subscription and purchase verification information, such as the product, purchase token, subscription status, and expiry information. SNUG does not receive your full payment-card number through Google Play Billing.
+
+2. HOW INFORMATION IS USED
+
+We use information to create and operate your account, display and personalize profiles, match users, support chats and notifications, calculate nearby results, verify photos, investigate reports, prevent abuse and fraud, provide customer support, and verify and manage VIP subscriptions.
+
+3. HOW INFORMATION IS SHARED
+
+Information you put in your profile may be shown to other SNUG users according to the profile visibility controls in the app. Messages and message photos are delivered to the people in that conversation. Reports and verification materials may be accessible to authorized moderators for safety review.
+
+SNUG uses Google/Firebase services for authentication, database storage, app functions, and app integrity checks. Google Play processes in-app subscription payments and provides subscription verification. These providers handle information as needed to provide their services under their own privacy terms. We may also disclose information when required by law or when reasonably necessary to protect users, enforce our rules, or respond to abuse and security issues.
+
+4. RETENTION AND ACCOUNT DELETION
+
+We keep account and profile information while your account is active and use it as described in this policy. You can start account deletion in the app by opening your Profile and selecting “Delete Account,” then confirming. The app may ask you to sign in again first for security.
+
+Important: the current in-app deletion process removes the Firebase sign-in account, the main profile, the profile’s gallery/contact records, matches, and certain related activity. It does not automatically remove every chat-message record or every report. To request deletion of remaining account-linked information, email smarttechlab.apps@gmail.com from the email address associated with your account. Use the subject “SNUG Account and Data Deletion Request,” include your SNUG display name if known, and do not send your password. We may ask for reasonable information to verify that you control the account. We will review the request and remove eligible information; we may retain limited information where necessary for safety, fraud prevention, resolving disputes, or legal obligations. We will tell you if we cannot delete particular information and why.
+
+5. YOUR CHOICES AND RIGHTS
+
+You can edit profile details and visibility settings in the app and control location permission through Android settings. Depending on where you live, you may have rights to access, correct, delete, restrict, or object to certain processing of your personal information. Contact smarttechlab.apps@gmail.com to ask about these rights.
+
+6. CHILDREN
+
+SNUG is intended for adults aged 18 and older. It is not intended for children under 18, and we do not knowingly allow people under 18 to use the service. If you believe a minor has provided information to SNUG, contact us so we can investigate and take appropriate action.
+
+7. SECURITY
+
+We use reasonable technical and organizational safeguards intended to protect information. No online service or storage system can be guaranteed to be completely secure.
+
+8. CHANGES TO THIS POLICY
+
+We may update this policy as SNUG changes or legal requirements change. We will post the current version at this page and update the effective date. Please review it periodically.
+
+9. CONTACT
+
+Smart Tech Labs
+Email: smarttechlab.apps@gmail.com
+
+DRAFT NOTE FOR THE PUBLISHER (do not paste this note into the public page): The project’s current deletion code leaves chat-message documents and some report records behind. Keep the disclosure in section 4 unless you update and verify the deletion implementation. Before publishing, review the policy against your actual Firebase configuration, retention practices, applicable laws, and the final public support process.
