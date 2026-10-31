@@ -7,4 +7,77 @@
     <string name="new_near_you">Wapya karibu nawe</string><string name="new_near_you_description">Wasifu mpya ndani ya eneo lako la utafutaji</string><string name="no_new_nearby">Hakuna wasifu mpya karibu nawe kwa sasa.</string><string name="close_matches_worldwide">Wanaokufaa duniani kote</string><string name="worldwide_description">Watu walio nje ya eneo lako, wamepangwa kwa ulinganifu</string><string name="worldwide_empty">Wanaokufaa zaidi wataonekana wasifu mpya wanapopakuliwa.</string>
     <string name="online_now">Waliopo mtandaoni sasa</string><string name="online_subtitle">Angalia walio hapa na tayari kuwasiliana</string><string name="who_liked_you">Waliokupenda</string><string name="online_near_you">Waliopo mtandaoni karibu nawe</string><string name="new_and_online">Wapya na waliopo mtandaoni</string><string name="no_liked_online">Hakuna aliyekupenda aliye mtandaoni sasa.</string><string name="no_one_nearby_online">Hakuna aliye karibu nawe mtandaoni sasa.</string><string name="no_new_online">Hakuna wasifu mpya ulio mtandaoni sasa.</string>
     <string name="language_settings_title">Lugha / Idioma</string><string name="language_settings_subtitle">%1$s · Badilisha lugha ya programu</string><string name="language_name_en">Kiingereza (Marekani)</string><string name="language_name_es">Kihispania</string><string name="language_name_fr">Kifaransa</string><string name="language_name_de">Kijerumani</string><string name="language_name_sw">Kiswahili</string><string name="language_sheet_title">Lugha ya Programu</string><string name="language_sheet_description">Chagua lugha unayopendelea kwa SNUG.</string><string name="confirm_language">Thibitisha lugha</string>
+
+    <!-- Profile, Matches, and Messages tabs -->
+    <string name="account_credentials">Taarifa za kuingia na nenosiri</string>
+    <string name="account_privacy">Akaunti na faragha</string>
+    <string name="active_chats">Mazungumzo hai</string>
+    <string name="add_profile_picture">Ongeza picha ya wasifu</string>
+    <string name="admin_verify_review">Msimamizi: kagua uthibitishaji</string>
+    <string name="app_preferences">Programu na mapendeleo</string>
+    <string name="archive">Hifadhi</string>
+    <string name="archived_count">Zilizohifadhiwa (%1$d)</string>
+    <string name="change_password_email">Badilisha nenosiri na barua pepe</string>
+    <string name="change_profile_picture">Badilisha picha ya wasifu</string>
+    <string name="choose_visibility">Chagua wengine wanachoweza kuona</string>
+    <string name="clear_search">Futa</string>
+    <string name="compare_selfies">Linganisha selfie na picha za wasifu</string>
+    <string name="data_privacy_export">Faragha na uhamishaji wa data</string>
+    <string name="dating_safety_tips">Vidokezo vya usalama na tahadhari</string>
+    <string name="delete_account">Futa akaunti</string>
+    <string name="device_sessions">Vifaa na vipindi vinavyotumika</string>
+    <string name="discovery_preferences">Mapendeleo ya kutafuta watu</string>
+    <string name="distance_age_gender">Umbali, umri na jinsia</string>
+    <string name="download_account_json">Pakua kumbukumbu ya data ya akaunti (JSON)</string>
+    <string name="edit_profile_bio">Hariri wasifu na maelezo</string>
+    <string name="email_verification">Uthibitishaji wa barua pepe</string>
+    <string name="enabled">Imewashwa</string>
+    <string name="get_vip">Pata SNUG VIP</string>
+    <string name="help_guidelines">Usaidizi na miongozo ya jumuiya</string>
+    <string name="likes_you_count">Watu wanaokupenda: %1$d</string>
+    <string name="log_out">Ondoka</string>
+    <string name="manage_devices">Dhibiti vifaa na uondoke kwenye vingine</string>
+    <string name="matches_empty">Bado hakuna ulinganifu. Endelea kutelezesha!</string>
+    <string name="message_action">Ujumbe</string>
+    <string name="messages_title">Ujumbe</string>
+    <string name="my_photos_privacy">Picha zangu na faragha</string>
+    <string name="new_match_say_hello">Ulinganifu mpya! Salimia</string>
+    <string name="new_matches">Ulinganifu mpya</string>
+    <string name="no_archived_conversations">Hakuna mazungumzo yaliyohifadhiwa.</string>
+    <string name="no_conversations_yet">Bado hakuna ulinganifu. Penda mtu kwenye Gundua ili kuanza kuzungumza!</string>
+    <string name="no_matching_conversations">Hakuna mazungumzo yanayolingana.</string>
+    <string name="notifications_quiet">Arifa na saa za kimya</string>
+    <string name="off">Imezimwa</string>
+    <string name="options">Chaguo</string>
+    <string name="pause_profile">Sitisha wasifu wangu</string>
+    <string name="pending">Inasubiri</string>
+    <string name="pending_count">%1$d zinasubiri</string>
+    <string name="photo_verification">Uthibitishaji wa picha</string>
+    <string name="photos_uploaded_visibility">Picha %1$d zimepakiwa · Mwonekano na ukungu</string>
+    <string name="pin_active">PIN ya tarakimu 4 inatumika</string>
+    <string name="pin_unlock">Fungua programu haraka kwa PIN ya tarakimu 4</string>
+    <string name="premium_unlocked">Vipengele vyote vya premium vimefunguliwa</string>
+    <string name="profile_complete">Wasifu umekamilika kwa %1$d%%</string>
+    <string name="profile_photo">Picha ya wasifu</string>
+    <string name="profile_visibility">Mwonekano wa wasifu</string>
+    <string name="push_matches_quiet">Arifa, ulinganifu na ratiba ya saa za kimya</string>
+    <string name="resume_profile">Washa wasifu wangu tena</string>
+    <string name="safety_center">Kituo cha usalama</string>
+    <string name="safety_faq_support">Usalama, maswali na usaidizi</string>
+    <string name="search_conversations">Tafuta mazungumzo…</string>
+    <string name="security_pin_lock">Usalama na kufunga kwa PIN</string>
+    <string name="see_who">Tazama nani</string>
+    <string name="selfie_matches">Selfie yako inalingana na picha zako</string>
+    <string name="selfie_rejected">Selfie haikukubaliwa, jaribu tena</string>
+    <string name="selfie_review">Selfie inakaguliwa</string>
+    <string name="sign_out_account">Ondoka kwenye akaunti yako</string>
+    <string name="someone">Mtu</string>
+    <string name="take_selfie_badge">Piga selfie upate beji yako</string>
+    <string name="unarchive">Ondoa kwenye yaliyohifadhiwa</string>
+    <string name="verified">Imethibitishwa</string>
+    <string name="verified_email">%1$s imethibitishwa</string>
+    <string name="verify">Thibitisha</string>
+    <string name="verify_email_address">Thibitisha anwani yako ya barua pepe</string>
+    <string name="vip_active">SNUG VIP inatumika</string>
+    <string name="vip_benefits">Vipendwa, kurudisha nyuma na Super Likes bila kikomo</string>
 </resources>
