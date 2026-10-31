@@ -639,4 +639,8 @@
     <string name="distance_under_100m">Less than 100 m away</string>
     <string name="distance_km_away">%1$.1f km away</string>
     <string name="location_unknown">Location unknown</string>
+
+    <string name="legal_privacy_policy">Privacy Policy</string>
+    <string name="legal_terms_conditions">Terms &amp; Conditions</string>
+    <string name="legal_close">Close</string>
 </resources>
