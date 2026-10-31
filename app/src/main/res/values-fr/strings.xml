@@ -595,4 +595,8 @@
     <string name="distance_under_100m">À moins de 100 m</string>
     <string name="distance_unknown">Distance inconnue</string>
     <string name="location_unknown">Emplacement inconnu</string>
+
+    <string name="legal_privacy_policy">Politique de confidentialité</string>
+    <string name="legal_terms_conditions">Conditions générales</string>
+    <string name="legal_close">Fermer</string>
 </resources>
