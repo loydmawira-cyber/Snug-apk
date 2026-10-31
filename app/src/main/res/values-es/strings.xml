@@ -554,7 +554,7 @@
     <string name="visibility_verified_badge">Insignia de verificación</string>
     <string name="visibility_verified_desc">Muestra tu insignia de verificación telefónica</string>
     <string name="zodiac_sign">Signo del zodiaco</string>
-    <string name="profile_age_range_years">%1$d - %1$d años</string>
+    <string name="profile_age_range_years">%1$d - %2$d años</string>
     <string name="profile_all_vip">Todos los beneficios VIP</string>
     <string name="profile_basic">Básicos</string>
     <string name="profile_blurred">Desenfocadas</string>
