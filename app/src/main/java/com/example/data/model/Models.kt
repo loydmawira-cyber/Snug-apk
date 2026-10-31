@@ -169,14 +169,14 @@ fun UserProfile.publicViewForOthers(): UserProfile {
 }
 
 /** "City, Country - 12 km away", falling back gracefully when something is unknown. */
-fun placeAndDistance(profile: UserProfile, distanceText: String): String {
+fun placeAndDistance(profile: UserProfile, distanceText: String, distanceUnknown: String, locationUnknown: String): String {
     val place = profile.locationLabel()
-    val dist = distanceText.takeIf { it != "Distance unknown" && !profile.hideDistance }
+    val dist = distanceText.takeIf { it != distanceUnknown && !profile.hideDistance }
     return when {
         place.isNotBlank() && dist != null -> "$place \u2022 $dist"
         place.isNotBlank() -> place
         dist != null -> dist
-        else -> "Location unknown"
+        else -> locationUnknown
     }
 }
 
