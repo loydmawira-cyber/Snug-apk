@@ -635,4 +635,8 @@
     <string name="distance_under_100m">100 m未満</string>
     <string name="distance_unknown">距離不明</string>
     <string name="location_unknown">位置情報不明</string>
+
+    <string name="legal_privacy_policy">プライバシーポリシー</string>
+    <string name="legal_terms_conditions">利用規約</string>
+    <string name="legal_close">閉じる</string>
 </resources>
