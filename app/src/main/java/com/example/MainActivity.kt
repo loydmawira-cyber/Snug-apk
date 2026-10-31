@@ -1,6 +1,7 @@
 package com.example
 
 import android.Manifest
+import android.content.Context
 import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -27,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +52,16 @@ import com.google.firebase.auth.auth
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        val language = newBase
+            .getSharedPreferences("snug_preferences", Context.MODE_PRIVATE)
+            .getString("app_language", "en") ?: "en"
+        val localizedConfiguration = Configuration(newBase.resources.configuration).apply {
+            setLocale(Locale.forLanguageTag(language))
+        }
+        super.attachBaseContext(newBase.createConfigurationContext(localizedConfiguration))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -69,33 +79,20 @@ class MainActivity : ComponentActivity() {
             var appLanguage by remember {
                 mutableStateOf(preferences.getString("app_language", "en") ?: "en")
             }
-            val languageConfiguration = remember(context, appLanguage) {
-                Configuration(context.resources.configuration).apply {
-                    setLocale(Locale.forLanguageTag(appLanguage))
-                }
-            }
-            val languageContext = remember(context, languageConfiguration) {
-                context.createConfigurationContext(languageConfiguration)
-            }
-            
             SNUGTheme(darkTheme = darkTheme) {
-                CompositionLocalProvider(
-                    LocalConfiguration provides languageConfiguration,
-                    LocalContext provides languageContext
-                ) {
-                    AppContent(
-                        isDarkTheme = darkTheme,
-                        appLanguage = appLanguage,
-                        onLanguageChanged = { language ->
-                            appLanguage = language
-                            preferences.edit().putString("app_language", language).apply()
-                        },
-                        onToggleTheme = {
-                            darkTheme = !darkTheme
-                            preferences.edit().putBoolean("dark_theme", darkTheme).apply()
-                        }
-                    )
-                }
+                AppContent(
+                    isDarkTheme = darkTheme,
+                    appLanguage = appLanguage,
+                    onLanguageChanged = { language ->
+                        preferences.edit().putString("app_language", language).apply()
+                        appLanguage = language
+                        recreate()
+                    },
+                    onToggleTheme = {
+                        darkTheme = !darkTheme
+                        preferences.edit().putBoolean("dark_theme", darkTheme).apply()
+                    }
+                )
             }
         }
     }
