@@ -252,6 +252,8 @@ fun MainNavigation(isDarkTheme: Boolean, appLanguage: String, onLanguageChanged:
     ) { grants -> if (grants.values.any { it }) viewModel.refreshLocation() }
     val uiMessage by viewModel.uiMessage.collectAsState()
     val myProfile by viewModel.currentUserProfile.collectAsState()
+    val moderationVm: com.example.ui.viewmodel.ModerationViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val suspension by moderationVm.mySuspension.collectAsState()
     val notifications by viewModel.notifications.collectAsState()
     val unreadCount = notifications.count { !it.read }
     var showNotifications by remember { mutableStateOf(false) }
@@ -260,8 +262,13 @@ fun MainNavigation(isDarkTheme: Boolean, appLanguage: String, onLanguageChanged:
     val hasProfile = myProfile != null
 
     // Admin suspended this account: show only the suspension screen
-    if (myProfile?.banned == true) {
-        com.example.ui.screens.SuspendedScreen(onLogout = { viewModel.goOffline { com.example.ui.components.signOut(appContext) {} } })
+    // (the live suspension status wins over the profile loaded at start, so a lifted suspension switches the app back on)
+    if (suspension?.banned ?: (myProfile?.banned == true)) {
+        com.example.ui.screens.SuspendedAppealScreen(
+            vm = moderationVm,
+            name = myProfile?.displayName ?: "",
+            onLogout = { viewModel.goOffline { com.example.ui.components.signOut(appContext) {} } }
+        )
         return
     }
 
