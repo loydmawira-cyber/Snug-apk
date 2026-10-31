@@ -579,6 +579,10 @@ fun ProfileScreen(
                             "fr" -> stringResource(R.string.language_name_fr)
                             "de" -> stringResource(R.string.language_name_de)
                             "sw" -> stringResource(R.string.language_name_sw)
+                            "ja" -> stringResource(R.string.language_name_ja)
+                            "zh" -> stringResource(R.string.language_name_zh)
+                            "hi" -> stringResource(R.string.language_name_hi)
+                            "tl" -> stringResource(R.string.language_name_tl)
                             else -> stringResource(R.string.language_name_en)
                         }
                     ),
@@ -1894,7 +1898,11 @@ fun AppLanguageSheet(currentLanguage: String = "en", onApply: (String) -> Unit =
         "es" to R.string.language_name_es,
         "fr" to R.string.language_name_fr,
         "de" to R.string.language_name_de,
-        "sw" to R.string.language_name_sw
+        "sw" to R.string.language_name_sw,
+        "ja" to R.string.language_name_ja,
+        "zh" to R.string.language_name_zh,
+        "hi" to R.string.language_name_hi,
+        "tl" to R.string.language_name_tl
     )
 
     ModalBottomSheet(
