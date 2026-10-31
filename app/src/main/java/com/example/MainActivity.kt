@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -79,14 +80,23 @@ class MainActivity : ComponentActivity() {
             var appLanguage by remember {
                 mutableStateOf(preferences.getString("app_language", "en") ?: "en")
             }
+            var languagePrompted by remember {
+                mutableStateOf(preferences.getBoolean("language_prompted", false))
+            }
             SNUGTheme(darkTheme = darkTheme) {
                 AppContent(
                     isDarkTheme = darkTheme,
                     appLanguage = appLanguage,
+                    showLanguagePrompt = !languagePrompted,
                     onLanguageChanged = { language ->
-                        preferences.edit().putString("app_language", language).apply()
+                        preferences.edit().putString("app_language", language).putBoolean("language_prompted", true).apply()
                         appLanguage = language
+                        languagePrompted = true
                         recreate()
+                    },
+                    onLanguagePromptFinished = {
+                        preferences.edit().putBoolean("language_prompted", true).apply()
+                        languagePrompted = true
                     },
                     onToggleTheme = {
                         darkTheme = !darkTheme
@@ -99,7 +109,14 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppContent(isDarkTheme: Boolean, appLanguage: String, onLanguageChanged: (String) -> Unit, onToggleTheme: () -> Unit) {
+fun AppContent(
+    isDarkTheme: Boolean,
+    appLanguage: String,
+    showLanguagePrompt: Boolean = false,
+    onLanguageChanged: (String) -> Unit,
+    onLanguagePromptFinished: () -> Unit = {},
+    onToggleTheme: () -> Unit
+) {
     val context = LocalContext.current
     LaunchedEffect(Unit) {
         com.example.data.security.DemoAuthManager.init(context)
@@ -127,7 +144,12 @@ fun AppContent(isDarkTheme: Boolean, appLanguage: String, onLanguageChanged: (St
     val isAuthenticated = currentUser != null || demoUid != null
 
     if (!isAuthenticated) {
-        SignInScreen()
+        SignInScreen(
+            appLanguage = appLanguage,
+            showLanguagePrompt = showLanguagePrompt,
+            onLanguageChanged = onLanguageChanged,
+            onLanguagePromptFinished = onLanguagePromptFinished
+        )
     } else if (pinManager.isPinEnabled() && !isUnlocked) {
         PinUnlockScreen(
             onUnlocked = { isUnlocked = true },
@@ -143,7 +165,23 @@ fun AppContent(isDarkTheme: Boolean, appLanguage: String, onLanguageChanged: (St
 }
 
 @Composable
-fun SignInScreen() {
+fun SignInScreen(
+    appLanguage: String = "en",
+    showLanguagePrompt: Boolean = false,
+    onLanguageChanged: (String) -> Unit = {},
+    onLanguagePromptFinished: () -> Unit = {}
+) {
+    var showLanguageChooser by remember(showLanguagePrompt) { mutableStateOf(showLanguagePrompt) }
+    if (showLanguageChooser) {
+        com.example.ui.screens.AppLanguageSheet(
+            currentLanguage = appLanguage,
+            onApply = onLanguageChanged,
+            onDismiss = {
+                showLanguageChooser = false
+                onLanguagePromptFinished()
+            }
+        )
+    }
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
@@ -152,6 +190,13 @@ fun SignInScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = { showLanguageChooser = true }) {
+                    Icon(Icons.Default.Language, contentDescription = null)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.language_settings_title))
+                }
+            }
             Image(
                 painter = painterResource(id = R.drawable.img_app_icon_1791026447003),
                 contentDescription = "SNUG Logo",
