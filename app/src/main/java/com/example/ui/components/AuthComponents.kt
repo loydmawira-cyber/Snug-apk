@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import com.example.R
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
