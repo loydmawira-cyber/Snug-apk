@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import com.example.R
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
