@@ -34,6 +34,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun PinUnlockScreen(
@@ -109,7 +110,7 @@ fun PinUnlockScreen(
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.img_app_icon_1791026447003),
-                    contentDescription = "SNUG Logo",
+                    contentDescription = stringResource(R.string.ui_snug_logo),
                     modifier = Modifier
                         .size(80.dp)
                         .clip(CircleShape)
@@ -250,7 +251,7 @@ fun PinKeypad(
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.Backspace,
-                                        contentDescription = "Backspace",
+                                        contentDescription = stringResource(R.string.ui_backspace),
                                         tint = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.size(26.dp)
                                     )
@@ -401,7 +402,7 @@ fun PinSetupDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 TextButton(onClick = onDismiss) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.ui_cancel))
                 }
             }
         }

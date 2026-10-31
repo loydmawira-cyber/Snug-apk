@@ -18,6 +18,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun EmailSignInFlow(
@@ -42,7 +43,7 @@ fun EmailSignInFlow(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it.trim(); resetMessage = null },
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.ui_email)) },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
@@ -52,7 +53,7 @@ fun EmailSignInFlow(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.ui_password)) },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
@@ -69,7 +70,7 @@ fun EmailSignInFlow(
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
-                label = { Text("Confirm password") },
+                label = { Text(stringResource(R.string.ui_confirm_password)) },
                 modifier = Modifier.fillMaxWidth(),
                 visualTransformation = if (showConfirmPassword) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -110,7 +111,7 @@ fun EmailSignInFlow(
                 },
                 enabled = !isLoading,
                 modifier = Modifier.align(Alignment.End)
-            ) { Text("Forgot password?") }
+            ) { Text(stringResource(R.string.ui_forgot_password)) }
         }
         Spacer(modifier = Modifier.height(24.dp))
         
@@ -196,7 +197,7 @@ fun EmailSignInFlow(
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = MaterialTheme.shapes.extraLarge
         ) {
-            Text("Continue in Demo / Guest Mode")
+            Text(stringResource(R.string.ui_continue_in_demo_guest_mode))
         }
     }
 }
