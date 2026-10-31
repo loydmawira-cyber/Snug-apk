@@ -479,15 +479,6 @@ fun ProfileCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (profile.showPresenceToOthers) {
-                    val online = profile.isOnlineNow()
-                    Surface(shape = RoundedCornerShape(22.dp), color = Color(0xFF303A46).copy(alpha = .94f)) {
-                        Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            Box(Modifier.size(8.dp).clip(CircleShape).background(if (online) Color(0xFF36D98A) else Color.LightGray))
-                            Text(if (online) "Online" else "Offline", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                }
                 FilledTonalIconButton(
                     onClick = { showMore = true },
                     modifier = Modifier.size(48.dp),
@@ -500,24 +491,6 @@ fun ProfileCard(
                     DropdownMenuItem(text = { Text("Boost profile") }, onClick = { showMore = false; onBoost() })
                 }
             }
-            if (liked) {
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 16.dp)
-                        .zIndex(2f)
-                ) {
-                    Text(
-                        "Liked \u2764",
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
