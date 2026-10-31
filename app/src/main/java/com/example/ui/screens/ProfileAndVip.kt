@@ -233,7 +233,7 @@ fun ProfileScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Profile $pct% complete", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.profile_complete, pct), fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
                         LinearProgressIndicator(
                             progress = { pct / 100f },
@@ -266,7 +266,7 @@ fun ProfileScreen(
                     if (avatarUrl != null) {
                         SnugImage(
                             model = avatarUrl,
-                            contentDescription = "Profile Photo",
+                            contentDescription = stringResource(R.string.profile_photo),
                             modifier = Modifier
                                 .size(100.dp)
                                 .clip(CircleShape)
@@ -318,7 +318,7 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(
                             Icons.Default.Verified,
-                            contentDescription = "Verified",
+                            contentDescription = stringResource(R.string.verified),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -354,7 +354,7 @@ fun ProfileScreen(
                 ) {
                     Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Edit Profile & Bio")
+                    Text(stringResource(R.string.edit_profile_bio))
                 }
             }
         }
@@ -385,9 +385,9 @@ fun ProfileScreen(
                 }
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(if (hasPremium) "SNUG VIP is active" else "Get SNUG VIP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(stringResource(if (hasPremium) R.string.vip_active else R.string.get_vip), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        if (hasPremium) "All premium features are unlocked for you" else "Unlimited likes, rewinds & Super Likes",
+                        stringResource(if (hasPremium) R.string.premium_unlocked else R.string.vip_benefits),
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 12.sp
                     )
@@ -407,7 +407,7 @@ fun ProfileScreen(
 
         // Category 1: Account & Privacy Settings
         Text(
-            text = "Account & Privacy",
+            text = stringResource(R.string.account_privacy),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
@@ -424,9 +424,9 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.Email,
                     iconTint = if (emailVerified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    title = "Email Verification",
-                    subtitle = if (emailVerified) "${EmailVerifier.email()} is verified" else "Verify your email address",
-                    badge = if (emailVerified) "Verified" else "Verify",
+                    title = stringResource(R.string.email_verification),
+                    subtitle = if (emailVerified) stringResource(R.string.verified_email, EmailVerifier.email()) else stringResource(R.string.verify_email_address),
+                    badge = stringResource(if (emailVerified) R.string.verified else R.string.verify),
                     badgeColor = if (emailVerified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     onClick = { activeSubScreen = ProfileSubScreen.PHOTO_VERIFICATION }
                 )
@@ -436,17 +436,17 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.Face,
                     iconTint = if (profile?.photoVerified == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    title = "Photo Verification",
+                    title = stringResource(R.string.photo_verification),
                     subtitle = when {
-                        profile?.photoVerified == true -> "Your selfie matched your photos"
-                        verifyStatus == "pending" -> "Selfie under review"
-                        verifyStatus == "rejected" -> "Selfie not accepted, try again"
-                        else -> "Take a selfie to earn your badge"
+                        profile?.photoVerified == true -> stringResource(R.string.selfie_matches)
+                        verifyStatus == "pending" -> stringResource(R.string.selfie_review)
+                        verifyStatus == "rejected" -> stringResource(R.string.selfie_rejected)
+                        else -> stringResource(R.string.take_selfie_badge)
                     },
                     badge = when {
-                        profile?.photoVerified == true -> "Verified"
-                        verifyStatus == "pending" -> "Pending"
-                        else -> "Verify"
+                        profile?.photoVerified == true -> stringResource(R.string.verified)
+                        verifyStatus == "pending" -> stringResource(R.string.pending)
+                        else -> stringResource(R.string.verify)
                     },
                     badgeColor = if (profile?.photoVerified == true || verifyStatus == "pending") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     onClick = { activeSubScreen = ProfileSubScreen.PHOTO_VERIFICATION }
@@ -458,9 +458,9 @@ fun ProfileScreen(
                     SettingsMenuRow(
                         icon = Icons.Default.Verified,
                         iconTint = MaterialTheme.colorScheme.primary,
-                        title = "Admin: Verification review",
-                        subtitle = "Compare selfies with profile photos",
-                        badge = "${pendingCount.size} pending",
+                        title = stringResource(R.string.admin_verify_review),
+                        subtitle = stringResource(R.string.compare_selfies),
+                        badge = stringResource(R.string.pending_count, pendingCount.size),
                         badgeColor = if (pendingCount.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
                         onClick = onOpenAdmin
                     )
@@ -471,8 +471,8 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.Collections,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    title = "My Photos & Privacy",
-                    subtitle = "${profile?.photos?.size ?: 0} photos uploaded • Visibility and blur",
+                    title = stringResource(R.string.my_photos_privacy),
+                    subtitle = stringResource(R.string.photos_uploaded_visibility, profile?.photos?.size ?: 0),
                     onClick = { activeSubScreen = ProfileSubScreen.PHOTOS_PRIVACY }
                 )
 
@@ -481,8 +481,8 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.Visibility,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Profile Visibility",
-                    subtitle = "Choose what other members can see",
+                    title = stringResource(R.string.profile_visibility),
+                    subtitle = stringResource(R.string.choose_visibility),
                     onClick = { activeSubScreen = ProfileSubScreen.PROFILE_VISIBILITY }
                 )
 
@@ -491,9 +491,9 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.Lock,
                     iconTint = if (isPinEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    title = "Security & PIN Lock",
-                    subtitle = if (isPinEnabled) "4-Digit PIN Lock Active" else "Fast app unlock with 4-digit PIN",
-                    badge = if (isPinEnabled) "Enabled" else "Off",
+                    title = stringResource(R.string.security_pin_lock),
+                    subtitle = stringResource(if (isPinEnabled) R.string.pin_active else R.string.pin_unlock),
+                    badge = stringResource(if (isPinEnabled) R.string.enabled else R.string.off),
                     badgeColor = if (isPinEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                     onClick = { activeSubScreen = ProfileSubScreen.SECURITY_PIN_LOCK }
                 )
@@ -503,8 +503,8 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.Key,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Account Credentials & Password",
-                    subtitle = "Change password & update email",
+                    title = stringResource(R.string.account_credentials),
+                    subtitle = stringResource(R.string.change_password_email),
                     onClick = { activeSubScreen = ProfileSubScreen.ACCOUNT_SECURITY }
                 )
 
@@ -513,8 +513,8 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.Devices,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Device & Active Sessions",
-                    subtitle = "Manage devices and sign out elsewhere",
+                    title = stringResource(R.string.device_sessions),
+                    subtitle = stringResource(R.string.manage_devices),
                     onClick = { activeSubScreen = ProfileSubScreen.DEVICE_SESSIONS }
                 )
 
@@ -523,8 +523,8 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.Download,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Data Privacy & Export",
-                    subtitle = "Download your account data archive (JSON)",
+                    title = stringResource(R.string.data_privacy_export),
+                    subtitle = stringResource(R.string.download_account_json),
                     onClick = { activeSubScreen = ProfileSubScreen.DATA_EXPORT }
                 )
             }
@@ -534,7 +534,7 @@ fun ProfileScreen(
 
         // Category 2: App & Matching Preferences
         Text(
-            text = "App & Preferences",
+            text = stringResource(R.string.app_preferences),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
@@ -551,8 +551,8 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.Tune,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Discovery Preferences",
-                    subtitle = "Distance radius, age filter & gender",
+                    title = stringResource(R.string.discovery_preferences),
+                    subtitle = stringResource(R.string.distance_age_gender),
                     onClick = { activeSubScreen = ProfileSubScreen.DISCOVERY_PREFERENCES }
                 )
 
@@ -561,8 +561,8 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.Notifications,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Notifications & Quiet Hours",
-                    subtitle = "Push alerts, matches & quiet hours schedule",
+                    title = stringResource(R.string.notifications_quiet),
+                    subtitle = stringResource(R.string.push_matches_quiet),
                     onClick = { activeSubScreen = ProfileSubScreen.NOTIFICATION_SETTINGS }
                 )
 
@@ -590,8 +590,8 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.HealthAndSafety,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Safety Center",
-                    subtitle = "Dating safety tips and red flags",
+                    title = stringResource(R.string.safety_center),
+                    subtitle = stringResource(R.string.dating_safety_tips),
                     onClick = { activeSubScreen = ProfileSubScreen.SAFETY_CENTER }
                 )
 
@@ -600,8 +600,8 @@ fun ProfileScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.HelpOutline,
                     iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    title = "Help & Community Guidelines",
-                    subtitle = "Safety rules, FAQs & support",
+                    title = stringResource(R.string.help_guidelines),
+                    subtitle = stringResource(R.string.safety_faq_support),
                     onClick = { activeSubScreen = ProfileSubScreen.HELP_SUPPORT }
                 )
 
@@ -634,7 +634,7 @@ fun ProfileScreen(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 Icons.Default.Logout,
-                                contentDescription = "Logout",
+                                contentDescription = stringResource(R.string.log_out),
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -642,8 +642,8 @@ fun ProfileScreen(
                     }
                     Spacer(modifier = Modifier.width(14.dp))
                     Column {
-                        Text("Log Out", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                        Text("Sign out of your account", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.log_out), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.sign_out_account), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 Icon(
@@ -661,10 +661,10 @@ fun ProfileScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(onClick = { viewModel.setPaused(profile?.isPaused != true) }) {
-                Text(if (profile?.isPaused == true) "Resume my profile" else "Pause my profile")
+                Text(stringResource(if (profile?.isPaused == true) R.string.resume_profile else R.string.pause_profile))
             }
             TextButton(onClick = { showDeleteDialog = true }) {
-                Text("Delete account", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.delete_account), color = MaterialTheme.colorScheme.error)
             }
         }
 

@@ -57,6 +57,8 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import com.example.data.model.calculateCompatibility
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun MatchesScreen(viewModel: SnugViewModel, navController: NavController) {
@@ -73,17 +75,17 @@ fun MatchesScreen(viewModel: SnugViewModel, navController: NavController) {
             ) {
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "${likesYou.size} ${if (likesYou.size == 1) "person likes" else "people like"} you \u2764\uFE0F",
+                        stringResource(R.string.likes_you_count, likesYou.size) + " \u2764\uFE0F",
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
-                    Text("See who", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.see_who), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
         Text(
-            "New Matches",
+            stringResource(R.string.new_matches),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
@@ -91,7 +93,7 @@ fun MatchesScreen(viewModel: SnugViewModel, navController: NavController) {
         
         if (matches.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No matches yet. Keep swiping!", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                Text(stringResource(R.string.matches_empty), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
             }
         } else {
             androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
@@ -151,7 +153,7 @@ fun MatchGridItem(
                     modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
                 ) {
                     Text(
-                        "\u2728 $compatibility% Match",
+                        stringResource(R.string.match_percent, compatibility),
                         color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -160,7 +162,7 @@ fun MatchGridItem(
                 }
             }
             Text(
-                text = match.otherUser?.displayName ?: "Someone",
+                text = match.otherUser?.displayName ?: stringResource(R.string.someone),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.BottomStart).padding(12.dp)
@@ -169,7 +171,7 @@ fun MatchGridItem(
                 onClick = onChat,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)
             ) {
-                Icon(Icons.Default.Chat, contentDescription = "Message", tint = Color.White)
+                Icon(Icons.Default.Chat, contentDescription = stringResource(R.string.message_action), tint = Color.White)
             }
         }
     }
@@ -196,7 +198,7 @@ fun MessagesScreen(viewModel: SnugViewModel, navController: NavController) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Messages",
+                stringResource(R.string.messages_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
@@ -204,7 +206,7 @@ fun MessagesScreen(viewModel: SnugViewModel, navController: NavController) {
             if (archivedMatches.isNotEmpty() || selectedTab == 1) {
                 AssistChip(
                     onClick = { selectedTab = if (selectedTab == 0) 1 else 0 },
-                    label = { Text(if (selectedTab == 0) "Archived (${archivedMatches.size})" else "Active Chats") },
+                    label = { Text(if (selectedTab == 0) stringResource(R.string.archived_count, archivedMatches.size) else stringResource(R.string.active_chats)) },
                     leadingIcon = {
                         Icon(
                             if (selectedTab == 0) Icons.Default.Archive else Icons.Default.Chat,
@@ -222,12 +224,12 @@ fun MessagesScreen(viewModel: SnugViewModel, navController: NavController) {
             value = searchQuery,
             onValueChange = { searchQuery = it },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            placeholder = { Text("Search conversations...") },
+            placeholder = { Text(stringResource(R.string.search_conversations)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
                     IconButton(onClick = { searchQuery = "" }) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_search))
                     }
                 }
             },
@@ -239,9 +241,9 @@ fun MessagesScreen(viewModel: SnugViewModel, navController: NavController) {
         if (filteredList.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    if (selectedTab == 1) "No archived conversations."
-                    else if (searchQuery.isNotEmpty()) "No matching conversations found."
-                    else "No matches yet. Like someone on Discover to start chatting!",
+                    if (selectedTab == 1) stringResource(R.string.no_archived_conversations)
+                    else if (searchQuery.isNotEmpty()) stringResource(R.string.no_matching_conversations)
+                    else stringResource(R.string.no_conversations_yet),
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(24.dp)
@@ -277,7 +279,7 @@ fun MatchAvatar(match: Match, onClick: () -> Unit) {
             contentScale = ContentScale.Crop
         )
         Text(
-            text = match.otherUser?.displayName ?: "Someone",
+            text = match.otherUser?.displayName ?: stringResource(R.string.someone),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium
         )
@@ -311,12 +313,12 @@ fun MatchRow(
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = match.otherUser?.displayName ?: "Someone",
+                text = match.otherUser?.displayName ?: stringResource(R.string.someone),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = match.lastMessage.ifEmpty { "New match! Say hello 👋" },
+                text = match.lastMessage.ifEmpty { stringResource(R.string.new_match_say_hello) + " 👋" },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 maxLines = 1
@@ -332,11 +334,11 @@ fun MatchRow(
             }
             Box {
                 IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
-                        text = { Text(if (match.isArchived) "Unarchive" else "Archive") },
+                        text = { Text(stringResource(if (match.isArchived) R.string.unarchive else R.string.archive)) },
                         leadingIcon = {
                             Icon(if (match.isArchived) Icons.Default.Unarchive else Icons.Default.Archive, contentDescription = null)
                         },
