@@ -148,6 +148,12 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     // Everyone matching my age/distance filters (used by Radar, includes people I already liked)
     private val _nearbyProfiles = MutableStateFlow<List<UserProfile>>(emptyList())
     val nearbyProfiles: StateFlow<List<UserProfile>> = _nearbyProfiles.asStateFlow()
+    val worldwideProfiles: StateFlow<List<UserProfile>> = combine(_rawProfiles, _currentUserProfile, _blockedIds) { raw, me, blocked ->
+        if (me == null) emptyList() else raw
+            .filter { it.id != me.id && it.id !in blocked && !it.isPaused && !it.banned && isCandidate(me, it, enforceDistance = false) }
+            .map { it.publicViewForOthers() }
+            .sortedByDescending { calculateCompatibility(me, it) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Swiped people leave the list, so the next card is always the first one
     val currentProfile: StateFlow<UserProfile?> = _discoveryProfiles
@@ -414,13 +420,13 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Whether [u] belongs in my Discover/Radar (age, distance and mutual interest). */
-    private fun isCandidate(me: UserProfile, u: UserProfile): Boolean {
+    private fun isCandidate(me: UserProfile, u: UserProfile, enforceDistance: Boolean = true): Boolean {
         // They must also be interested in my gender (empty = open to everyone)
         val theyLikeMe = u.interestedIn.isEmpty() || me.gender.isBlank() || me.gender in u.interestedIn
         val age = calculateAge(u.birthDate)
         val d = distanceTo(me, u)
         // If either person has no location yet we can't measure, so keep them
-        val distOk = d == null || d <= me.radiusKm
+        val distOk = !enforceDistance || d == null || d <= me.radiusKm
         return theyLikeMe && age in me.minAge..me.maxAge && distOk
     }
 
