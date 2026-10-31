@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="suspension_until">Your account is suspended until %1$s.</string>
+    <string name="suspension_indefinite">Your account is suspended until our team reviews it.</string>
+    <string name="suspension_reason">Reason: %1$s</string>
+    <string name="suspension_appeal_title">Think this is a mistake?</string>
+    <string name="suspension_appeal_hint">Tell us what happened. Our team reads every appeal and answers in the app.</string>
+    <string name="suspension_appeal_field">Your message</string>
+    <string name="suspension_appeal_send">Send appeal</string>
+    <string name="suspension_appeal_sent">Your appeal was sent. Our team will review it soon.</string>
+    <string name="suspension_appeal_denied">Your last appeal was reviewed and the suspension stays in place.</string>
+    <string name="suspension_appeal_admin_note">Note from our team: %1$s</string>
+    <string name="suspension_appeal_failed">Could not send your appeal. Please try again.</string>
+    <string name="suspension_appeal_min">Write at least 10 characters.</string>
+</resources>
