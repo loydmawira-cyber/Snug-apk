@@ -554,7 +554,7 @@
     <string name="visibility_verified_badge">Beji ya uthibitisho</string>
     <string name="visibility_verified_desc">Onyesha beji yako ya uthibitisho wa simu</string>
     <string name="zodiac_sign">Alama ya nyota</string>
-    <string name="profile_age_range_years">miaka %d - %d</string>
+    <string name="profile_age_range_years">miaka %1$d - %1$d</string>
     <string name="profile_all_vip">VIP Zote</string>
     <string name="profile_basic">Msingi</string>
     <string name="profile_blurred">Iliyofifishwa</string>
