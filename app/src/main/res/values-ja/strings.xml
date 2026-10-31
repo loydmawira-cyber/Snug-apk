@@ -594,7 +594,7 @@
     <string name="visibility_verified_badge">認証バッジ</string>
     <string name="visibility_verified_desc">電話番号認証バッジを表示</string>
     <string name="zodiac_sign">星座</string>
-    <string name="profile_age_range_years">%1$d～%1$d歳</string>
+    <string name="profile_age_range_years">%1$d～%2$d歳</string>
     <string name="profile_all_vip">VIPの全機能</string>
     <string name="profile_basic">基本</string>
     <string name="profile_blurred">ぼかし表示</string>
