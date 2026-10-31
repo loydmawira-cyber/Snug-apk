@@ -635,4 +635,8 @@
     <string name="distance_under_100m">Wala pang 100 m ang layo</string>
     <string name="distance_unknown">Hindi alam ang distansya</string>
     <string name="location_unknown">Hindi alam ang lokasyon</string>
+
+    <string name="legal_privacy_policy">Patakaran sa Privacy</string>
+    <string name="legal_terms_conditions">Mga Tuntunin at Kundisyon</string>
+    <string name="legal_close">Isara</string>
 </resources>
