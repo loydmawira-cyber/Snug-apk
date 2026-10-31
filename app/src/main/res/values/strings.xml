@@ -201,4 +201,9 @@
     <string name="still_needed">Still needed:</string>
     <string name="current_email">Current: %1$s</string>
     <string name="not_set">Not set</string>
+    <string name="language_name_ja">日本語 (Japanese)</string>
+    <string name="language_name_zh">中文 (Simplified Chinese)</string>
+
+    <string name="language_name_hi">हिन्दी (Hindi)</string>
+    <string name="language_name_tl">Tagalog (Filipino)</string>
 </resources>
