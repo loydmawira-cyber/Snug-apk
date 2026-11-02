@@ -77,5 +77,7 @@ data class AdminUserRow(
 data class AdminUserPage(
     val users: List<AdminUserRow>,
     val cursor: com.google.firebase.firestore.DocumentSnapshot?,
-    val exhausted: Boolean
+    val exhausted: Boolean,
+    /** How many documents Firestore returned for this page (before any conversion). */
+    val rawCount: Int = 0
 )
