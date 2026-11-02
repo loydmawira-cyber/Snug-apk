@@ -17,6 +17,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.AggregateSource
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -249,9 +250,12 @@ class ModerationRepository(private val db: FirebaseFirestore) {
         )
     }
 
-    /** Newest registrations first, [pageSize] people at a time. Throws if Firestore refuses the read. */
-    suspend fun loadUsers(after: DocumentSnapshot?, pageSize: Long = 25): AdminUserPage {
-        var q: Query = db.collection("users").orderBy("createdAt", Query.Direction.DESCENDING)
+    /**
+     * Everyone, [pageSize] people at a time, in document-id order. (Ordering by createdAt would silently
+     * skip every account that has no createdAt field.) Throws if Firestore refuses the read.
+     */
+    suspend fun loadUsers(after: DocumentSnapshot?, pageSize: Long = 50): AdminUserPage {
+        var q: Query = db.collection("users").orderBy(FieldPath.documentId())
         if (after != null) q = q.startAfter(after)
         val snap = q.limit(pageSize).get().await()
         return AdminUserPage(
