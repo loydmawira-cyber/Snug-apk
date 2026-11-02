@@ -237,16 +237,37 @@ class ModerationRepository(private val db: FirebaseFirestore) {
     // Admin: all registered users
     // ------------------------------------------------------------------
 
+    /**
+     * Never drops a person: if a document has a field of the wrong type (so the normal conversion fails),
+     * a basic profile is built from the fields that can be read.
+     */
     private fun DocumentSnapshot.toAdminUserRow(): AdminUserRow? {
-        val p = toObject(UserProfile::class.java) ?: return null
+        if (!exists()) return null
+        val parsed = try {
+            toObject(UserProfile::class.java)
+        } catch (e: Exception) {
+            null
+        }
+        val base = parsed ?: UserProfile(
+            displayName = (get("displayName") as? String) ?: "",
+            gender = (get("gender") as? String) ?: "",
+            city = (get("city") as? String) ?: "",
+            country = (get("country") as? String) ?: "",
+            profilePhoto = (get("profilePhoto") as? String) ?: "",
+            coverPhoto = (get("coverPhoto") as? String) ?: "",
+            bio = (get("bio") as? String) ?: "",
+            photoVerified = (get("photoVerified") as? Boolean) ?: false,
+            banned = (get("banned") as? Boolean) ?: false,
+            createdAt = get("createdAt") as? Timestamp
+        )
         return AdminUserRow(
-            profile = p.copy(
+            profile = base.copy(
                 id = id,
-                isPaused = getBoolean("isPaused") ?: false,
-                isVip = getBoolean("isVip") ?: false
+                isPaused = (get("isPaused") as? Boolean) ?: false,
+                isVip = (get("isVip") as? Boolean) ?: false
             ),
-            suspendedUntil = getTimestamp("suspendedUntil"),
-            suspensionReason = getString("suspensionReason") ?: ""
+            suspendedUntil = get("suspendedUntil") as? Timestamp,
+            suspensionReason = (get("suspensionReason") as? String) ?: ""
         )
     }
 
