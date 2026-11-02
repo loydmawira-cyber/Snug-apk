@@ -387,7 +387,14 @@ class SnugViewModel(application: Application) : AndroidViewModel(application) {
                 // permission failure must never overwrite the user's existing document.
                 val profile = profileRepo.getProfileOrThrow(uid)
                 if (profile == null) {
-                    val newProfile = UserProfile(id = uid, displayName = "New User", createdAt = com.google.firebase.Timestamp.now())
+                    val newProfile = UserProfile(
+                        id = uid,
+                        displayName = "New User",
+                        minAge = 18,
+                        maxAge = 65,
+                        radiusKm = 20_000,
+                        createdAt = com.google.firebase.Timestamp.now()
+                    )
                     val saved = profileRepo.updateProfile(newProfile)
                     if (saved.isSuccess) _currentUserProfile.value = newProfile
                     else _uiMessage.value = "Could not create profile: ${saved.exceptionOrNull()?.message}"
