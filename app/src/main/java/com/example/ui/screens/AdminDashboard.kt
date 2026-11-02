@@ -41,7 +41,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
     val isAdmin by viewModel.isAdmin.collectAsState()
     val pending by viewModel.pendingVerifications.collectAsState()
     val audit by remember { viewModel.observeVerificationAudit() }.collectAsState(initial = emptyList())
-    var tab by remember { mutableStateOf(0) }
+    var tab by remember { mutableStateOf(5) }
     var rejecting by remember { mutableStateOf<VerificationRequest?>(null) }
     var stats by remember { mutableStateOf<AdminStats?>(null) }
     var statsRefresh by remember { mutableStateOf(0) }
@@ -128,14 +128,22 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
             return@Scaffold
         }
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 0.dp) {
+            ScrollableTabRow(selectedTabIndex = listOf(5, 0, 3, 4, 1, 2).indexOf(tab).coerceAtLeast(0), edgePadding = 0.dp) {
+                Tab(selected = tab == 5, onClick = { tab = 5 }, text = { Text("Users") })
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(com.example.R.string.admin_pending_count, pending.size)) })
                 Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Reports (${reportCases.size})") })
                 Tab(selected = tab == 4, onClick = { tab = 4 }, text = { Text("Appeals (${openAppeals.size})") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.ui_history)) })
                 Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text(stringResource(R.string.ui_users_stats)) })
             }
-            if (tab == 3) {
+            if (tab == 5) {
+                UsersTab(
+                    vm = modVm,
+                    pending = pending,
+                    onApprove = { req -> viewModel.decideVerification(req, approve = true) },
+                    onReject = { req -> rejecting = req }
+                )
+            } else if (tab == 3) {
                 ReportsTab(modVm)
             } else if (tab == 4) {
                 AppealsTab(modVm)
@@ -262,7 +270,7 @@ private fun PhotoColumn(label: String, image: String, modifier: Modifier) {
 @Composable
 private fun AuditRow(e: VerificationAuditEntry) {
     val approved = e.decision == "approved" || e.decision == "unsuspended" ||
-        e.decision == "report_dismissed" || e.decision == "appeal_accepted"
+        e.decision == "report_dismissed" || e.decision == "appeal_accepted" || e.decision == "verified"
     Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -271,6 +279,8 @@ private fun AuditRow(e: VerificationAuditEntry) {
                         "approved" -> "Approved"
                         "suspended" -> "Suspended"
                         "unsuspended" -> "Reinstated"
+                        "verified" -> "Badge given"
+                        "unverified" -> "Badge removed"
                         "warned" -> "Warning sent"
                         "report_dismissed" -> "Reports closed"
                         "appeal_accepted" -> "Appeal accepted"
