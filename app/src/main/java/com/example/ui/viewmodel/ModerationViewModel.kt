@@ -3,6 +3,7 @@ package com.example.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.model.AdminUserRow
 import com.example.data.model.Appeal
 import com.example.data.model.MessageReportEntry
 import com.example.data.model.ReportCase
@@ -71,6 +72,107 @@ class ModerationViewModel(application: Application) : AndroidViewModel(applicati
         act(if (accept) "Appeal accepted, ${appeal.name} reinstated" else "Appeal denied") {
             repo.decideAppeal(appeal, accept, response)
         }
+
+    // ---- Admin: all registered users ----
+    private val _users = MutableStateFlow<List<AdminUserRow>>(emptyList())
+    val users: StateFlow<List<AdminUserRow>> = _users.asStateFlow()
+
+    private val _searchResults = MutableStateFlow<List<AdminUserRow>>(emptyList())
+    val searchResults: StateFlow<List<AdminUserRow>> = _searchResults.asStateFlow()
+
+    private val _usersLoading = MutableStateFlow(false)
+    val usersLoading: StateFlow<Boolean> = _usersLoading.asStateFlow()
+
+    private val _usersExhausted = MutableStateFlow(false)
+    val usersExhausted: StateFlow<Boolean> = _usersExhausted.asStateFlow()
+
+    /** Registered people and how many of them are verified (-1 = could not be loaded). */
+    private val _userTotals = MutableStateFlow<Pair<Long, Long>?>(null)
+    val userTotals: StateFlow<Pair<Long, Long>?> = _userTotals.asStateFlow()
+
+    private var usersCursor: com.google.firebase.firestore.DocumentSnapshot? = null
+
+    /** [reset] starts again from the newest registration. */
+    fun loadUsers(reset: Boolean = false) {
+        if (_usersLoading.value) return
+        if (!reset && _usersExhausted.value) return
+        viewModelScope.launch {
+            _usersLoading.value = true
+            try {
+                if (reset) {
+                    usersCursor = null
+                    _usersExhausted.value = false
+                }
+                val page = repo.loadUsers(usersCursor)
+                usersCursor = page.cursor ?: usersCursor
+                _users.value = if (reset) page.users else (_users.value + page.users).distinctBy { it.profile.id }
+                _usersExhausted.value = page.exhausted
+            } catch (e: Exception) {
+                _message.value = "Could not load users: ${e.message}"
+            }
+            _usersLoading.value = false
+        }
+    }
+
+    fun loadUserTotals() {
+        viewModelScope.launch { _userTotals.value = repo.loadUserTotals() }
+    }
+
+    fun searchUsers(text: String) {
+        viewModelScope.launch {
+            try {
+                _searchResults.value = repo.searchUsers(text)
+            } catch (e: Exception) {
+                _message.value = "Search failed: ${e.message}"
+            }
+        }
+    }
+
+    fun clearSearch() {
+        _searchResults.value = emptyList()
+    }
+
+    /** Reloads one person after an admin action so the list shows the new state. */
+    private suspend fun refreshUser(userId: String) {
+        val fresh = repo.loadUser(userId) ?: return
+        _users.value = _users.value.map { if (it.profile.id == userId) fresh else it }
+        _searchResults.value = _searchResults.value.map { if (it.profile.id == userId) fresh else it }
+    }
+
+    private fun actOnUser(userId: String, okText: String, block: suspend () -> String?) {
+        viewModelScope.launch {
+            val problem = block()
+            _message.value = problem ?: okText
+            if (problem == null) {
+                refreshUser(userId)
+                loadUserTotals()
+            }
+        }
+    }
+
+    fun setVerified(row: AdminUserRow, verified: Boolean) =
+        actOnUser(row.profile.id, if (verified) "${row.profile.displayName} verified" else "Badge removed") {
+            repo.setVerified(row.profile.id, row.profile.displayName, verified)
+        }
+
+    /** days = 0 means permanent. */
+    fun suspendPerson(row: AdminUserRow, days: Int, reason: String) =
+        actOnUser(row.profile.id, "${row.profile.displayName} suspended") {
+            repo.suspendUser(row.profile.id, row.profile.displayName, days, reason, emptyList())
+        }
+
+    fun reinstatePerson(row: AdminUserRow) =
+        actOnUser(row.profile.id, "${row.profile.displayName} reinstated") {
+            repo.reinstate(row.profile.id, row.profile.displayName)
+        }
+
+    /** Call after a selfie was approved or rejected so the row shows the new badge. */
+    fun refreshPerson(userId: String) {
+        viewModelScope.launch {
+            refreshUser(userId)
+            loadUserTotals()
+        }
+    }
 
     // ---- The suspended person ----
     val mySuspension: StateFlow<SuspensionInfo?> = repo.observeMySuspension()
