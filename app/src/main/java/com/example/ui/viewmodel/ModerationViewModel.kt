@@ -92,6 +92,10 @@ class ModerationViewModel(application: Application) : AndroidViewModel(applicati
 
     private var usersCursor: com.google.firebase.firestore.DocumentSnapshot? = null
 
+    /** Documents Firestore has returned in total (for the counter under the filters). */
+    private val _usersFetched = MutableStateFlow(0)
+    val usersFetched: StateFlow<Int> = _usersFetched.asStateFlow()
+
     /** [reset] starts again from the newest registration. */
     fun loadUsers(reset: Boolean = false) {
         if (_usersLoading.value) return
@@ -102,9 +106,11 @@ class ModerationViewModel(application: Application) : AndroidViewModel(applicati
                 if (reset) {
                     usersCursor = null
                     _usersExhausted.value = false
+                    _usersFetched.value = 0
                 }
                 val page = repo.loadUsers(usersCursor)
                 usersCursor = page.cursor ?: usersCursor
+                _usersFetched.value = _usersFetched.value + page.rawCount
                 // Newest registrations first within what is loaded (accounts without a join date go last)
                 _users.value = (if (reset) page.users else _users.value + page.users)
                     .distinctBy { it.profile.id }
