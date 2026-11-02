@@ -1112,12 +1112,12 @@ fun DiscoveryPreferencesSheet(
     val distanceStops = remember { listOf(5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 20000) }
     var distanceIndex by remember {
         mutableFloatStateOf(
-            (distanceStops.indexOfFirst { it >= (profile?.radiusKm ?: 50) }
+            (distanceStops.indexOfFirst { it >= (profile?.radiusKm ?: 20_000) }
                 .let { if (it == -1) distanceStops.lastIndex else it }).toFloat()
         )
     }
     val distanceKm = distanceStops[distanceIndex.roundToInt().coerceIn(0, distanceStops.lastIndex)]
-    var ageRange by remember { mutableStateOf((profile?.minAge ?: 18).toFloat()..(profile?.maxAge ?: 35).toFloat()) }
+    var ageRange by remember { mutableStateOf((profile?.minAge ?: 18).toFloat()..(profile?.maxAge ?: 65).toFloat()) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
