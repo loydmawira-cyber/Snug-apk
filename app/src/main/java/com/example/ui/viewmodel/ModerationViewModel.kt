@@ -105,7 +105,10 @@ class ModerationViewModel(application: Application) : AndroidViewModel(applicati
                 }
                 val page = repo.loadUsers(usersCursor)
                 usersCursor = page.cursor ?: usersCursor
-                _users.value = if (reset) page.users else (_users.value + page.users).distinctBy { it.profile.id }
+                // Newest registrations first within what is loaded (accounts without a join date go last)
+                _users.value = (if (reset) page.users else _users.value + page.users)
+                    .distinctBy { it.profile.id }
+                    .sortedByDescending { it.profile.createdAt?.seconds ?: 0L }
                 _usersExhausted.value = page.exhausted
             } catch (e: Exception) {
                 _message.value = "Could not load users: ${e.message}"
