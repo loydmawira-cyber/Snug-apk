@@ -214,7 +214,7 @@ fun DiscoverScreen(
     android.util.Log.d("DiscoverScreen", "Recomposing with profile: ${profile?.displayName}")
     
     Column(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF100D17)).padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -227,39 +227,39 @@ fun DiscoverScreen(
                 Surface(
                     modifier = Modifier.weight(1f).height(40.dp).clickable { onNavigateTab(route) },
                     shape = RoundedCornerShape(24.dp),
-                    color = if (index == 0) Color(0xFFF02B6B) else Color(0xFF241D2B),
-                    border = if (index == 0) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A3042))
-                ) { Box(contentAlignment = Alignment.Center) { Text(label, color = Color.White, fontSize = 13.sp) } }
+                    color = if (index == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
+                    border = if (index == 0) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) { Box(contentAlignment = Alignment.Center) { Text(label, color = if (index == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontSize = 13.sp) } }
             }
         }
         val sharedInterest = me?.interests?.firstOrNull { it in curatedPicks.firstOrNull()?.interests.orEmpty() }
-        Surface(Modifier.fillMaxWidth().height(78.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFF261526), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF403047))) {
+        Surface(Modifier.fillMaxWidth().height(78.dp), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainer, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
             Row(Modifier.padding(horizontal = 15.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.banner_title), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text(stringResource(R.string.banner_subtitle, sharedInterest ?: stringResource(R.string.live_music)), color = Color(0xFFD8CADD), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(stringResource(R.string.banner_title), color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.banner_subtitle, sharedInterest ?: stringResource(R.string.live_music)), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy((-10).dp)) {
                     curatedPicks.take(3).forEach { person ->
                         val image = person.avatarUrl()
-                        if (image != null) SnugImage(image, person.displayName, Modifier.size(42.dp).clip(CircleShape).background(Color.DarkGray), contentScale = ContentScale.Crop)
-                        else Box(Modifier.size(42.dp).clip(CircleShape).background(Color(0xFF514358)))
+                        if (image != null) SnugImage(image, person.displayName, Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentScale = ContentScale.Crop)
+                        else Box(Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant))
                     }
                 }
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.todays_picks), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Text(stringResource(R.string.curated_for_you) + "  —  ♥", color = Color(0xFFE8DCEB), fontSize = 11.sp)
+            Text(stringResource(R.string.todays_picks), color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.curated_for_you) + "  —  ♥", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.height(146.dp)) {
             items(curatedPicks, key = { "pick_${it.id}" }) { person ->
                 val image = person.avatarUrl()
-                Card(Modifier.width(120.dp).fillMaxHeight().clickable { onOpenProfile(person.id) }, shape = RoundedCornerShape(13.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2230))) {
+                Card(Modifier.width(120.dp).fillMaxHeight().clickable { onOpenProfile(person.id) }, shape = RoundedCornerShape(13.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                     Box(Modifier.fillMaxSize()) {
                         if (image != null) SnugImage(image, person.displayName, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .9f)))))
-                        Surface(Modifier.align(Alignment.TopStart).padding(start = 6.dp, top = 7.dp), shape = RoundedCornerShape(16.dp), color = Color(0xFFF02B6B)) {
+                        Surface(Modifier.align(Alignment.TopStart).padding(start = 6.dp, top = 7.dp), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primary) {
                             Text(stringResource(R.string.match_percent, calculateCompatibility(me, person)), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                         }
                         IconButton(onClick = { viewModel.likeProfile(person.id) }, modifier = Modifier.align(Alignment.TopEnd).size(34.dp).padding(4.dp)) {
@@ -273,8 +273,8 @@ fun DiscoverScreen(
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                 person.interests.take(2).forEach { interest ->
-                                    Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF59285B).copy(alpha = .95f)) {
-                                        Text(interest, color = Color.White, fontSize = 8.sp, maxLines = 1, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
+                                    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
+                                        Text(interest, color = MaterialTheme.colorScheme.onSecondaryContainer, fontSize = 8.sp, maxLines = 1, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
                                     }
                                 }
                             }
@@ -300,8 +300,8 @@ fun DiscoverScreen(
                             else showFilters = true
                         }
                     }
-                }, shape = RoundedCornerShape(20.dp), color = if (selected) Color(0xFFF02B6B) else Color(0xFF241D2B), border = if (selected) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A3042))) {
-                    Box(contentAlignment = Alignment.Center) { Text(label, color = Color.White, fontSize = 10.sp, maxLines = 1) }
+                }, shape = RoundedCornerShape(20.dp), color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer, border = if (selected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                    Box(contentAlignment = Alignment.Center) { Text(label, color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontSize = 10.sp, maxLines = 1) }
                 }
             }
         }
@@ -503,7 +503,7 @@ fun ProfileCard(
                 if (compatibility > 0) {
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = Color(0xFFF02B6B)
+                        color = MaterialTheme.colorScheme.primary
                     ) {
                         Text(
                             stringResource(R.string.match_percent, compatibility),
@@ -670,29 +670,29 @@ fun RadarScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {}) 
     val nearby by viewModel.discoveryProfiles.collectAsState()
     val worldwide by viewModel.worldwideProfiles.collectAsState()
     val me by viewModel.currentUserProfile.collectAsState()
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF100D17)).verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text(stringResource(R.string.new_near_you), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
-        Text(stringResource(R.string.new_near_you_description), color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text(stringResource(R.string.new_near_you), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+        Text(stringResource(R.string.new_near_you_description), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(12.dp))
-        if (nearby.isEmpty()) Text(stringResource(R.string.no_new_nearby), color = Color(0xFFD8CADD))
+        if (nearby.isEmpty()) Text(stringResource(R.string.no_new_nearby), color = MaterialTheme.colorScheme.onSurfaceVariant)
         else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(nearby, key = { "near_${it.id}" }) { person ->
                 RadarItem(person, placeAndDistance(person, formatDistance(viewModel.distanceTo(me, person)), stringResource(R.string.distance_unknown), stringResource(R.string.location_unknown)), Modifier.width(150.dp).height(205.dp)) { onOpenProfile(person.id) }
             }
         }
         Spacer(Modifier.height(24.dp))
-        Text(stringResource(R.string.close_matches_worldwide), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
-        Text(stringResource(R.string.worldwide_description), color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.close_matches_worldwide), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+        Text(stringResource(R.string.worldwide_description), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(12.dp))
         val nearbyIds = nearby.map { it.id }.toSet()
         val farMatches = worldwide.filter { it.id !in nearbyIds }.take(20)
-        if (farMatches.isEmpty()) Text(stringResource(R.string.worldwide_empty), color = Color(0xFFD8CADD))
+        if (farMatches.isEmpty()) Text(stringResource(R.string.worldwide_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
         else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(farMatches, key = { "world_${it.id}" }) { person ->
                 Box {
                     RadarItem(person, placeAndDistance(person, formatDistance(viewModel.distanceTo(me, person)), stringResource(R.string.distance_unknown), stringResource(R.string.location_unknown)), Modifier.width(150.dp).height(205.dp)) { onOpenProfile(person.id) }
-                    Surface(Modifier.align(Alignment.TopStart).padding(7.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFFF02B6B)) {
-                        Text(stringResource(com.example.R.string.compat_match, calculateCompatibility(me, person)), color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                    Surface(Modifier.align(Alignment.TopStart).padding(7.dp), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primary) {
+                        Text(stringResource(com.example.R.string.compat_match, calculateCompatibility(me, person)), color = MaterialTheme.colorScheme.onPrimary, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                     }
                 }
             }
@@ -713,9 +713,9 @@ fun OnlineScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {})
     val onlineNearby = nearby.filter { it.showLocationToOthers && it.showPresenceToOthers && it.isOnlineNow(now) }
         .sortedBy { viewModel.distanceTo(me, it) ?: Double.MAX_VALUE }
     val onlineNew = newProfiles.filter { it.showPresenceToOthers && it.isOnlineNow(now) }
-    Column(Modifier.fillMaxSize().background(Color(0xFF100D17)).verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text(stringResource(R.string.online_now), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
-        Text(stringResource(R.string.online_subtitle), color = Color(0xFFD8CADD), style = MaterialTheme.typography.bodySmall)
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text(stringResource(R.string.online_now), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+        Text(stringResource(R.string.online_subtitle), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         OnlineSection(stringResource(R.string.who_liked_you), onlineLiked, stringResource(R.string.no_liked_online), onOpenProfile)
         OnlineSection(stringResource(R.string.online_near_you), onlineNearby, stringResource(R.string.no_one_nearby_online), onOpenProfile)
         OnlineSection(stringResource(R.string.new_and_online), onlineNew, stringResource(R.string.no_new_online), onOpenProfile)
@@ -725,9 +725,9 @@ fun OnlineScreen(viewModel: SnugViewModel, onOpenProfile: (String) -> Unit = {})
 @Composable
 private fun OnlineSection(title: String, people: List<UserProfile>, emptyText: String, onOpenProfile: (String) -> Unit) {
     Spacer(Modifier.height(22.dp))
-    Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(10.dp))
-    if (people.isEmpty()) Text(emptyText, color = Color(0xFFD8CADD), fontSize = 13.sp)
+    if (people.isEmpty()) Text(emptyText, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
     else LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         items(people, key = { "online_${title}_${it.id}" }) { person -> OnlineAvatar(person) { onOpenProfile(person.id) } }
     }
