@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import com.example.R
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -128,15 +129,6 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
             return@Scaffold
         }
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            ScrollableTabRow(selectedTabIndex = listOf(6, 5, 0, 3, 4, 1, 2).indexOf(tab).coerceAtLeast(0), edgePadding = 0.dp) {
-                Tab(selected = tab == 6, onClick = { tab = 6 }, text = { Text("Overview") })
-                Tab(selected = tab == 5, onClick = { tab = 5 }, text = { Text("Users") })
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(com.example.R.string.admin_pending_count, pending.size)) })
-                Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Reports (${reportCases.size})") })
-                Tab(selected = tab == 4, onClick = { tab = 4 }, text = { Text("Appeals (${openAppeals.size})") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.ui_history)) })
-                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text(stringResource(R.string.ui_users_stats)) })
-            }
             if (tab == 6) {
                 DashboardOverview(
                     stats = stats,
@@ -234,9 +226,9 @@ private fun DashboardOverview(
     onNavigate: (Int) -> Unit,
     onRefresh: () -> Unit
 ) {
-    val plum = androidx.compose.ui.graphics.Color(0xFF3B1259)
-    val rose = androidx.compose.ui.graphics.Color(0xFFFF4370)
-    val softRose = androidx.compose.ui.graphics.Color(0xFFFFEFF4)
+    val plum = MaterialTheme.colorScheme.onSurface
+    val rose = MaterialTheme.colorScheme.primary
+    val softRose = MaterialTheme.colorScheme.surfaceContainer
     fun count(value: Long?): String = if (value == null || value < 0) "—" else value.toString()
 
     LazyColumn(
@@ -254,11 +246,11 @@ private fun DashboardOverview(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OverviewMetric("Users", count(stats?.totalUsers), Modifier.weight(1f), plum)
-                    OverviewMetric("Online", count(stats?.activeNow), Modifier.weight(1f), rose)
+                    OverviewMetric("Users", count(stats?.totalUsers), Modifier.weight(1f), plum) { onNavigate(5) }
+                    OverviewMetric("Online", count(stats?.activeNow), Modifier.weight(1f), MaterialTheme.colorScheme.secondary)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OverviewMetric("New today", count(stats?.newToday), Modifier.weight(1f), rose)
+                    OverviewMetric("New today", count(stats?.newToday), Modifier.weight(1f), MaterialTheme.colorScheme.secondary)
                     OverviewMetric("VIP members", count(stats?.vip), Modifier.weight(1f), plum)
                 }
             }
@@ -342,8 +334,14 @@ private fun DashboardOverview(
 }
 
 @Composable
-private fun OverviewMetric(label: String, value: String, modifier: Modifier, accent: androidx.compose.ui.graphics.Color) {
-    Card(modifier = modifier, shape = RoundedCornerShape(18.dp)) {
+private fun OverviewMetric(
+    label: String,
+    value: String,
+    modifier: Modifier,
+    accent: androidx.compose.ui.graphics.Color,
+    onClick: (() -> Unit)? = null
+) {
+    Card(modifier = if (onClick == null) modifier else modifier.clickable { onClick() }, shape = RoundedCornerShape(18.dp)) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp)) {
             Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = accent)
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
