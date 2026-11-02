@@ -2,6 +2,8 @@ package com.example.data.repository
 
 import android.content.Context
 import com.example.R
+import com.example.data.model.AdminUserPage
+import com.example.data.model.AdminUserRow
 import com.example.data.model.Appeal
 import com.example.data.model.MessageReportEntry
 import com.example.data.model.ReportCase
@@ -13,6 +15,8 @@ import com.example.data.util.handleFirestoreError
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.AggregateSource
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -225,6 +229,88 @@ class ModerationRepository(private val db: FirebaseFirestore) {
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.UPDATE, "users/$userId")
             e.message ?: "Could not reinstate the account"
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Admin: all registered users
+    // ------------------------------------------------------------------
+
+    private fun DocumentSnapshot.toAdminUserRow(): AdminUserRow? {
+        val p = toObject(UserProfile::class.java) ?: return null
+        return AdminUserRow(
+            profile = p.copy(
+                id = id,
+                isPaused = getBoolean("isPaused") ?: false,
+                isVip = getBoolean("isVip") ?: false
+            ),
+            suspendedUntil = getTimestamp("suspendedUntil"),
+            suspensionReason = getString("suspensionReason") ?: ""
+        )
+    }
+
+    /** Newest registrations first, [pageSize] people at a time. Throws if Firestore refuses the read. */
+    suspend fun loadUsers(after: DocumentSnapshot?, pageSize: Long = 25): AdminUserPage {
+        var q: Query = db.collection("users").orderBy("createdAt", Query.Direction.DESCENDING)
+        if (after != null) q = q.startAfter(after)
+        val snap = q.limit(pageSize).get().await()
+        return AdminUserPage(
+            users = snap.documents.mapNotNull { it.toAdminUserRow() },
+            cursor = snap.documents.lastOrNull(),
+            exhausted = snap.size() < pageSize
+        )
+    }
+
+    /** People whose name starts with [text] (tries it as typed and with a capital first letter). */
+    suspend fun searchUsers(text: String): List<AdminUserRow> {
+        val variants = listOf(text, text.replaceFirstChar { it.uppercase() }).distinct()
+        val out = mutableListOf<AdminUserRow>()
+        for (v in variants) {
+            val snap = db.collection("users")
+                .orderBy("displayName")
+                .startAt(v)
+                .endAt(v + "\uf8ff")
+                .limit(30)
+                .get().await()
+            out += snap.documents.mapNotNull { it.toAdminUserRow() }
+        }
+        return out.distinctBy { it.profile.id }
+    }
+
+    suspend fun loadUser(userId: String): AdminUserRow? = try {
+        db.collection("users").document(userId).get().await().toAdminUserRow()
+    } catch (e: Exception) {
+        null
+    }
+
+    /** Total registered people and how many have the blue check (server-side counts, no documents downloaded). */
+    suspend fun loadUserTotals(): Pair<Long, Long> {
+        return try {
+            val total = db.collection("users").count().get(AggregateSource.SERVER).await().count
+            val verified = db.collection("users").whereEqualTo("photoVerified", true)
+                .count().get(AggregateSource.SERVER).await().count
+            total to verified
+        } catch (e: Exception) {
+            -1L to -1L
+        }
+    }
+
+    /** Gives or removes the blue check by hand (the selfie approval does the same thing automatically). */
+    suspend fun setVerified(userId: String, name: String, verified: Boolean): String? {
+        val admin = auth.currentUser ?: return "Not signed in"
+        if (userId == admin.uid) return "You cannot change your own badge."
+        return try {
+            val batch = db.batch()
+            batch.update(db.collection("users").document(userId), "photoVerified", verified)
+            batch.set(
+                db.collection("verificationAudit").document(),
+                auditEntry(userId, name, if (verified) "verified" else "unverified", "Changed by an admin")
+            )
+            batch.commit().await()
+            null
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, "users/$userId")
+            e.message ?: "Could not change the badge"
         }
     }
 
