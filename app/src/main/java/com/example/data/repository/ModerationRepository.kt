@@ -278,11 +278,12 @@ class ModerationRepository(private val db: FirebaseFirestore) {
     suspend fun loadUsers(after: DocumentSnapshot?, pageSize: Long = 50): AdminUserPage {
         var q: Query = db.collection("users").orderBy(FieldPath.documentId())
         if (after != null) q = q.startAfter(after)
-        val snap = q.limit(pageSize).get().await()
+        val snap = q.limit(pageSize).get(com.google.firebase.firestore.Source.SERVER).await()
         return AdminUserPage(
             users = snap.documents.mapNotNull { it.toAdminUserRow() },
             cursor = snap.documents.lastOrNull(),
-            exhausted = snap.size() < pageSize
+            exhausted = snap.size() < pageSize,
+            rawCount = snap.size()
         )
     }
 
