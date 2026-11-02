@@ -3,6 +3,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onMessagePublished } = require("firebase-functions/v2/pubsub");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onUserCreated } = require("firebase-functions/v2/identity");
 const admin = require("firebase-admin");
 const { google } = require("googleapis");
 
@@ -16,6 +17,40 @@ const ACTIVE_STATES = [
   "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
   "SUBSCRIPTION_STATE_CANCELED", // cancelled but still paid until expiry
 ];
+
+// Create the Firestore profile as soon as Firebase Authentication creates an account.
+// The admin Users tab reads the `users` collection, so this keeps Auth and Firestore
+// in sync even when a person has not completed onboarding yet.
+exports.createUserProfile = onUserCreated(async (event) => {
+  const user = event.data;
+  const ref = db.collection("users").doc(user.uid);
+  const existing = await ref.get();
+
+  // Never overwrite a profile that onboarding or an older version already created.
+  if (existing.exists) return;
+
+  await ref.set({
+    displayName: user.displayName || "",
+    profilePhoto: user.photoURL || "",
+    coverPhoto: "",
+    bio: "",
+    gender: "",
+    interestedIn: [],
+    interests: [],
+    photos: [],
+    city: "",
+    country: "",
+    lookingFor: "",
+    photoVerified: false,
+    banned: false,
+    isVip: false,
+    isPaused: false,
+    onboarded: false,
+    online: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+});
 
 async function publisher() {
   const auth = new google.auth.GoogleAuth({
