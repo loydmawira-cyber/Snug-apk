@@ -41,7 +41,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
     val isAdmin by viewModel.isAdmin.collectAsState()
     val pending by viewModel.pendingVerifications.collectAsState()
     val audit by remember { viewModel.observeVerificationAudit() }.collectAsState(initial = emptyList())
-    var tab by remember { mutableStateOf(5) }
+    var tab by remember { mutableStateOf(6) }
     var rejecting by remember { mutableStateOf<VerificationRequest?>(null) }
     var stats by remember { mutableStateOf<AdminStats?>(null) }
     var statsRefresh by remember { mutableStateOf(0) }
@@ -65,7 +65,7 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
     }
 
     LaunchedEffect(tab, statsRefresh, isAdmin) {
-        if (tab == 2 && isAdmin) {
+        if ((tab == 2 || tab == 6) && isAdmin) {
             stats = null
             stats = viewModel.loadAdminStats()
             signups = viewModel.loadSignups()
@@ -128,7 +128,8 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
             return@Scaffold
         }
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            ScrollableTabRow(selectedTabIndex = listOf(5, 0, 3, 4, 1, 2).indexOf(tab).coerceAtLeast(0), edgePadding = 0.dp) {
+            ScrollableTabRow(selectedTabIndex = listOf(6, 5, 0, 3, 4, 1, 2).indexOf(tab).coerceAtLeast(0), edgePadding = 0.dp) {
+                Tab(selected = tab == 6, onClick = { tab = 6 }, text = { Text("Overview") })
                 Tab(selected = tab == 5, onClick = { tab = 5 }, text = { Text("Users") })
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(com.example.R.string.admin_pending_count, pending.size)) })
                 Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Reports (${reportCases.size})") })
@@ -136,7 +137,18 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.ui_history)) })
                 Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text(stringResource(R.string.ui_users_stats)) })
             }
-            if (tab == 5) {
+            if (tab == 6) {
+                DashboardOverview(
+                    stats = stats,
+                    signups = signups,
+                    pendingCount = pending.size,
+                    reportCount = reportCases.size,
+                    appealCount = openAppeals.size,
+                    audit = audit,
+                    onNavigate = { tab = it },
+                    onRefresh = { statsRefresh++ }
+                )
+            } else if (tab == 5) {
                 UsersTab(
                     vm = modVm,
                     pending = pending,
@@ -208,6 +220,157 @@ fun AdminDashboardScreen(viewModel: SnugViewModel, navController: NavController)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DashboardOverview(
+    stats: AdminStats?,
+    signups: List<SignupDay>,
+    pendingCount: Int,
+    reportCount: Int,
+    appealCount: Int,
+    audit: List<VerificationAuditEntry>,
+    onNavigate: (Int) -> Unit,
+    onRefresh: () -> Unit
+) {
+    val plum = androidx.compose.ui.graphics.Color(0xFF3B1259)
+    val rose = androidx.compose.ui.graphics.Color(0xFFFF4370)
+    val softRose = androidx.compose.ui.graphics.Color(0xFFFFEFF4)
+    fun count(value: Long?): String = if (value == null || value < 0) "—" else value.toString()
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            Column {
+                Text("Good morning, Alex", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = plum)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Your community at a glance", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OverviewMetric("Users", count(stats?.totalUsers), Modifier.weight(1f), plum)
+                    OverviewMetric("Online", count(stats?.activeNow), Modifier.weight(1f), rose)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OverviewMetric("New today", count(stats?.newToday), Modifier.weight(1f), rose)
+                    OverviewMetric("VIP members", count(stats?.vip), Modifier.weight(1f), plum)
+                }
+            }
+        }
+        item {
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = softRose)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Safety & review queue", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = plum)
+                            Text("${pendingCount + reportCount + appealCount} items to review", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        TextButton(onClick = { onNavigate(0) }) { Text("Open queue", color = rose) }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OverviewQueueChip("Verify", pendingCount, Modifier.weight(1f)) { onNavigate(0) }
+                        OverviewQueueChip("Reports", reportCount, Modifier.weight(1f)) { onNavigate(3) }
+                        OverviewQueueChip("Appeals", appealCount, Modifier.weight(1f)) { onNavigate(4) }
+                    }
+                }
+            }
+        }
+        item {
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Member activity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("New sign-ups · last 7 days", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        TextButton(onClick = { onNavigate(2) }) { Text("Insights") }
+                    }
+                    if (signups.isEmpty()) {
+                        Text("Activity data will appear here when available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
+                    } else {
+                        val maxCount = signups.maxOf { it.count }.coerceAtLeast(1L)
+                        Row(modifier = Modifier.fillMaxWidth().height(104.dp).padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+                            signups.forEach { day ->
+                                Column(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
+                                    Box(modifier = Modifier.fillMaxWidth().fillMaxHeight((day.count.toFloat() / maxCount).coerceIn(0.08f, 1f)).clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)).background(rose))
+                                    Spacer(modifier = Modifier.height(5.dp))
+                                    Text(day.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Community health", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    OverviewHealthRow("Photo verified", stats?.photoVerified, stats?.totalUsers)
+                    OverviewHealthRow("Reports received", stats?.reports, null)
+                }
+            }
+        }
+        item {
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Recent admin activity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { onNavigate(1) }) { Text("History") }
+                    }
+                    if (audit.isEmpty()) {
+                        Text("No recent decisions yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        audit.take(2).forEach { entry ->
+                            Column {
+                                Text("${entry.decision.replace('_', ' ').replaceFirstChar { it.uppercase() }} · ${entry.userName.ifBlank { entry.userId.take(8) }}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text(relativeTime(entry.decidedAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item { OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) { Text("Refresh overview") } }
+    }
+}
+
+@Composable
+private fun OverviewMetric(label: String, value: String, modifier: Modifier, accent: androidx.compose.ui.graphics.Color) {
+    Card(modifier = modifier, shape = RoundedCornerShape(18.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp)) {
+            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = accent)
+            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun OverviewQueueChip(label: String, count: Int, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surface) {
+        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 11.dp)) {
+            Text(count.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun OverviewHealthRow(label: String, value: Long?, total: Long?) {
+    val detail = when {
+        value == null || value < 0 -> "—"
+        total != null && total > 0 -> "${((value.toFloat() / total) * 100).toInt()}%"
+        else -> value.toString()
+    }
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Text(detail, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
     }
 }
 
