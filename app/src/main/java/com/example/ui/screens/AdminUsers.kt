@@ -69,6 +69,7 @@ fun UsersTab(
     val loading by vm.usersLoading.collectAsState()
     val exhausted by vm.usersExhausted.collectAsState()
     val totals by vm.userTotals.collectAsState()
+    val fetched by vm.usersFetched.collectAsState()
     val message by vm.message.collectAsState()
     val context = LocalContext.current
 
@@ -145,6 +146,7 @@ fun UsersTab(
                 }
                 append("Showing ${shown.size}")
                 if (!searching && !exhausted) append(" of ${users.size} loaded")
+                append(". Firestore returned $fetched document" + (if (fetched == 1) "" else "s") + if (exhausted) " (all)." else ".")
             },
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             style = MaterialTheme.typography.bodySmall,
