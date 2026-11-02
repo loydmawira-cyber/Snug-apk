@@ -65,3 +65,17 @@ object SuspensionOptions {
         "Permanent" to 0
     )
 }
+
+/** One registered person as the admin Users tab sees them. */
+data class AdminUserRow(
+    val profile: UserProfile,
+    val suspendedUntil: Timestamp? = null,
+    val suspensionReason: String = ""
+)
+
+/** One page of registered people. [cursor] is passed back to load the next page. */
+data class AdminUserPage(
+    val users: List<AdminUserRow>,
+    val cursor: com.google.firebase.firestore.DocumentSnapshot?,
+    val exhausted: Boolean
+)
